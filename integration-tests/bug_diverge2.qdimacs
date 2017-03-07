@@ -1,0 +1,22 @@
+c 2015-11-10 18:47:23 by qbfdd.py,v 1.2.2
+c qbfdd.py /Users/markus/work/caqe/qbf-instances/tests/full_qbf/pec_adder_unsat.qdimacs /Users/markus/work/caqe/caqe -m ddmin -g b
+c 
+c mode: ddmin
+c rounds: 2
+c test runs: 909
+c time elapsed: 15.41s
+c total: clauses  : -39 (84.78%)
+c        variables: -18 (72.00%)
+c        literals : -108 (88.52%)
+c 
+p cnf 7 7
+e 1 0
+a 6 0
+e 2 3 4 5 7 0
+-1 -3 0
+1 3 0
+-3 2 0
+-4 -5 0
+-2 4 0
+-2 5 0
+-6 7 0

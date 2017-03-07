@@ -1,0 +1,31 @@
+TARGET = cadet
+SRCDIR = ./src
+LIBS = -lm -lstdc++
+CC = cc
+CFLAGS += -std=c11 -Wall -Wextra -pedantic
+CPPFLAGS += -std=c++11 -Wall -Wextra -pedantic
+
+.PHONY: default clean test
+
+default: $(TARGET)
+
+OBJECTS = $(patsubst %.c, %.o, $(wildcard $(SRCDIR)/*.c))
+HEADERS = $(wildcard $(SRCDIR)/*.h)
+
+%.o: %.c $(HEADERS)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+.PRECIOUS: $(TARGET) $(OBJECTS)
+
+$(TARGET): $(OBJECTS)
+	$(CC) $(CFLAGS) $(OBJECTS) $(LIBS) -o $@
+
+test: default
+	python scripts/tester.py --test
+
+profile: default
+	$(CC) $(CFLAGS) -pg $(OBJECTS) $(LIBS) -o $(TARGET) 
+
+clean:
+	cd $(SRCDIR) && rm -f *.o *.h.gch *.plist 
+	-rm -f $(TARGET)

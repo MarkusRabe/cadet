@@ -1,0 +1,31 @@
+c 2017-01-11 18:36:17 by qbfdd.py,v 1.2.2
+c qbfdd.py /Users/markus/work/cadet/sns53.qdimacs /Users/markus/work/cadet/cadet -m qobo -g b -S
+c 
+c mode: qobo
+c rounds: 3
+c test runs: 4146
+c time elapsed: 347.54s
+c total: clauses  : -988 (98.50%)
+c        variables: -579 (97.15%)
+c        literals : -2654 (98.81%)
+c 
+c Decision lvl 0: 10 17
+c 
+p cnf 17 15
+a 5 6 7 0
+e 1 2 3 4 8 9 10 11 12 13 14 15 16 17 0
+4 15 14 0
+-15 13 0
+-14 12 0
+-3 17 0
+3 16 0
+-17 10 0
+8 9 0
+-13 5 0
+-13 -2 0
+-12 6 0
+-12 1 0
+-11 -3 0
+-10 7 0
+-8 -1 3 0
+-9 -4 0

@@ -1,0 +1,45 @@
+aig 70 13 0 0 57 2 13
+138
+140
+51
+69
+87
+89
+91
+93
+97
+99
+101
+103
+107
+125
+127
+#&!$+.)36/2;	>7CF=@HFHIQPNPQYMPYTU_bcE
+W/Ai0 pi_C_0
+i1 pi_C_1
+i2 pi_B_0
+i3 pi_B_1
+i4 pi_B_2
+i5 sel_in_0_0
+i6 sel_in_1_0
+i7 sel_in_0_1
+i8 sel_in_1_1
+i9 sel_in_0_2
+i10 sel_in_1_2
+i11 sel_out_0_0
+i12 sel_out_0_1
+b0 bad_0
+b1 bad_1
+c0 mapping_0
+c1 mapping_1
+c2 mapping_2
+c3 mapping_3
+c4 mapping_4
+c5 mapping_5
+c6 mapping_6
+c7 mapping_7
+c8 mapping_8
+c9 mapping_9
+c10 mapping_10
+c11 mapping_11
+c12 mapping_12

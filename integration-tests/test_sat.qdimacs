@@ -1,0 +1,9 @@
+c variable 1,2 -> x1,x2
+c variable 3,4 -> y1,y2
+p cnf 4 4
+a 1 2 0
+e 3 4 0
+1 3 0
+-1 4 0
+-3 -4 0
+-1 2 4 0

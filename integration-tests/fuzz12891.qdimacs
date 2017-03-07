@@ -1,0 +1,20 @@
+c 2016-07-22 17:19:16 by qbfdd.py,v 1.2.2
+c qbfdd.py /Users/markus/work/cadet/fuzz12891.qdimacs /Users/markus/work/cadet/cadet -m ddmin -g b
+c 
+c mode: ddmin
+c rounds: 1
+c test runs: 100
+c time elapsed:  1.91s
+c total: clauses  : -0 (0.00%)
+c        variables: -0 (0.00%)
+c        literals : -9 (45.00%)
+c 
+p cnf 4 6
+a 3 4 0
+e 1 2 0
+-3 2 0
+1 0
+1 0
+-3 2 -1 0
+4 -2 0
+4 -2 0

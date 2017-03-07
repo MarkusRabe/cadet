@@ -1,0 +1,26 @@
+c 2015-11-08 20:37:30 by qbfdd.py,v 1.2.2
+c qbfdd.py /Users/markus/work/caqe/bug1_r.qdimacs /Users/markus/work/caqe/caqe -m ddmin -g b
+c 
+c mode: ddmin
+c rounds: 1
+c test runs: 261
+c time elapsed:  4.05s
+c total: clauses  : -24 (72.73%)
+c        variables: -12 (52.17%)
+c        literals : -65 (77.38%)
+c 
+p cnf 11 9
+e 2 0
+a 4 0
+e 3 0
+a 7 0
+e 1 5 6 8 9 10 11 0
+-1 -2 0
+1 2 0
+-3 -6 0
+3 6 0
+-4 -5 0
+-7 11 0
+-8 10 0
+8 9 -10 0
+2 -9 0

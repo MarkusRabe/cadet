@@ -1,0 +1,22 @@
+c 2016-05-27 12:03:51 by qbfdd.py,v 1.2.2
+c qbfdd.py /Users/markus/work/cadet/qbf-instances/tests/full_qbf/pec_adder_32bit_sat.qdimacs /Users/markus/work/cadet/cadet -m ddmin -g c
+c 
+c mode: ddmin
+c rounds: 1
+c test runs: 5633
+c time elapsed: 39.76s
+c total: clauses  : -1664 (96.91%)
+c        variables: -761 (93.37%)
+c        literals : -4537 (97.59%)
+c 
+p cnf 11 7
+e 10 11 0
+a 12 0
+e 1 2 3 4 5 6 7 8 9 0
+-2 -4 0
+-1 4 0
+-10 3 0
+10 -3 0
+-3 2 0
+11 -1 0
+-11 1 0

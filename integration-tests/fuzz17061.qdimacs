@@ -1,0 +1,11 @@
+c generated 07-24-2016 14:50:43 with QBFuzz version 1.1.1
+c qbfuzz.py --seed=17061 -v 4 -c 7 -s 2 -r 0.60
+c 
+p cnf 4 6
+a 3 0
+e 1 4 0
+-3 -1 0
+-3 -1 -4 0
+-3 -1 4 0
+3 1 -4 0
+-3 4 0

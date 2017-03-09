@@ -3,6 +3,9 @@
 
 #include <stdbool.h>
 
+#define SEED 0
+#define VERSION "v2.0"
+
 typedef enum {
     CADET_RESULT_SAT     = 10,
     CADET_RESULT_UNSAT   = 20,
@@ -13,7 +16,6 @@ typedef enum {
 int random_permutation(int* item_array, int* permutation);
 
 static inline unsigned lit_to_var(int lit) { return lit < 0 ? (unsigned) -lit : (unsigned) lit; }
-static inline int create_lit(int var, bool negated) { return negated ? -var : var; }
 
 int hash6432shift(void* k);
 int hash32shiftmult(int key);

@@ -12,7 +12,7 @@
 #include "util.h"
 #include "conflict_analysis.h"
 #include "debug.h"
-#include "c2_cert.h"
+#include "certify.h"
 #include "c2_validate.h"
 #include "c2_traces.h"
 #include "c2_casesplits.h"
@@ -23,7 +23,6 @@
 
 #include <math.h>
 #include <stdint.h>
-
 
 C2* c2_init_qcnf(QCNF* qcnf, Options* options) {
     
@@ -42,7 +41,7 @@ C2* c2_init_qcnf(QCNF* qcnf, Options* options) {
     c2->stack = stack_init(c2_undo);
     
     // DOMAINS
-    c2->skolem = skolem_init(c2->qcnf,options,vector_count(qcnf->scopes),0);
+    c2->skolem = skolem_init(c2->qcnf, options, vector_count(qcnf->scopes) + 1, 0);
     c2->cegar = NULL;
     c2->examples = examples_init(qcnf, options->examples_max_num);
     
@@ -78,6 +77,17 @@ C2* c2_init_qcnf(QCNF* qcnf, Options* options) {
     c2->case_split_depth_penalty = C2_CASE_SPLIT_DEPTH_PENALTY_QUADRATIC;
     c2->conflicts_between_case_splits = options->easy_debugging_mode_c2 ? 0 : 10;
     c2->conflicts_between_case_splits_countdown = c2->conflicts_between_case_splits;
+    
+    // initialize the initially deterministic variables; these are usually the universals
+    for (unsigned i = 1; i < var_vector_count(qcnf->vars); i++) {
+        c2_new_variable(c2, i);
+    }
+    // search for unit clauses and clauses with unique consequence
+    for (unsigned i = 0; i < vector_count(qcnf->clauses); i++) {
+        Clause* c = vector_get(qcnf->clauses, i);
+        if (c) {c2_new_clause(c2, c);}
+    }
+    
     return c2;
 }
 
@@ -561,9 +571,10 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                 if (c2->conflicts_between_case_splits_countdown > 0)
                     c2->conflicts_between_case_splits_countdown--;
                 
+                
                 for (unsigned i = 0; i < int_vector_count(conflict); i++) {
                     int lit = int_vector_get(conflict, i);
-                    qcnf_add_lit(c2->qcnf, - lit);
+                    c2_add_lit(c2, - lit);
                 }
                 Clause* learnt_clause = qcnf_close_clause(c2->qcnf);
                 
@@ -572,7 +583,6 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                 learnt_clause->original = false;
                 learnt_clause->consistent_with_originals = true;
                 assert(skolem_get_unique_consequence(c2->skolem, learnt_clause) == 0);
-                skolem_new_clause(c2->skolem, learnt_clause);
                 
                 if (skolem_get_unique_consequence(c2->skolem, learnt_clause) != 0) {
                     skolem_bump_conflict_potential(c2->skolem, lit_to_var(skolem_get_unique_consequence(c2->skolem, learnt_clause)));
@@ -581,6 +591,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                 if (debug_verbosity >= VERBOSITY_MEDIUM || c2->options->trace_learnt_clauses) {
                     c2_log_clause(c2, learnt_clause);
                 }
+                c2_new_clause(c2, learnt_clause);
                 
                 c2_conflict_heuristics(c2, learnt_clause, conflicted_var_id);
                 
@@ -667,7 +678,53 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
     return c2->result; // results in a restart
 }
 
+cadet_res c2_check_propositional(QCNF* qcnf) {
+    V1("Using SAT solver to solve propositional problem.\n");
+    SATSolver* checker = satsolver_init();
+    satsolver_set_max_var(checker, (int) var_vector_count(qcnf->vars));
+    for (unsigned i = 0; i < vector_count(qcnf->clauses); i++) {
+        Clause* c = vector_get(qcnf->clauses, i);
+        if (c) {
+            for (unsigned j = 0; j < c->size; j++) {
+                satsolver_add(checker, c->occs[j]);
+            }
+            satsolver_clause_finished(checker);
+        }
+    }
+    sat_res res = satsolver_sat(checker);
+    satsolver_free(checker);
+    assert(res == SATSOLVER_RESULT_SAT || res == SATSOLVER_RESULT_UNSAT);
+    return res == SATSOLVER_RESULT_SAT ? CADET_RESULT_SAT : CADET_RESULT_UNSAT;
+}
+
+
 cadet_res c2_sat(C2* c2) {
+    
+    if (c2->result != CADET_RESULT_UNKNOWN) {
+        return c2->result;
+    }
+    
+    if (c2->qcnf->empty_clause != NULL) {
+        V1("CNF contains an empty clause (clause id %u).\n", c2->qcnf->empty_clause->clause_id);
+        c2->result = CADET_RESULT_UNSAT;
+        c2->state = C2_EMPTY_CLAUSE_CONFLICT;
+        return CADET_RESULT_UNSAT;
+    }
+    
+    if (qcnf_is_propositional(c2->qcnf) && ! c2->options->use_qbf_engine_also_for_propositional_problems) {
+        c2->result = c2_check_propositional(c2->qcnf);
+        if (c2->result == CADET_RESULT_UNSAT) {
+            c2->state = C2_CEGAR_CONFLICT; // ensures the validation of the conflict does the right thing
+        }
+        return c2->result;
+    }
+    
+    ////// THIS RESTRICTS US TO 2QBF
+    if (! qcnf_is_2QBF(c2->qcnf) && ! qcnf_is_propositional(c2->qcnf)) {
+        V0("Is not 2QBF. Currently not supported.\n");
+        return CADET_RESULT_UNKNOWN;
+    }
+    //////
     
     c2_initial_propagation(c2);
     
@@ -713,7 +770,7 @@ cadet_res c2_sat(C2* c2) {
         V0("\n");
     }
     
-    while (true) {
+    while (true) { // This loop controls the restarts
         c2_run(c2, c2->next_restart);
         if (c2->result != CADET_RESULT_UNKNOWN) {
             break;
@@ -733,37 +790,17 @@ cadet_res c2_sat(C2* c2) {
     return c2->result;
 }
 
-cadet_res c2_check_propositional(QCNF* qcnf) {
-    V1("Using SAT solver to solve propositional problem.\n");
-    SATSolver* checker = satsolver_init();
-    satsolver_set_max_var(checker, (int) var_vector_count(qcnf->vars));
-    for (unsigned i = 0; i < vector_count(qcnf->clauses); i++) {
-        Clause* c = vector_get(qcnf->clauses, i);
-        if (c) {
-            for (unsigned j = 0; j < c->size; j++) {
-                satsolver_add(checker, c->occs[j]);
-            }
-            satsolver_clause_finished(checker);
-        }
-    }
-    sat_res res = satsolver_sat(checker);
-    satsolver_free(checker);
-    assert(res == SATSOLVER_RESULT_SAT || res == SATSOLVER_RESULT_UNSAT);
-    return res == SATSOLVER_RESULT_SAT ? CADET_RESULT_SAT : CADET_RESULT_UNSAT;
-}
-
+/**
+ * c2_solve_qdimacs is the traditional entry point to C2. It reads the qdimacs, then solves, then prints and checks the result after calling c2_sat.
+ */
 cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
     QCNF* qcnf = create_qcnf_from_file(f, options);
     fclose(f);
     abortif(!qcnf,"Failed to create QCNF.");
-    if (options->preprocess) {
-        LOG_WARNING("No preprocessing implemented for CADET v2.0");
-    }
     
-    if (options->reencode_existentials) {
+    if (options->reencode_existentials) { // experimental feature
         reencode_existentials(qcnf, options);
     }
-    
     if (options->print_qdimacs) {
         qcnf_print_qdimacs(qcnf);
         return 1;
@@ -772,17 +809,6 @@ cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
     V1("Maximal variable index: %u\n", var_vector_count(qcnf->vars));
     V1("Number of clauses: %u\n", vector_count(qcnf->clauses));
     V1("Number of scopes: %u\n", vector_count(qcnf->scopes));
-    
-    if (vector_count(qcnf->clauses) == 0) {
-        V1("No clause specified, CNF is empty.\n");
-        V0("SAT\n");
-        return CADET_RESULT_SAT;
-    }
-    if (qcnf->empty_clause != NULL) {
-        V1("Found empty clause with clause id %u\n", qcnf->empty_clause->clause_id);
-        V0("UNSAT\n");
-        return CADET_RESULT_UNSAT;
-    }
     
     if (! qcnf_is_2QBF(qcnf) && ! qcnf_is_propositional(qcnf)
         && vector_count(qcnf->scopes) == 2 && options->reencode3QBF) {
@@ -793,17 +819,6 @@ cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
         qcnf = create_qcnf_from_aiger(aig, options);
     }
     
-    ////// THIS RESTRICTS US TO 2QBF
-    if (! qcnf_is_2QBF(qcnf) && ! qcnf_is_propositional(qcnf)) {
-        V0("Is not 2QBF\n");
-        return CADET_RESULT_UNKNOWN;
-    }
-    //////
-    
-    if (qcnf_is_propositional(qcnf) && ! options->use_qbf_engine_also_for_propositional_problems) {
-        c2_check_propositional(qcnf);
-    }
-
     C2* c2 = c2_init_qcnf(qcnf, options);
     
     c2_sat(c2);
@@ -811,7 +826,6 @@ cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
     if (debug_verbosity >= VERBOSITY_LOW) {
         c2_print_statistics(c2);
     }
-    
     
     switch (c2->result) {
         case CADET_RESULT_UNKNOWN:
@@ -828,7 +842,7 @@ cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
     if (c2->result == CADET_RESULT_SAT && c2->options->certify_SAT) {
         c2_cert_AIG_certificate(c2);
     }
-    if (c2->result == CADET_RESULT_UNSAT && options->certify_internally_UNSAT) {
+    if (c2->result == CADET_RESULT_UNSAT && c2->options->certify_internally_UNSAT) {
         switch (c2->state) {
             case C2_SKOLEM_CONFLICT:
                 abortif(! c2_cert_check_UNSAT(c2->qcnf, c2->skolem, skolem_get_value_for_conflict_analysis) , "Check failed! UNSAT result could not be certified.");
@@ -838,6 +852,9 @@ cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
                 break;
             case C2_EXAMPLES_CONFLICT:
                 abortif(! c2_cert_check_UNSAT(c2->qcnf, c2->examples, examples_get_value_for_conflict_analysis) , "Check failed! UNSAT result could not be certified.");
+                break;
+            case C2_EMPTY_CLAUSE_CONFLICT:
+                abortif(!c2->qcnf->empty_clause || (! c2->qcnf->empty_clause->original && !c2->qcnf->empty_clause->consistent_with_originals), "Inconsistency after empty clause conflict.");
                 break;
                 
             default:
@@ -891,7 +908,46 @@ void c2_undo(void* parent, char type, void* obj) {
     }
 }
 
-void c2_add_lit(C2* c2, Lit lit) {
-    NOT_IMPLEMENTED();
+Clause* c2_add_lit(C2* c2, Lit lit) {
+    if (lit != 0) {
+        qcnf_add_lit(c2->qcnf, lit);
+        return NULL;
+    } else {
+        Clause* c = qcnf_close_clause(c2->qcnf);
+        if (c) {
+            c2_new_clause(c2, c);
+        }
+        return c;
+    }
 }
 
+void c2_new_variable(C2* c2, unsigned var_id) {
+    Var* v = var_vector_get(c2->qcnf->vars, var_id);
+    if (v->var_id != 0 && skolem_is_initially_deterministic(c2->skolem, var_id)) {
+        assert(var_id == v->var_id);
+        
+        skolem_update_deterministic(c2->skolem, var_id, 1);
+        
+        int innerlit = satsolver_inc_max_var(c2->skolem->skolem);
+        skolem_update_pos_lit(c2->skolem, var_id, innerlit);
+        skolem_update_neg_lit(c2->skolem, var_id, - innerlit);
+        
+        union Dependencies dep;
+        if (!qcnf_is_DQBF(c2->qcnf)) {
+            dep.dependence_lvl = v->scope_id;
+        } else {
+            dep.dependencies = int_vector_init();
+            int_vector_add(dep.dependencies, (int) v->var_id);
+        }
+        skolem_update_dependencies(c2->skolem, var_id, dep);
+        
+        if (v->is_universal) {
+            skolem_update_universal(c2->skolem, var_id, 1);
+        }
+    }
+}
+
+void c2_new_clause(C2* c2, Clause* c) {
+    c2->result = CADET_RESULT_UNKNOWN;
+    skolem_new_clause(c2->skolem, c);
+}

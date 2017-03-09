@@ -6,7 +6,7 @@
 //  Copyright © 2016 Saarland University. All rights reserved.
 //
 
-#include "c2_cert.h"
+#include "certify.h"
 #include "c2_validate.h"
 #include "aiger.h"
 #include "aiger_utils.h"

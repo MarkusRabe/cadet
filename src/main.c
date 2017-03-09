@@ -1,21 +1,19 @@
+
+#include "log.h"
+#include "parse.h"
+#include "certify.h"
+#include "options.h"
+#include "util.h"
+#include "cadet2.h"
+#include "heap.h"
+//#include "qipasir.h"
+//#include "qipasir_parser.h"
+
 #include <stdio.h>
 #include <stdbool.h>
 #include <assert.h>
 #include <string.h>
 
-#include "log.h"
-#include "parse.h"
-#include "cadet.h"
-#include "certification.h"
-#include "usage_example.h"
-#include "reactive.h"
-#include "options.h"
-#include "util.h"
-#include "cadet2.h"
-#include "heap.h"
-
-#define SEED 0
-#define VERSION "2.0 beta"
 void print_usage(const char* name) {
     const char* options_string =
                                 "  General options:\n"
@@ -26,8 +24,7 @@ void print_usage(const char* name) {
                                     "\t-c [file]\t\tWrite certificate to specified file. File ending defines Aiger formag aag/aig.\n"
                                     "\t--qbfcert\t\tWrite certificate in qbfcert-readable format. Only compatible with aag file ending.\n"
                                     "\n"
-                                "  Options for CADET v2.0\n"
-                                    "\t-2 \t\t\tRun CADET v2.0 (default)\n"
+                                "  Options for the QBF engine\n"
                                     "\t-p \t\t\tEasy debugging configuration (default off)\n"
                                     "\t--case_splits \t\tCase distinctions (default off) \n"
                                     "\t--miniscoping \t\tEnables miniscoping \n"
@@ -44,10 +41,6 @@ void print_usage(const char* name) {
                                     "\t--aiger_negated\t\tNegate encoding of aiger files. Can be combined with --print.\n"
                                     "\t--aiger_controllable_inputs [string] Set prefix of controllable inputs of AIGER files (default 'pi_')\n"
                                     "\n"
-                                "  Options for CADET v1.0\n"
-                                    "\t-1 \t\t\tRun CADET v1.0\n"
-                                    "\t-r \t\t\tReactive safety synthesis for a AIGER. Very experimental feature.\n"
-                                    "\t--stats\t\t\tPrint statistics\n"
                                     ;
   printf("Usage: %s [options] file\n\n  The file can be in QDIMACS or AIGER format. Files can be compressed with gzip (ending in .gz or .gzip). \n\n%s\n", name, options_string);
 }
@@ -69,10 +62,6 @@ int main(int argc, const char* argv[]) {
         
         if (argv[i][0] == '-') {
             switch (argv[i][1]) {
-                case 'r':
-                    V0("Reactive mode, reading Aiger file.\n");
-                    options->reactive = true;
-                    break;
                     
                 case 'c': // certification flag
                     if (i + 1 >= argc) {
@@ -159,14 +148,6 @@ int main(int argc, const char* argv[]) {
                     }
                     i++;
                     
-                    break;
-                
-                case '1':
-                    options->cadet_version = 1;
-                    break;
-                    
-                case '2':
-                    options->cadet_version = 2;
                     break;
                     
                 case 's':
@@ -270,8 +251,8 @@ int main(int argc, const char* argv[]) {
         if ( (extlen == 2 && strcmp("gz", ext) == 0) || (extlen == 4 && strcmp("gzip", ext) == 0) ) {
             char* cmd = malloc(strlen("gzcat ") + strlen(file_name) + 5);
             sprintf(cmd, "%s '%s'", "gzcat", file_name);
-            free(cmd);
             file = popen(cmd, "r");
+            free(cmd);
             if (!file) {
                 LOG_ERROR("Cannot open gzipped file with zcat via popen. File may not exist.\n");
                 return 1;
@@ -285,18 +266,11 @@ int main(int argc, const char* argv[]) {
         }
     }
     
-    if (options->reactive) {
-        return reactive(file, options);
-    }
+    V0("CADET %s\n", VERSION);
     
-    switch (options->cadet_version) {
-        case 2:
-            V0("CADET (version 2.0)\n");
-            return c2_solve_qdimacs(file,options);
-        case 1:
-            V0("CADET (version 1.0)\n");
-            return cadet_solve_qdimacs(file, options);
-        default:
-            abortif(true,"Illegal qdimacs version: %d\n",options->cadet_version);
-    }
+//    void* solver = create_solver_from_qdimacs(file);
+//    int res = qipasir_solve(solver);
+//    return res == 0 ? 30 : res; // unknown result according to ipasir is not the same as unknown result otherwise.
+
+    return c2_solve_qdimacs(file,options);
 }

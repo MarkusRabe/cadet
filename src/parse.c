@@ -29,7 +29,6 @@
 
 #include "util.h"
 #include "log.h"
-#include "matrix.h"
 #include "qcnf.h"
 #include "aiger.h"
 #include "aiger_utils.h"
@@ -43,6 +42,8 @@ inline static void skip_space(char* buffer, size_t* pos) {
         (*pos)++;
     }
 }
+
+static inline int create_lit(int var, bool negated) { return negated ? -var : var; }
 
 inline static int get_next_lit(char* buffer, size_t* pos, int line_num) {
     if (!(buffer[*pos] == '-' || (buffer[*pos] >= '0' && buffer[*pos] <= '9'))) {
@@ -259,116 +260,6 @@ error:
     return NULL;
 }
 
-Matrix* create_matrix_from_qdimacs(FILE* file) {
-    int len = 1000; // max 1mb per line
-    char *line = malloc((size_t)len);
-    size_t var_num;
-    size_t clause_num;
-    
-    // Read first line
-    if (!fgets(line, len, file)) {
-        goto error;
-    }
-    
-    int line_num = 1;
-    
-    // Skip comment lines
-    while (line[0] == 'c') {
-        line_num++;
-        if (!fgets(line, len, file)) {
-            goto error;
-        }
-    }
-    
-    // Parse number of variables and number of clauses.
-    sscanf(line, "p cnf %zd %zd", &var_num, &clause_num);
-    int log_of_var_num = 0;
-    size_t var_num_copy = var_num;
-    while (var_num_copy >>= 1) log_of_var_num++;
-    len = 10 + (log_of_var_num + 2) * (int)var_num; // assuming that literals don't repeat too often within a clause
-    assert(len >= 0);
-    free(line);
-    line = malloc((size_t)len);
-    
-    V3("File indicates %zu variables and %zu clauses.\n", var_num, clause_num);
-    
-    Matrix* matrix = matrix_init();
-    
-    // Parse the quantifier part
-    while (fgets(line, len, file)) {
-        line_num++;
-        size_t pos = 0;
-        switch (line[0]) {
-            case 'e':
-                matrix_new_scope(matrix, QUANTIFIER_EXISTENTIAL);
-                pos++;
-                break;
-            case 'a':
-                matrix_new_scope(matrix, QUANTIFIER_UNIVERSAL);
-                pos++;
-                break;
-            case 'c':
-                continue;
-                break;
-            default:
-                break;
-        }
-        if (pos == 0) {
-            // reached end of quantification
-            break;
-        }
-        
-        //printf("%s", line);
-        while (line[pos] != '\n' && line[pos] != '\r' && line[pos] != '\0') {
-            skip_space(line, &pos);
-            int next_lit = get_next_lit(line, &pos, line_num);
-            if (next_lit == 0) {
-                break;
-            }
-            matrix_add_variable_to_last_scope(matrix, next_lit);
-            skip_space(line, &pos);
-        }
-    }
-    
-    if (feof(file)) {
-        free(line);
-        return matrix;
-    }
-    
-    // Parse the matrix
-    do {
-        //printf("%s", line);
-        size_t pos = 0;
-        line_num++;
-        if (line[0] == 'c') {
-            continue;
-        }
-        while (line[pos] != '\n' && line[pos] != '\r' && line[pos] != '\0') {
-            skip_space(line, &pos);
-            int next_lit = get_next_lit(line, &pos, line_num);
-            if (pos >= (size_t)len) {
-                printf("Clause was way too long. Cannot parse.\n");
-                goto error;
-            }
-            MClause* c = matrix_add_lit(matrix, next_lit);
-            if (c != NULL) {
-                c->original = true;
-            }
-            skip_space(line, &pos);
-        }
-    } while (fgets(line, len, file));
-    
-    free(line);
-    // reduce dead memory (could be significant)
-    assert(int_vector_count(matrix->new_clause) == 0);
-    int_vector_free(matrix->new_clause);
-    matrix->new_clause = int_vector_init();
-    return matrix;
-    
-error:
-    free(line);
-    return NULL;
-}
 
 bool is_controllable_input(const char* str, Options* options) {
     return strlen(str) >= strlen(options->aiger_controllable_inputs)

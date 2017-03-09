@@ -124,6 +124,7 @@ void skolem_new_clause(Skolem*,Clause*);
 void skolem_assign_constant_value(Skolem*,Lit,union Dependencies);
 void skolem_assume_constant_value(Skolem*,Lit);
 int skolem_get_constant_value(Skolem*, Lit);
+bool skolem_is_initially_deterministic(Skolem* s, unsigned var_id);
 bool skolem_lit_satisfied(Skolem* s, Lit lit);
 bool skolem_clause_satisfied(Skolem* s, Clause* c);
 

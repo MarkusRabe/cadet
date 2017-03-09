@@ -27,6 +27,8 @@ typedef enum {
     C2_PA_CONFLICT,
     C2_SKOLEM_CONFLICT,
     C2_CEGAR_CONFLICT,
+    C2_EMPTY_CLAUSE_CONFLICT,
+    C2_PROPOSITIONAL_CONFLICT,
     C2_EXAMPLES_CONFLICT
 } c2_state;
 
@@ -98,14 +100,18 @@ struct C2 {
 
 C2* c2_init(Options* options);
 C2* c2_init_qcnf(QCNF*, Options* options);
+void c2_free(C2* c2);
 
 // Push and pop are for external use. 
 void c2_push(C2*);
 void c2_pop(C2*);
-void c2_add_lit(C2*,Lit);
+Clause* c2_add_lit(C2* c2, Lit lit);
+void c2_new_variable(C2* c2, unsigned var_id);
+void c2_new_clause(C2* c2, Clause* c);
 
 cadet_res c2_sat(C2*);
 cadet_res c2_solve_qdimacs(FILE*,Options*);
+cadet_res c2_solve(C2* c2);
 
 // PRINTING
 void c2_print_statistics(C2*);

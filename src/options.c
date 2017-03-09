@@ -15,18 +15,16 @@ Options* default_options() {
     o->easy_debugging_mode_c2 = false;
 
     // Computational enginges
-    o->cadet_version = 2; // 1 or 2
     o->cadet2cegar = false;
     o->delay_conflict_checks = false;
     o->use_qbf_engine_also_for_propositional_problems = false;
     o->reencode3QBF = false;
     o->examples_max_num = 0; // 0 corresponds to not doing examples at all
-    o->initial_examples = 5;
+    o->initial_examples = 0;
     
     // Aiger interpretations
     o->aiger_controllable_inputs = "pi_"; // "controllable_";
     o->aiger_negated_encoding = false;
-    o->reactive = false;
     
     // Certificates
     o->certify_internally_UNSAT = true;

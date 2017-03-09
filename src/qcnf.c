@@ -235,6 +235,8 @@ Var* qcnf_new_var(QCNF* qcnf, bool is_universal, unsigned scope_id, unsigned var
     }
     abortif(qcnf_is_DQBF(qcnf) && scope_id >= vector_count(qcnf->scopes), "Scope IDs must be initialized before usage for DQBF.");
     
+    V4("Introducing new variable %u to qlvl %u, universal: %d\n",var_id, scope_id, is_universal);
+    
     while (scope_id >= vector_count(qcnf->scopes)) {
         vector_add(qcnf->scopes, NULL);
     }
@@ -451,6 +453,9 @@ void qcnf_add_lit(QCNF* qcnf, int lit) {
 Clause* qcnf_close_clause(QCNF* qcnf) {
     Clause* c = qcnf_new_clause(qcnf, qcnf->new_clause);
     int_vector_reset(qcnf->new_clause);
+    if (c && qcnf->empty_clause == NULL && c->size == 0) {
+        qcnf->empty_clause = c;
+    }
     return c;
 }
 

@@ -25,7 +25,6 @@ typedef struct {
     bool easy_debugging_mode_c2;
     
     // Computational enginges
-    unsigned cadet_version;
     bool cadet2cegar;
     bool delay_conflict_checks;
     bool use_qbf_engine_also_for_propositional_problems;
@@ -36,7 +35,6 @@ typedef struct {
     // Aiger interpretations
     const char* aiger_controllable_inputs;
     bool aiger_negated_encoding; // creates 3QBF out of 2QBF, for example
-    bool reactive; // reactive controller synthesis; very preliminary implementation based on CADET v1.0
     
     // Certificates
     bool certify_internally_UNSAT;

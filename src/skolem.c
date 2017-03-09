@@ -17,11 +17,6 @@
 #include <stdint.h>
 #include <sys/time.h>
 
-bool is_initially_deterministic(Skolem* s, unsigned var_id) {
-    Var* v = var_vector_get(s->qcnf->vars, var_id);
-    return v->scope_id < (v->is_universal ? s->u_initially_deterministic : s->e_initially_deterministic);
-}
-
 Skolem* skolem_init(QCNF* qcnf, Options* o,
                     unsigned u_initially_deterministic,
                     unsigned e_initially_deterministic) {
@@ -87,40 +82,6 @@ Skolem* skolem_init(QCNF* qcnf, Options* o,
     s->magic.conflict_potential_threshold = 0.8f; // (0..1)
     s->magic.conflict_potential_offset = 0.00f;
     
-    // initialize the initially deterministic variables; these are usually the universals
-    for (unsigned i = 0; i < var_vector_count(qcnf->vars); i++) {
-        Var* v = var_vector_get(qcnf->vars, i);
-        if (v->var_id != 0 && is_initially_deterministic(s,i)) {
-            assert(i == v->var_id);
-            
-            skolem_update_deterministic(s, i, 1);
-            
-            int innerlit = satsolver_inc_max_var(s->skolem);
-            skolem_update_pos_lit(s, i, innerlit);
-            skolem_update_neg_lit(s, i, - innerlit);
-            
-            union Dependencies dep;
-            if (!qcnf_is_DQBF(qcnf)) {
-                dep.dependence_lvl = v->scope_id;
-            } else {
-                dep.dependencies = int_vector_init();
-                int_vector_add(dep.dependencies, (int) v->var_id);
-            }
-            skolem_update_dependencies(s, i, dep);
-            
-            if (v->is_universal) {
-                skolem_update_universal(s,i, 1);
-            }
-        }
-    }
-    // search for unit clauses and clauses with unique consequence
-    for (unsigned i = 0; i < vector_count(qcnf->clauses); i++) {
-        Clause* c = vector_get(qcnf->clauses, i);
-        if (c) {
-            skolem_new_clause(s, c);
-        }
-    }
-    
     return s;
 }
 
@@ -157,6 +118,11 @@ void skolem_new_clause(Skolem* s, Clause* c) {
     if (c->size == 1) {
         worklist_push(s->clauses_to_check, c);
     }
+}
+
+bool skolem_is_initially_deterministic(Skolem* s, unsigned var_id) {
+    Var* v = var_vector_get(s->qcnf->vars, var_id);
+    return v->scope_id < (v->is_universal ? s->u_initially_deterministic : s->e_initially_deterministic);
 }
 
 // Approximation, not accurate. Functions may be constant true but we don't necessarily detect that.
@@ -1369,7 +1335,7 @@ void skolem_propagate_constants_over_clause(Skolem* s, Clause* c) {
         
     } else { // assign value
         if ((qcnf_is_universal(s->qcnf, lit_to_var(unassigned_lit)) ||
-                is_initially_deterministic(s, lit_to_var(unassigned_lit)) ) &&
+                skolem_is_initially_deterministic(s, lit_to_var(unassigned_lit)) ) &&
             s->mode != SKOLEM_MODE_CONSTANT_PROPAGATIONS_TO_DETERMINISTICS) {
             
             goto cleanup;

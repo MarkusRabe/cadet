@@ -51,6 +51,7 @@
 		28F4A9531E29C0D30090BB67 /* satsolver_picosat_assumptions.c in Sources */ = {isa = PBXBuildFile; fileRef = 28F4A9511E29C0D30090BB67 /* satsolver_picosat_assumptions.c */; };
 		28FA8D301E10ACBC00A43B7B /* c2_validate.c in Sources */ = {isa = PBXBuildFile; fileRef = 28FA8D2E1E10ACBC00A43B7B /* c2_validate.c */; };
 		28FA8D361E14F4E900A43B7B /* c2_cegar.c in Sources */ = {isa = PBXBuildFile; fileRef = 28FA8D341E14F4E900A43B7B /* c2_cegar.c */; };
+		28FEE64B1EDA304000A9D8CA /* skolem_conflict_analysis.c in Sources */ = {isa = PBXBuildFile; fileRef = 28FEE64A1EDA304000A9D8CA /* skolem_conflict_analysis.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -151,6 +152,7 @@
 		28FA8D2F1E10ACBC00A43B7B /* c2_validate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = c2_validate.h; path = src/c2_validate.h; sourceTree = "<group>"; };
 		28FA8D341E14F4E900A43B7B /* c2_cegar.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = c2_cegar.c; path = src/c2_cegar.c; sourceTree = "<group>"; };
 		28FA8D351E14F4E900A43B7B /* c2_cegar.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = c2_cegar.h; path = src/c2_cegar.h; sourceTree = "<group>"; };
+		28FEE64A1EDA304000A9D8CA /* skolem_conflict_analysis.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = skolem_conflict_analysis.c; path = src/skolem_conflict_analysis.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -264,6 +266,7 @@
 				287C3B151E3C01FE00F7096A /* skolem_var.h */,
 				28DA30F21DFFDD2600EABCA6 /* skolem_dependencies.c */,
 				28DA30F31DFFDD2600EABCA6 /* skolem_dependencies.h */,
+				28FEE64A1EDA304000A9D8CA /* skolem_conflict_analysis.c */,
 			);
 			name = skolem_ext;
 			sourceTree = "<group>";
@@ -412,6 +415,7 @@
 				28675A561DDAA9D000951212 /* partial_assignment.c in Sources */,
 				28675A581DDAA9D000951212 /* pqueue.c in Sources */,
 				28675A4E1DDAA9D000951212 /* heap.c in Sources */,
+				28FEE64B1EDA304000A9D8CA /* skolem_conflict_analysis.c in Sources */,
 				28675A551DDAA9D000951212 /* parse.c in Sources */,
 				28675A4A1DDAA9D000951212 /* certify.c in Sources */,
 				28EBA5541DE195DD003D21EB /* skolem_var_vector.c in Sources */,

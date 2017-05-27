@@ -95,8 +95,11 @@ struct Skolem {
     
     union Dependencies empty_dependencies; // needed because we would otherwise create plenty of empty dependency objects which we would fail to disallocate; used when non-existent skolem_vars should return a dependency set
     
-    // Data structures for skolem function propagation
+    /* Data structures for skolem function propagation.
+     * For propagation, variables are first added to determinicity_queue, if they are not deterministic, they are added to pure_var_queue.
+     */
     pqueue* determinicity_queue; // contains Var*
+    pqueue* pure_var_queue;
     int_vector* unique_consequence; // vector of lit indexed by clause_id
     
     // Data structures for explicit propagation

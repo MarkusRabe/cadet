@@ -1,10 +1,14 @@
 #!/usr/bin/env python
 
 import sys, os, re, argparse, random, signal, multiprocessing, Queue, threading
+import numpy as np
+import matplotlib.pyplot as plt
+
 from reporting import log, log_progress, cyan, red, green, yellow
 from command import Command
 
 testcase_result = {}
+profiling_db = dict()
 testcases = []
 benchmark_results = {} # testcase => [(seconds, memory)]
 failed = False
@@ -66,7 +70,8 @@ RIENER = ['riener']
 BMC2006 = ['bmc2006']
 STRATEGIC_COMPANIES = ['strategiccompanies']
 QREVENGE_ADDER_SELF = ['qrevenge-adder-self-2QBF']
-ALL_INSTANCES = HANDMADE_INSTANCES + EASY_INSTANCES + QBFLIB2010_INSTANCES + QBFEVAL2016_2QBF_INSTANCES + QBFEVAL2016_INSTANCES + CIRCUIT_UNDERSTANDING_3QBF + HARDWAREFIXPOINT + PEC_2QBF + COMPLEXITY + SYNTHESIS + RANKING + RANDOM2QBF + TERMINATOR + HORN + RENHORN + RF_1133qd + IRQ + WMI + SORTING + HOLCOMB + SYGUS_MINITEST + SYGUS_PERFORMANCE + SYGUS_GALLERY + SYGUS_MINITEST3QBF + SYGUS_PERFORMANCE3QBF + SYGUS_GALLERY3QBF + TICTACTOE3x3 + TICTACTOE4x4 + TICTACTOE5x5 + TICTACTOE6x6 + EVAL2012r2 + RIENER + BMC2006 + STRATEGIC_COMPANIES + QREVENGE_ADDER_SELF
+FUNCTION_SYNTHESIS = ['function-synthesis']
+ALL_INSTANCES = HANDMADE_INSTANCES + EASY_INSTANCES + QBFLIB2010_INSTANCES + QBFEVAL2016_2QBF_INSTANCES + QBFEVAL2016_INSTANCES + CIRCUIT_UNDERSTANDING_3QBF + HARDWAREFIXPOINT + PEC_2QBF + COMPLEXITY + SYNTHESIS + RANKING + RANDOM2QBF + TERMINATOR + HORN + RENHORN + RF_1133qd + IRQ + WMI + SORTING + HOLCOMB + SYGUS_MINITEST + SYGUS_PERFORMANCE + SYGUS_GALLERY + SYGUS_MINITEST3QBF + SYGUS_PERFORMANCE3QBF + SYGUS_GALLERY3QBF + TICTACTOE3x3 + TICTACTOE4x4 + TICTACTOE5x5 + TICTACTOE6x6 + EVAL2012r2 + RIENER + BMC2006 + STRATEGIC_COMPANIES + QREVENGE_ADDER_SELF + FUNCTION_SYNTHESIS
 CUSTOM_INSTANCES = ['custom']
 custom_instances = []
 
@@ -79,8 +84,8 @@ TIME_UTIL = 'exec ' + TIME_UTIL
 def log_fail(name, log):
     for line in log.split('\n'):
         if line:
-            print '> ' + line
-    print ''
+            print ('> ' + line)
+    print ('')
 
 def log_return_value(name, return_value):
     if return_value == SATISFIABLE:
@@ -129,7 +134,7 @@ def print_result(name,result,return_value,seconds,memory):
             
 def print_stats():
     global failed
-    print '\nStatistics:'
+    print ('\nStatistics:')
     i = 0
     for name in testcases:
         if name not in testcase_result:
@@ -141,7 +146,7 @@ def print_stats():
         if name in benchmark_results:
             seconds, memory = compute_average(benchmark_results[name])
         print_result(name,result,return_value,seconds,memory)
-    print 'Printed {} results in total'.format(i)
+    print ('Printed {} results in total'.format(i))
     
     log_progress(green( 'SUCCESS: ') + "{}\n".format(SUCCESSES))
     log_progress(red(   'FAILED:  ') + "{}\n".format(FAILEDS))
@@ -250,7 +255,7 @@ def run_testcases(threads, runs=1):
                 global UNKNOWNS
                 UNKNOWNS += 1
             else:
-                print 'Unexpected return code. Statistics might be affected.'
+                print ('Unexpected return code. Statistics might be affected.')
         except KeyboardInterrupt:
             interrupted = True
             for worker in workers:
@@ -262,12 +267,89 @@ def run_testcases(threads, runs=1):
         worker.terminate()
         worker.join()
 
+def profile_entry(testcase,output,seconds,memory,return_value):
+    
+    quantifiers = None
+    existential_variables = None
+    universal_variables = None
+    initial_clauses = None
+    decisions = None
+    conflicts = None
+    global_conflict_checks = None
+    local_determinicity_checks = None
+    propagations = None
+    pure_variables = None
+    propagations_of_constants = None
+    restarts = None
+    
+    parse_num = re.compile(r"[^\d]*(\d+)")
+    
+    for line in output.split('\n'):
+        if 'Scopes:' in line:
+            quantifiers = int(parse_num.match(line).groups(1)[0])
+        elif 'Existential variables:' in line:
+            existental_variables = int(parse_num.match(line).groups(1)[0])
+        elif 'Universal variables:' in line:
+            universal_variables = int(parse_num.match(line).groups(1)[0])
+        elif 'Clauses:' in line:
+            initial_clauses = int(parse_num.match(line).groups(1)[0])
+        elif 'Conflicts:' in line:
+            conflicts = int(parse_num.match(line).groups(1)[0])
+        elif 'Decisions:' in line:
+            decisions = int(parse_num.match(line).groups(1)[0])
+        elif 'Global conflict checks:' in line:
+            global_conflict_checks = int(parse_num.match(line).groups(1)[0])
+        elif 'Local conflict checks:' in line:
+            local_conflict_checks = int(parse_num.match(line).groups(1)[0])
+        elif 'Propagations:' in line:
+            propagations = int(parse_num.match(line).groups(1)[0])
+        elif 'Pure variables:' in line:
+            pure_variables = int(parse_num.match(line).groups(1)[0])
+        elif 'Propagations of constants:' in line:
+             propagations_of_constants = int(parse_num.match(line).groups(1)[0])
+        elif 'Restarts:' in line:
+            restarts = int(parse_num.match(line).groups(1)[0])
+    
+    # Composite values
+    # successful_local_determinicity_checks = propagations - pure_variables - propagations_of_constants
+    # variables = existential_variables + universal_variables
+    # learnt_clauses_timings =
+    # average_learnt_clause_size =
+    # initial_average_clause_size =
+    
+    p = {'name':testcase,
+        'seconds':seconds,
+        'memory':memory,
+        'return_value':return_value,
+        'quantifiers':quantifiers,
+        'existential_variables':existential_variables,
+        'universal_variables':universal_variables,
+        'initial_clauses':initial_clauses,
+        'decisions':decisions,
+        'conflicts':conflicts,
+        'global_conflict_checks':global_conflict_checks,
+        'local_determinicity_checks':local_determinicity_checks,
+        'propagations':propagations,
+        'pure_variables':pure_variables,
+        'propagations_of_constants':propagations_of_constants,
+        'restarts':restarts
+        }
+    
+    # p.successful_local_determinicity_checks = successful_local_determinicity_checks
+    # p.variables = variables
+    
+    profiling_db.update({testcase:p})
+
+    for attribute, value in p.items():
+        print('  {} : {}'.format(attribute, value))
+
 def run_testcase(testcase):
     testcase, expected = testcase
-    if ARGS.certify: 
-        parameters = ['-c', os.path.join(BASE_PATH, testcase + 'certificate.aag')]
-    else:
-        parameters = []
+    parameters = []
+    if ARGS.certify:
+        # random_string = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(N))
+        cert_file = testcase+'.cert1.aig';
+        parameters += ['-c', cert_file]
     
     file_path = os.path.join(BASE_PATH, testcase)
     
@@ -291,7 +373,7 @@ def run_testcase(testcase):
     else: 
         file_reader = 'cat'
     
-    command_string = '{} {} | {} {} {} {}'.format(
+    command_string = 'bash -c "{} {} | {} {} {} {}"'.format(   # using bash -c here because otherwise the command is executed in sh which may cause strange behavior
                         file_reader, 
                         file_path, 
                         preprocessing_string, 
@@ -299,11 +381,12 @@ def run_testcase(testcase):
                         ARGS.tool, 
                         ' '.join(parameters))
     
-    if ARGS.verbose:
-        print('Comand: ' + command_string)
-        sys.stdout.flush()
-    
     return_value, output, error = call(command_string, ARGS.timeout)
+    
+    if ARGS.verbose:
+        print('COMMAND: ' + command_string)
+        print('OUTPUT: ' + output)
+        sys.stdout.flush()
     
     code = None
     seconds = None
@@ -329,6 +412,38 @@ def run_testcase(testcase):
         print('\nOutput for command ' + command_string + '\n' + output)
         sys.stdout.flush()
     
+    if ARGS.profile:
+        profile_entry(testcase,output,seconds,memory,return_value)
+    
+    if ARGS.certify and return_value == SATISFIABLE:
+        print("CERTIFYING NOW")
+        cert_return_value, cert_output, cert_error = call('abc -c "read ' + cert_file + 'tmp.aig; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2;  print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; write ' + cert_file + ';"',ARGS.timeout);
+
+        cert_file2 = testcase+'.cert2.aig';
+
+        cert_cmd = './../tools/caqe/certcheck ' + testcase + ' ' + cert_file + ' | aigtoaig - ' + cert_file2
+        cert_return_value, cert_output, cert_error = call(cert_cmd, ARGS.timeout)
+        
+        # print(cert_cmd)
+        # print(cert_output)
+        # print(cert_error)
+        
+        cert_return_value, cert_output, cert_error = call('abc -c "&r ' + cert_file2 + '; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &put; write ' + cert_file2 + '"', ARGS.timeout);
+        
+        cert_return_value, cert_output, cert_error = call('cat '+cert_file2+' | aigtocnf | lingeling', 5 *  ARGS.timeout)
+        
+        if 's UNSATISFIABLE' not in cert_output:
+            print('CERTIFICATE FAILED!')
+            code = TEST_FAILED
+            if ARGS.verbose:
+                print('Cert Output:\n' + cert_output)
+                print('Cert Error:\n' + cert_error)
+        else:
+            # if ARGS.verbose:
+            print('Certified!')
+            
+        call('rm ' + cert_file + ' ' + cert_file2, ARGS.timeout)
+        
     return testcase, code, seconds, memory, return_value
 
 def getTestCases():
@@ -432,7 +547,7 @@ if __name__ == "__main__":
                         help='Timeout in seconds (default: 10)')
     parser.add_argument('--csv', dest='csv', action='store', nargs='?', const='tester.csv', metavar='file_name', type=argparse.FileType('w'),
                         help='Write CSV to file (default: tester.csv)')
-    parser.add_argument('--threads', dest='threads', action='store', nargs='?', type=int, metavar='num', default=multiprocessing.cpu_count(),
+    parser.add_argument('--threads', dest='threads', action='store', nargs='?', type=int, metavar='num', default=1,
                         help='Number of threads to use (default: {})'.format(multiprocessing.cpu_count()))
     parser.add_argument('instances', nargs='*',
                         help='Instances to run the tester on')
@@ -446,7 +561,8 @@ if __name__ == "__main__":
                         help='Also test certificates. CADET only.')
     parser.add_argument('-d', '--directory', dest='directory', action='store', default=None,
                         help='Specify folder of instances to execute.')
-                        
+    parser.add_argument('-p', '--profile', dest='profile', action='store_true', default=None,
+                        help='Run in profiling mode. Evaluate statistics.')
                         
     for instance in ALL_INSTANCES:
         parser.add_argument('--{}'.format(instance), dest=instance, action='store_true', help='Run the {} instances'.format(instance))
@@ -461,7 +577,7 @@ if __name__ == "__main__":
         ARGS.csv = False
         ARGS.threads = 1
         ARGS.instances = None
-        ARGS.certify = False
+        # ARGS.certify = False
         categories = ['test']
     
     if ARGS.instances:
@@ -488,6 +604,12 @@ if __name__ == "__main__":
         run_testcases(ARGS.threads, ARGS.benchmark)
     else:
         run_testcases(ARGS.threads)
+    
+    # if ARGS.profile:
+#         for key, data in profiling_db.items():
+#             print(key)
+#             for attribute, value in data.items():
+#                 print('{} : {}'.format(attribute, value))
     
     print_stats()
     

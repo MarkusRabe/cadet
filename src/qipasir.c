@@ -41,10 +41,10 @@ void qipasir_add (void * solver, int lit_or_zero) {
     c2_add_lit(solver, lit_or_zero);
 }
 
-void qipasir_assume (void * solver, int lit) {
-    V0("Not implemented");
-    abort();
-}
+//void qipasir_assume (void * solver, int lit) {
+//    V0("Not implemented");
+//    abort();
+//}
 
 int qipasir_solve (void * solver) {
     cadet_res res = c2_sat(solver);
@@ -76,12 +76,12 @@ int qipasir_val (void * solver, int lit) {
     return skolem_get_constant_value(c2->skolem, lit) * lit;
 }
 
-int qipasir_failed (void * solver, int lit) {
-    V0("Not implemented");
-    abort();
-}
+//int qipasir_failed (void * solver, int lit) {
+//    V0("Not implemented");
+//    abort();
+//}
 
-void qipasir_set_terminate (void * solver, void * state, int (*terminate)(void * state)) {
-    V0("Not implemented");
-    abort();
-}
+//void qipasir_set_terminate (void * solver, void * state, int (*terminate)(void * state)) {
+//    V0("Not implemented");
+//    abort();
+//}

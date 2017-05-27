@@ -37,7 +37,7 @@
 #define KORANGE_BOLD  "\x1B[01;38;5;202m"
 
 int debug_verbosity;
-bool log_comment_prefix;
+bool log_qdimacs_compliant;
 bool log_colors;
 bool log_silent;
 //asdfbool print_full_variable_names; // whenever available
@@ -46,9 +46,9 @@ bool log_silent;
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
 
-#define LOG_PRINTF(message, ...) if(log_silent){}else{if(log_comment_prefix){ fprintf(stdout, "c ");}fprintf(stdout, message, ## __VA_ARGS__);}
+#define LOG_PRINTF(message, ...) if(log_silent){}else{if(log_qdimacs_compliant){ fprintf(stdout, "c ");}fprintf(stdout, message, ## __VA_ARGS__);}
 
-#define V0(message, ...) LOG_PRINTF(message, ## __VA_ARGS__);
+#define V0(message, ...) if(true){LOG_PRINTF(message, ## __VA_ARGS__);}
 #define V1(message, ...) if(debug_verbosity >= VERBOSITY_LOW){ LOG_PRINTF(message, ## __VA_ARGS__); }
 #define V2(message, ...) if(debug_verbosity >= VERBOSITY_MEDIUM){ LOG_PRINTF("  "message, ## __VA_ARGS__); }
 #define V3(message, ...) if(debug_verbosity >= VERBOSITY_HIGH){ LOG_PRINTF("    "message, ## __VA_ARGS__); }

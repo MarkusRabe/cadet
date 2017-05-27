@@ -133,7 +133,7 @@ aiger* qbf2aiger(QCNF* qcnf, Options* o) {
     }
     
     // Create aiger
-    aiger* a = aiger_init();
+//    aiger* a = aiger_init();
     
     // encode group 1 as constraints
     

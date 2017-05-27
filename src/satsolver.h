@@ -9,25 +9,18 @@
 #define SOLVER_PICOSAT_ASSUMPTIONS 2
 #define SOLVER_MINISAT 3
 #define SOLVER_CRYPTOMINISAT 4
+#define SOLVER_LINGELING_ASSUMPTIONS 5
 
-//define USE_MINISAT
-//define USE_CRYPTOMINISAT
+// Use on of the following 4 sat solvers
 
-#ifdef USE_MINISAT
-    #define USE_SOLVER SOLVER_MINISAT
-#endif
+//#define USE_SOLVER SOLVER_MINISAT
+//#define USE_SOLVER SOLVER_CRYPTOMINISAT
+#define USE_SOLVER SOLVER_PICOSAT_ASSUMPTIONS
+//#define USE_SOLVER SOLVER_PICOSAT_PUSH_POP
+//#define USE_SOLVER SOLVER_LINGELING_ASSUMPTIONS
 
-#ifdef USE_CRYPTOMINISAT
-    #define USE_SOLVER SOLVER_CRYPTOMINISAT
-#endif
-
-#ifndef USE_SOLVER
-    #define USE_SOLVER SOLVER_PICOSAT_PUSH_POP
-#endif
-
-// Sanity check, make sure that USE_SOLVER is correct (in case it is set external)
-#if (USE_SOLVER != SOLVER_PICOSAT_PUSH_POP) && (USE_SOLVER != SOLVER_PICOSAT_ASSUMPTIONS) && (USE_SOLVER != SOLVER_MINISAT) && (USE_SOLVER != SOLVER_CRYPTOMINISAT)
-    #error "Wrong definition of USE_SOLVER constant!"
+#ifndef USE_SOLVER // sanity check
+    #error "No SAT solver selected. See file satsolver.h"
 #endif
 
 #include <stdbool.h>
@@ -81,5 +74,8 @@ void satsolver_print_statistics(SATSolver*);
 
 // for debugging picosat, only available if preprocessing flag SATSOLVER_TRACE is set
 void satsolver_trace_commands(SATSolver*);
+
+void satsolver_measure_all_calls(SATSolver*);
+double satsolver_seconds(SATSolver*);
 
 #endif

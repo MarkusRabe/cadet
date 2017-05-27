@@ -27,12 +27,27 @@ skolem_var skolem_get_info(Skolem* s, unsigned var_id) {
 
 unsigned skolem_get_decision_lvl_for_conflict_analysis(void* domain, unsigned var_id) {
     Skolem* s = (Skolem*) domain;
-    return skolem_get_decision_lvl(s, var_id);
+    if (skolem_get_constant_value(s, (Lit) var_id) != 0) {
+        return skolem_get_dlvl_for_constant(s, var_id);
+    } else {
+        return skolem_get_decision_lvl(s, var_id);
+    }
 }
 unsigned skolem_get_decision_lvl(Skolem* s, unsigned var_id) {
     skolem_enlarge_skolem_var_vector(s, var_id);
     skolem_var* sv = skolem_var_vector_get(s->infos, var_id);
     return sv->decision_lvl;
+}
+
+unsigned skolem_get_dlvl_for_constant(Skolem* s, unsigned var_id) {
+    skolem_enlarge_skolem_var_vector(s, var_id);
+    skolem_var* sv = skolem_var_vector_get(s->infos, var_id);
+    return sv->dlvl_for_constant;
+}
+unsigned skolem_get_reason_for_constant(Skolem* s, unsigned var_id) {
+    skolem_enlarge_skolem_var_vector(s, var_id);
+    skolem_var* sv = skolem_var_vector_get(s->infos, var_id);
+    return sv->reason_for_constant;
 }
 
 void skolem_print_skolem_var(Skolem* s, skolem_var* si, unsigned indent) {
@@ -73,15 +88,44 @@ void skolem_enlarge_skolem_var_vector(Skolem* s, unsigned var_id) {
     sv.pure_neg = 0;
     sv.deterministic = 0;
     sv.dep = s->empty_dependencies;
-    sv.decision_lvl = 0;
     
     // permanent portion
+    sv.decision_lvl = 0;
     sv.conflict_potential = s->magic.initial_conflict_potential;
+    sv.reason_for_constant = INT_MAX;
+    sv.dlvl_for_constant = 0;
     
-    // extend the vector
+    // add this sv to the var_vector
     while (skolem_var_vector_count(s->infos) <= var_id) {
         skolem_var_vector_add(s->infos, sv);
     }
+}
+
+void skolem_update_reason_for_constant(Skolem* s, unsigned var_id, unsigned clause_id, unsigned dlvl) {
+    skolem_enlarge_skolem_var_vector(s, var_id);
+    skolem_var* sv = skolem_var_vector_get(s->infos, var_id);
+    
+    // we currently want to set it at most once, the next three checks ensure that
+    assert(sv->reason_for_constant == INT_MAX);
+    assert(sv->dlvl_for_constant == 0);
+    assert(clause_id != UINT_MAX || dlvl != 0);
+    
+    V4("Setting reason %d for constant for var %u\n", clause_id, var_id);
+    union skolem_undo_union suu;
+    suu.sus.var_id = var_id;
+    suu.sus.val = (int) sv->reason_for_constant;
+    stack_push_op(s->stack, SKOLEM_OP_UPDATE_INFO_REASON_FOR_CONSTANT, suu.ptr);
+    sv->reason_for_constant = clause_id;
+    sv->dlvl_for_constant = dlvl;
+}
+
+void skolem_undo_reason_for_constant(Skolem* s, void* data) {
+    union skolem_undo_union suu;
+    suu.ptr = data;
+    skolem_var* sv = skolem_var_vector_get(s->infos, suu.sus.var_id);
+    assert(suu.sus.val == INT_MAX); // currently reasons for constant are just set once.
+    sv->reason_for_constant = (unsigned) suu.sus.val;
+    sv->dlvl_for_constant = 0;
 }
 
 void skolem_update_decision_lvl(Skolem* s, unsigned var_id, unsigned dlvl) {

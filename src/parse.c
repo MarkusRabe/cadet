@@ -378,8 +378,9 @@ QCNF* create_qcnf_from_aiger(aiger* aig, Options* o) {
     options_set_variable_name(o, bads_qcnf_var, "BADS");
     
     qcnf_new_var(qcnf, aiger_quantification_polarity(input_group, false), aiger_quantification_levels(input_group), bads_qcnf_var);
-    if (o->print_name_mapping)
+    if (o->print_name_mapping) {
         V0("bads summary variable %d\n", bads_qcnf_var);
+    }
     
     for (size_t i = 0; i < aig->num_bad; i++) {
         aiger_symbol b = aig->bad[i];
@@ -387,8 +388,9 @@ QCNF* create_qcnf_from_aiger(aiger* aig, Options* o) {
         qcnf_add_lit(qcnf, (Lit) bads_qcnf_var);
         qcnf_close_clause(qcnf);
         
-        if (o->print_name_mapping)
+        if (o->print_name_mapping) {
             V0("bad %d\n", aiger_lit2lit(b.lit));
+        }
     }
     for (size_t i = 0; i < aig->num_bad; i++) {
         aiger_symbol b = aig->bad[i];
@@ -403,8 +405,9 @@ QCNF* create_qcnf_from_aiger(aiger* aig, Options* o) {
     options_set_variable_name(o, constraints_qcnf_var, "CONSTRAINTS");
     
     qcnf_new_var(qcnf, aiger_quantification_polarity(o->aiger_negated_encoding ? 0 : 1, false), aiger_quantification_levels(o->aiger_negated_encoding ? 0 : 1), constraints_qcnf_var);
-    if (o->print_name_mapping)
+    if (o->print_name_mapping) {
         V0("constraints summary variable %d\n", constraints_qcnf_var);
+    }
     
     for (size_t i = 0; i < aig->num_constraints; i++) {
         aiger_symbol c = aig->constraints[i];

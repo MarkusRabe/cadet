@@ -12,7 +12,8 @@
 #include "cadet2.h"
 
 void c2_backtrack_case_split(C2* c2);
-void c2_case_split(C2* c2);
+void c2_case_split_backtracking_heuristics(C2* c2);
+bool c2_case_split(C2* c2); // returns if any kind of progress happened
 float c2_notoriousity(C2* c2, Lit lit);
 float c2_notoriousity_threshold(C2* c2);
 

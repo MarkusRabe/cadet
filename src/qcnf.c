@@ -40,6 +40,7 @@ bool qcnf_var_has_unique_maximal_dependency(QCNF* qcnf, unsigned var_id) {
 
 // Clauses
 bool qcnf_contains_literal(Clause* clause, Lit lit) {
+    assert(lit != 0);
     for (int i = 0; i < clause->size; i++) {
         if (clause->occs[i] == lit) {
             return true;
@@ -166,32 +167,36 @@ int qcnf_compare_literals_by_var_id(const void * a, const void * b) {
 
 QCNF* static_qcnf_variable_for_sorting = NULL; // TODO: this prevents C2 from being concurrent
 
-int qcnf_compare_scope_ids_via_static_qcnf_variable(unsigned scope_id1, unsigned scope_id2) {
-    if (!qcnf_is_DQBF(static_qcnf_variable_for_sorting)) {
+int qcnf_compare_scope_ids(QCNF* qcnf, unsigned scope_id1, unsigned scope_id2) {
+    if (!qcnf_is_DQBF(qcnf)) {
         return (int) scope_id1 - (int) scope_id2;
     }
-    Scope* d1 = vector_get(static_qcnf_variable_for_sorting->scopes, scope_id1);
-    Scope* d2 = vector_get(static_qcnf_variable_for_sorting->scopes, scope_id2);
+    Scope* d1 = vector_get(qcnf->scopes, scope_id1);
+    Scope* d2 = vector_get(qcnf->scopes, scope_id2);
     return (int) int_vector_count(d1->vars) - (int) int_vector_count(d2->vars);
 }
 
-// universals < existentials, then scope sizes, then var_id
-int qcnf_compare_occurrence_by_qtype_then_scope_size_then_var_id(const void * a, const void * b) {
+// universals < existentials, then scope size, then var_id
+int qcnf_compare_occurrence_by_qtype_then_scope_size_then_var_id(QCNF* qcnf, const void * a, const void * b) {
     Lit l1 = *(Lit*) a;
     Lit l2 = *(Lit*) b;
-    Var* v1 = var_vector_get(static_qcnf_variable_for_sorting->vars, lit_to_var(l1));
-    Var* v2 = var_vector_get(static_qcnf_variable_for_sorting->vars, lit_to_var(l2));
+    Var* v1 = var_vector_get(qcnf->vars, lit_to_var(l1));
+    Var* v2 = var_vector_get(qcnf->vars, lit_to_var(l2));
     int level_diff =  (int) v2->is_universal - (int) v1->is_universal;
     if (level_diff != 0) {
         return level_diff;
     }
     if (! v1->is_universal && ! v2->is_universal) {
-        int scope_cmp = qcnf_compare_scope_ids_via_static_qcnf_variable(v1->scope_id,v2->scope_id);
+        int scope_cmp = qcnf_compare_scope_ids(qcnf, v1->scope_id,v2->scope_id);
         if (scope_cmp != 0) {
             return scope_cmp;
         }
     }
     return (int)v1->var_id - (int)v2->var_id;
+}
+// this version does not need qcnf as an argument but uses the (hacky) static variable "static_qcnf_variable_for_sorting"
+int qcnf_compare_occurrence_by_qtype_then_scope_size_then_var_id__static_qcnf(const void * a, const void * b) {
+    return qcnf_compare_occurrence_by_qtype_then_scope_size_then_var_id(static_qcnf_variable_for_sorting, a, b);
 }
 
 QCNF* qcnf_init() {
@@ -246,7 +251,7 @@ Var* qcnf_new_var(QCNF* qcnf, bool is_universal, unsigned scope_id, unsigned var
         case QCNF_PROPOSITIONAL:
             if (var_vector_count(qcnf->vars) == 1 && scope_id == 1) { // var_vector_count(qcnf->var) == 1 because the first element is always assigned NULL, see qcnf_init
                 qcnf->problem_type = QCNF_2QBF;
-            } else {
+            } else if (scope_id != 0) {
                 qcnf->problem_type = QCNF_QBF;
             }
             break;
@@ -395,7 +400,7 @@ Clause* qcnf_new_clause(QCNF* qcnf, int_vector* literals) {
     abortif(static_qcnf_variable_for_sorting != NULL, "Memory curruption or concurrent usage of static variable static_qcnf_variable_for_sorting.");
     
     static_qcnf_variable_for_sorting = qcnf; // sorry for this hack; need to reference qcnf from within the sorting procedure
-    qsort(c->occs, c->size, sizeof(int), qcnf_compare_occurrence_by_qtype_then_scope_size_then_var_id);
+    qsort(c->occs, c->size, sizeof(int), qcnf_compare_occurrence_by_qtype_then_scope_size_then_var_id__static_qcnf);
     static_qcnf_variable_for_sorting = NULL;
     
     qcnf_universal_reduction(qcnf, c);
@@ -735,9 +740,79 @@ void qcnf_check_invariants_variable(QCNF* qcnf, Var* v) {
 }
 
 void qcnf_check_invariants_clause(QCNF* qcnf, Clause* c) {
-    NOT_IMPLEMENTED();
+    for (unsigned i = 1; i < c->size; i++) {
+        Lit prev = c->occs[i-1];
+        Lit cur = c->occs[i];
+        assert(qcnf_compare_occurrence_by_qtype_then_scope_size_then_var_id(qcnf, &prev, &cur) < 0);
+    }
 }
 
 void qcnf_check_invariants(QCNF* qcnf) {
+    for (unsigned i = 0; i < vector_count(qcnf->clauses); i++) {
+        Clause* c = vector_get(qcnf->clauses, i);
+        if (c) {
+            qcnf_check_invariants_clause(qcnf, c);
+        }
+    }
+    for (unsigned i = 1; i < var_vector_count(qcnf->vars); i++) {
+        Var* v = var_vector_get(qcnf->vars, i++);
+        if (v && v->var_id == i) {
+            qcnf_check_invariants_variable(qcnf, v);
+        }
+        
+    }
+}
+
+bool qcnf_is_resolvent_tautological(Clause* c1, Clause* c2, unsigned var_id) {
+    assert(qcnf_contains_literal(c1, (Lit) var_id) && qcnf_contains_literal(c2, - (Lit) var_id) || (qcnf_contains_literal(c2, (Lit) var_id) || qcnf_contains_literal(c1, - (Lit) var_id)));
+    for (unsigned i = 0; i < c1->size; i++) {
+        if (lit_to_var(c1->occs[i]) != var_id && qcnf_contains_literal(c2, - c1->occs[i])) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// TODO: implement version that requires only a single pass
+//bool qcnf_is_resolvent_tautological_fast(Clause* c1, Clause* c2, unsigned var_id) {
+////    for (unsigned i = 0; c1->size < i; i++) {
+////
+////    }
+//}
+
+/* Check if c1 is a subset of c2, excluding literals of var_id.
+ *
+ */
+bool qcnf_antecedent_subsubsumed(QCNF* qcnf, Clause* c1, Clause* c2, unsigned var_id) {
+    unsigned j = 0;
+    bool res = true;
+    for (unsigned i = 0; i < c1->size; i++) {
+        if (lit_to_var(c1->occs[i]) == var_id) {
+            continue;
+        }
+        while(qcnf_compare_occurrence_by_qtype_then_scope_size_then_var_id(qcnf, &c1->occs[i], &c2->occs[j]) > 0) {
+            j++;
+            if (j >= c2->size) {
+                res = false;
+                goto validate_and_return;
+            }
+        }
+        if (c1->occs[i] != c2->occs[j]) {
+            res = false;
+            goto validate_and_return;
+        }
+    }
     
+validate_and_return: // check that the result is correct ... this function is too easy to get wrong
+#ifdef DEBUG
+    assert(true);
+    bool alt_res = true;
+    for (unsigned i = 0; i < c1->size; i++) {
+        if (lit_to_var(c1->occs[i]) != var_id && ! qcnf_contains_literal(c2, c1->occs[i])) {
+            alt_res = false;
+        }
+    }
+    assert(alt_res == res);
+#endif
+    return res;
 }

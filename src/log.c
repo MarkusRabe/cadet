@@ -9,5 +9,6 @@
 #include "log.h"
 
 int debug_verbosity = VERBOSITY_NONE;
-bool log_comment_prefix = false;
+bool log_qdimacs_compliant = false;
 bool log_colors = true;
+bool log_silent = false;

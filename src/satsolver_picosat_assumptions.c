@@ -59,7 +59,7 @@ static inline int lit_from_int(SATSolver* solver, int lit) {
         nvar = picosat_inc_max_var(solver->ps);
 #ifdef SATSOLVER_TRACE
         if (solver->trace_solver_commands) {
-            LOG_PRINTF("picosat_inc_max_var(s);\n");
+            LOG_PRINTF("assert(picosat_inc_max_var(s) == %d);\n", nvar);
         }
 #endif
         map_add(solver->var_mapping, var, (void *)(intptr_t)nvar);
@@ -70,15 +70,6 @@ static inline int lit_from_int(SATSolver* solver, int lit) {
         nvar = (int) map_get(solver->var_mapping, var);
     }
     return neg ? -nvar : nvar;
-}
-
-static inline int int_from_lit(SATSolver* solver, int lit) {
-    bool neg = lit < 0;
-    int var = neg ? -lit : lit;
-    
-    int reverse = (int)(intptr_t)map_get(solver->reverse_var_mapping, var);
-    
-    return neg ? -reverse : reverse;
 }
 
 SATSolver* satsolver_init() {
@@ -99,9 +90,6 @@ SATSolver* satsolver_init() {
     
 #ifdef SATSOLVER_TRACE
     solver->trace_solver_commands = false;
-    if (solver->trace_solver_commands) {
-        LOG_PRINTF("PicoSAT* s = picosat_init();\n");
-    }
 #endif
     return solver;
 }
@@ -207,14 +195,19 @@ void satsolver_clause_finished_for_context(SATSolver* solver, unsigned context_i
     }
     
     if (context_index != 0) {
-        picosat_add(solver->ps, int_vector_get(solver->context_literals, context_index - 1));
+        int context_lit = int_vector_get(solver->context_literals, context_index - 1);
+        picosat_add(solver->ps, context_lit);
+#ifdef SATSOLVER_TRACE
+        if (solver->trace_solver_commands) {
+            LOG_PRINTF("picosat_add(s,%d); // context var %u\n", context_lit, context_index);
+        }
+#endif
     }
     
     picosat_add(solver->ps, 0);
-    
 #ifdef SATSOLVER_TRACE
     if (solver->trace_solver_commands) {
-        LOG_PRINTF("picosat_add_to_context(s,0,%d);\n", (int) context_index);
+        LOG_PRINTF("picosat_add(s,0);\n");
     }
 #endif
 }
@@ -266,7 +259,7 @@ sat_res satsolver_sat(SATSolver* solver) {
         picosat_assume(solver->ps, - context_lit);
 #ifdef SATSOLVER_TRACE
         if (solver->trace_solver_commands) {
-            LOG_PRINTF("picosat_assume(s,-%d);\n",context_lit);
+            LOG_PRINTF("picosat_assume(s,%d);\n", - context_lit);
         }
 #endif
     }
@@ -277,7 +270,7 @@ sat_res satsolver_sat(SATSolver* solver) {
     
 #ifdef SATSOLVER_TRACE
     if (solver->trace_solver_commands) {
-        LOG_PRINTF("picosat_sat(s,%d);\n",PICOSAT_DECISION_LIMIT);
+        LOG_PRINTF("assert(picosat_sat(s,%d) == %d);\n", PICOSAT_DECISION_LIMIT, res);
     }
 #endif
     return res;
@@ -290,7 +283,7 @@ int satsolver_deref(SATSolver* solver, int lit) {
     
 #ifdef SATSOLVER_TRACE
     if (solver->trace_solver_commands) {
-        LOG_PRINTF("picosat_deref(s,%d);\n",pico_lit);
+        LOG_PRINTF("assert(picosat_deref(s,%d) == %d);\n",pico_lit, res);
     }
 #endif
     return res;
@@ -303,7 +296,7 @@ int satsolver_deref_partial(SATSolver* solver, int lit) {
     
 #ifdef SATSOLVER_TRACE
     if (solver->trace_solver_commands) {
-        LOG_PRINTF("picosat_deref_partial(s,%d);\n",pico_lit);
+        LOG_PRINTF("assert(picosat_deref_partial(s,%d) == %d);\n",pico_lit, res);
     }
 #endif
     return res;
@@ -315,20 +308,20 @@ int satsolver_deref_toplevel(SATSolver* solver, int lit) {
     
 #ifdef SATSOLVER_TRACE
     if (solver->trace_solver_commands) {
-        LOG_PRINTF("picosat_deref_toplevel(s,%d);\n",pico_lit);
+        LOG_PRINTF("assert(picosat_deref_toplevel(s,%d) == %d);\n",pico_lit, res);
     }
 #endif
     return res;
 }
 
 bool satsolver_failed_assumption(SATSolver* solver, int lit) {
+    assert(int_vector_contains(solver->assumptions, lit));
+    int pico_lit = lit_from_int(solver, lit);
 #ifdef SATSOLVER_TRACE
     if (solver->trace_solver_commands) {
         LOG_PRINTF("picosat_failed_assumption(s,%d);\n", pico_lit);
     }
 #endif
-    assert(int_vector_contains(solver->assumptions, lit));
-    int pico_lit = lit_from_int(solver, lit);
     return picosat_failed_assumption(solver->ps, pico_lit);
 }
 
@@ -425,13 +418,11 @@ void satsolver_print(SATSolver* solver) {
 
 void satsolver_push(SATSolver* solver) {
     int_vector_add(solver->max_var_stack, solver->max_var);
-    picosat_push(solver->ps);
-    
-    int_vector_add(solver->context_literals,picosat_inc_max_var(solver->ps));
-    
+    int new_context_lit = picosat_inc_max_var(solver->ps);
+    int_vector_add(solver->context_literals,new_context_lit);
 #ifdef SATSOLVER_TRACE
     if (solver->trace_solver_commands) {
-        LOG_PRINTF("picosat_push(s);\n");
+        LOG_PRINTF("assert(picosat_inc_max_var(s) == %d); // push context %d\n", new_context_lit, int_vector_count(solver->context_literals));
     }
 #endif
 }
@@ -451,7 +442,8 @@ void satsolver_pop(SATSolver* solver) {
     
 #ifdef SATSOLVER_TRACE
     if (solver->trace_solver_commands) {
-        LOG_PRINTF("picosat_pop(s);\n");
+        LOG_PRINTF("picosat_add(s,%d); // context %u\n", context_var, int_vector_count(solver->context_literals) + 1);
+        LOG_PRINTF("picosat_add(s,0);\n");
     }
 #endif
 }
@@ -471,6 +463,11 @@ void satsolver_set_more_important_lit (SATSolver* solver, int lit) {
 #ifdef SATSOLVER_TRACE
 void satsolver_trace_commands(SATSolver* solver) {
     solver->trace_solver_commands = true;
+    LOG_PRINTF("#include <stdio.h>\n"
+"#include <assert.h>\n"
+"#include \"picosat.h\"\n"
+"int main() {\n"
+"    PicoSAT* s = picosat_init();\n");
 }
 #endif
 
@@ -478,6 +475,21 @@ void satsolver_print_statistics(SATSolver* solver) {
     V0("Skolem SAT solver:\n");
     V0("  SATSolver maxvar: %u\n", satsolver_get_max_var(solver));
     V0("  PicoSAT maxvar: %u\n", picosat_inc_max_var(solver->ps));
+#ifdef SATSOLVER_TRACE
+    if (solver->trace_solver_commands) {
+        abortif(true,"Not logging satsolver_print_statistics, implement me.");
+    }
+#endif
+}
+
+
+void satsolver_measure_all_calls(SATSolver* solver) {
+    picosat_measure_all_calls(solver->ps);
+#ifdef SATSOLVER_TRACE
+    if (solver->trace_solver_commands) {
+        LOG_PRINTF("picosat_measure_all_calls(s);\n");
+    }
+#endif
 }
 
 #endif

@@ -86,7 +86,12 @@ void debug_print_histogram_of_activities(C2* c2, bool only_deterministic) {
             }
         }
     }
-    V1("Activity statistics:\n    Max activity var: %u\n", v_max->var_id);
+    V1("Activity statistics:\n    ");
+    if(v_max) {
+        V1("Max activity var: %u\n", v_max->var_id);
+    } else {
+        V1("No deterministic var found.\n");
+    }
     statistics_print(s);
     statistics_free(s);
 }

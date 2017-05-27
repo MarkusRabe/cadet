@@ -41,6 +41,8 @@ struct skolem_var {
     // permanent portion of skolem_var
     float conflict_potential;
     unsigned decision_lvl;
+    unsigned reason_for_constant;
+    unsigned dlvl_for_constant;
 };
 
 bool skolem_is_deterministic(Skolem*, unsigned var_id);
@@ -59,6 +61,12 @@ unsigned skolem_get_decision_lvl_for_conflict_analysis(void*, unsigned var_id);
 unsigned skolem_get_decision_lvl(Skolem*, unsigned var_id);
 void skolem_update_decision_lvl(Skolem*, unsigned var_id, unsigned dlvl);
 void skolem_undo_decision_lvl(Skolem*, void* data);
+
+unsigned skolem_get_reason_for_constant(Skolem*, unsigned var_id);
+unsigned skolem_get_dlvl_for_constant(Skolem*, unsigned var_id);
+void skolem_update_reason_for_constant(Skolem*, unsigned var_id, unsigned clause_id, unsigned dlvl);
+void skolem_undo_reason_for_constant(Skolem*, void* data);
+
 
 union Dependencies skolem_get_dependencies(Skolem*, unsigned);
 

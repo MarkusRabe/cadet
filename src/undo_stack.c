@@ -13,10 +13,6 @@
 #include "log.h"
 #include "util.h"
 
-
-
-#define STACK_OP_MILESTONE -1
-
 Stack* stack_init(void (*undo)(void *parent, char, void*)) {
     Stack* s = malloc(sizeof(Stack));
     s->op_size = 64;
@@ -76,7 +72,7 @@ void stack_pop(Stack* s, void* parent) {
     s->push_count -= 1;
 }
 
-void stack_print_debug(Stack* s) {
-    NOT_IMPLEMENTED();
-}
+//void stack_print_debug(Stack* s) {
+//    NOT_IMPLEMENTED();
+//}
 

@@ -28,7 +28,8 @@ struct Skolem;
 typedef struct Skolem Skolem;
 struct skolem_var;
 typedef struct skolem_var skolem_var;
-
+struct Cegar;
+typedef struct Cegar Cegar;
 
 bool skolem_is_total(skolem_var*); // pos_lit == neg_lit && pos_lit != 0
 bool skolem_is_top(skolem_var*); // pos_lit == 0 && neg_lit == 0
@@ -47,10 +48,11 @@ typedef enum {
 
 struct Skolem_Statistics {
     // Statistics
+    size_t propagations;
+    size_t pure_vars;
     size_t local_determinicity_checks;
     size_t local_conflict_checks;
     size_t global_conflict_checks;
-    size_t pure_vars;
     
     size_t explicit_propagations;
     size_t explicit_propagation_conflicts;
@@ -69,14 +71,17 @@ struct Skolem_Magic_Values {
     float conflict_potential_change_factor;
     float conflict_potential_threshold;
     float conflict_potential_offset;
+    unsigned blocked_clause_occurrence_cutoff;
 };
 
 struct Skolem {
     Options* options;
     QCNF* qcnf;
+    SATSolver* skolem;
+    Cegar* cegar;
+    
     unsigned u_initially_deterministic;
     unsigned e_initially_deterministic;
-    SATSolver* skolem;
     SKOLEM_MODE mode;
     SKOLEM_STATE state;
     unsigned decision_lvl;
@@ -102,7 +107,6 @@ struct Skolem {
     
     // Keeping track of progress
     size_t deterministic_variables;
-    int_vector* recently_determinized; // for transferring info to c2
     
     Stack* stack;
     
@@ -117,11 +121,11 @@ void skolem_free(Skolem*);
 // INTERACTION WITH CONFLICT ANALYSIS
 bool skolem_is_legal_dependence_for_conflict_analysis(void* s, unsigned var_id, unsigned depending_on);
 int skolem_get_value_for_conflict_analysis(void* s, Lit lit);
-bool skolem_is_relevant_clause(void* domain, Clause* c, unsigned var_id);
+bool skolem_is_relevant_clause(void* domain, Clause* c, Lit lit);
 
 // INTERACTION WITH CADET2
 void skolem_new_clause(Skolem*,Clause*);
-void skolem_assign_constant_value(Skolem*,Lit,union Dependencies);
+void skolem_assign_constant_value(Skolem*,Lit,union Dependencies, Clause* reason); // reason may be NULL
 void skolem_assume_constant_value(Skolem*,Lit);
 int skolem_get_constant_value(Skolem*, Lit);
 bool skolem_is_initially_deterministic(Skolem* s, unsigned var_id);
@@ -158,6 +162,7 @@ typedef enum {
     SKOLEM_OP_UPDATE_INFO_PURE_NEG, // obj contains the variable and a single bit, see union skolem_undo_union
     SKOLEM_OP_UPDATE_INFO_DEPENDENCIES, // depending on mode, obj contains the variable and previous dependency level, or a pointer to a Dependency_Update_struct
     SKOLEM_OP_UPDATE_INFO_DECISION_LVL,
+    SKOLEM_OP_UPDATE_INFO_REASON_FOR_CONSTANT,
     SKOLEM_OP_UNIQUE_CONSEQUENCE,
     SKOLEM_OP_PROPAGATION_CONFLICT,
     SKOLEM_OP_SKOLEM_CONFLICT,

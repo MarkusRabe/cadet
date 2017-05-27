@@ -18,7 +18,7 @@ typedef struct {
     int_vector* conflicting_assignment;
     void* domain;
     int (*domain_get_value)(void* domain, Lit lit);
-    bool (*domain_is_relevant_clause)(void* domain, Clause* c, unsigned var_id);
+    bool (*domain_is_relevant_clause)(void* domain, Clause* c, Lit lit);
     bool (*domain_is_legal_dependence)(void* domain, unsigned var_id, unsigned depending_on);
     unsigned (*domain_get_decision_lvl)(void* domain, unsigned var_id);
     
@@ -32,20 +32,20 @@ void conflict_analysis_schedule_causing_vars_in_work_queue(conflict_analysis* ca
     assert(lit_to_var(consequence) < var_vector_count(ca->c2->qcnf->vars));
     assert(ca->c2->skolem->conflict_var_id == lit_to_var(consequence)
            || ca->domain_get_value(ca->domain, consequence) == 1);
-    assert( ca->domain != ca->c2->skolem || skolem_get_unique_consequence(ca->c2->skolem, reason) == consequence); // a bit hacky
+    assert(ca->domain != ca->c2->skolem || skolem_get_unique_consequence(ca->c2->skolem, reason) == consequence || skolem_get_constant_value(ca->c2->skolem, consequence) == 1); // a bit hacky
     for (unsigned i = 0; i < reason->size; i++) {
         Lit l = reason->occs[i];
         if (consequence == l) { // not strictly necessary
             continue;
         }
-        assert(ca->domain_get_decision_lvl(ca->domain, lit_to_var(consequence)) >= ca->domain_get_decision_lvl(ca->domain, lit_to_var(l)));
+        assert(ca->domain_get_decision_lvl(ca->domain, lit_to_var(consequence)) >= ca->domain_get_decision_lvl(ca->domain, lit_to_var(l)) || ca->domain_get_value(ca->domain, consequence) == 1);
         
         if (! ca->domain_is_legal_dependence(ca->c2->skolem, lit_to_var(consequence), lit_to_var(l))) {
             int_vector_add(ca->conflicting_assignment, - l);
             continue;
         }
         
-        assert(skolem_get_unique_consequence((Skolem*) ca->domain, reason) == consequence);
+        assert(ca->c2->state != C2_SKOLEM_CONFLICT || skolem_get_unique_consequence((Skolem*) ca->domain, reason) == consequence || skolem_get_constant_value(ca->c2->skolem, consequence) == 1);
         
         assert(ca->domain_get_value(ca->domain, l) == -1);
         
@@ -66,8 +66,20 @@ void conflict_analysis_schedule_causing_vars_in_work_queue(conflict_analysis* ca
 //    return satsolver_deref(s->skolem, satlit);
 //}
 
-bool is_reason_for_lit(conflict_analysis* ca, Clause* c, Lit lit, bool* depends_on_illegals) {
-    assert(lit != 0);
+bool conflict_analysis_depends_only_on_legals(conflict_analysis* ca, Clause* c, Lit lit) {
+    assert(qcnf_contains_literal(c, lit));
+    for (unsigned i = 0; i < c->size; i++) {
+        Lit other = c->occs[i];
+        assert(other != - lit); // no tautological clauses
+        if (other == lit) {continue;}
+        if (!ca->domain_is_legal_dependence(ca->c2->skolem, lit_to_var(lit), lit_to_var(other))) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool is_reason_for_lit(conflict_analysis* ca, Clause* c, Lit lit) {
     assert(ca->c2->skolem->conflict_var_id == lit_to_var(lit) || ca->domain_get_value(ca->domain, lit) == 1);
     assert(qcnf_contains_literal(c, lit));
     for (unsigned i = 0; i < c->size; i++) {
@@ -75,12 +87,6 @@ bool is_reason_for_lit(conflict_analysis* ca, Clause* c, Lit lit, bool* depends_
         assert(other != - lit);
         if (other == lit) {continue;}
         if (ca->domain_get_value(ca->domain, - other) != 1) { // all others must be surely false, if one of them isn't then the clause cannot be used as reason. This allows us to use conflicted variables as reasons.
-            
-            if (!ca->domain_is_legal_dependence(ca->c2->skolem, lit_to_var(lit), lit_to_var(other))) {
-                *depends_on_illegals = true;
-                continue;
-            }
-            
             return false;
         }
     }
@@ -108,17 +114,16 @@ Clause* conflict_analysis_find_reason_for_value(conflict_analysis* ca, Lit lit, 
     for (unsigned i = 0; i < vector_count(occs); i++) {
         Clause* c = vector_get(occs, i);
         
-        // it is questionable whether this optimization actually helps as it requires the CPU to keep another data structure in cache
-        if (!ca->domain_is_relevant_clause(ca->domain, c, v->var_id)) {
+        // it is questionable whether this optimization actually helps as it requires us to keep another data structure in cache
+        if (!ca->domain_is_relevant_clause(ca->domain, c, lit)) {
             continue;
         }
-        bool depends_on_illegals_tmp = false;
-        if (is_reason_for_lit(ca, c, lit, &depends_on_illegals_tmp)) {
+        if (is_reason_for_lit(ca, c, lit)) {
             unsigned cost = determine_cost(ca, c);
             if (candidate == NULL || !candidate->consistent_with_originals || (cost < candidate_cost && c->consistent_with_originals)) { // TODO: prefer clauses that have only legal dependencies 
                 candidate = c;
                 candidate_cost = cost;
-                depends_on_illegals_candidate = depends_on_illegals_tmp;
+                depends_on_illegals_candidate = ! conflict_analysis_depends_only_on_legals(ca, c, lit);
             }
             if (cost == 0) {
                 break; // unlikely
@@ -134,16 +139,11 @@ void conflict_analysis_follow_implication_graph(conflict_analysis* ca) {
     while (worklist_count(ca->queue) > 0) {
         Lit lit = (Lit) worklist_pop(ca->queue);
 
-        abortif(ca->domain_get_value(ca->domain, lit) != 1
-                /* && ca->conflicted_var_id != lit_to_var(lit) */,
-                "Variable to track in conflict analysis has no value.");
+        abortif(ca->c2->examples->state != EXAMPLES_STATE_INCONSISTENT_DECISION_CONFLICT && ca->domain_get_value(ca->domain, lit) != 1, "Variable to track in conflict analysis has no value.");
         
         Var* v = var_vector_get(ca->c2->qcnf->vars, lit_to_var(lit));
         unsigned d_lvl = ca->domain_get_decision_lvl(ca->domain, lit_to_var(lit));
-        if (v->var_id == ca->conflicted_var_id && c2_is_decision_var(ca->c2, v->var_id)) {
-            d_lvl -= 1;
-        }
-        assert(d_lvl <= ca->conflict_decision_lvl /* || ca->c2->skolem->state == SKOLEM_STATE_CONSTANTS_CONLICT */);
+        assert(d_lvl <= ca->conflict_decision_lvl);
         
         bool is_value_decision = c2_is_decision_var(ca->c2, v->var_id) && skolem_get_constant_value(ca->c2->skolem, lit) == 1;
         
@@ -153,11 +153,14 @@ void conflict_analysis_follow_implication_graph(conflict_analysis* ca) {
             bool depends_on_illegals = false;
             Clause* reason = conflict_analysis_find_reason_for_value(ca, lit, &depends_on_illegals);
             if (reason == NULL) {
-                abortif(true,"No reason found in conflict analysis.\n");
+                abortif(ca->c2->state == C2_SKOLEM_CONFLICT, "No reason for lit %d found in conflict analysis.\n", lit);
+                assert(ca->c2->state == C2_EXAMPLES_CONFLICT && c2_is_decision_var(ca->c2, v->var_id)); // this means it was a decision variable for the example domain
+                int_vector_add(ca->conflicting_assignment, lit); // must be decision variable (and conflict caused by this decision)
             } else if (!reason->consistent_with_originals) { // decision clause!
                 assert(c2_is_decision_var(ca->c2, lit_to_var(lit)) || lit_to_var(lit) == ca->conflicted_var_id);
                 int_vector_add(ca->conflicting_assignment, lit);
             } else {
+                assert(reason->original || reason->consistent_with_originals);
                 if (debug_verbosity >= VERBOSITY_HIGH) {
                     V3("  Reason for %d is clause %u: ", lit, reason->clause_id);
                     qcnf_print_clause(reason, stdout);
@@ -227,17 +230,17 @@ int_vector* analyze_assignment_conflict(C2* c2,
                                         Clause* conflicted_clause,
                                         void* domain,
                                         int  (*domain_get_value)(void* domain, Lit lit),
-                                        bool (*domain_is_relevant_clause)(void* domain, Clause* c, unsigned var_id),
+                                        bool (*domain_is_relevant_clause)(void* domain, Clause* c, Lit lit),
                                         bool (*domain_is_legal_dependence)(void* domain, unsigned var_id, unsigned depending_on),
                                         unsigned (*domain_get_decision_lvl)(void* domain, unsigned var_id)) {
-    V3("Computing conflict clause. Conflicted var: %u\n", conflicted_var);
+    V3("Computing conflict clause. Conflicted var: %u. Conflicted clause: %u\n", conflicted_var, conflicted_clause ? conflicted_clause->clause_id : 0);
     
 #ifdef DEBUG
-    Var* v_help = var_vector_get(c2->qcnf->vars, conflicted_var);
-    assert(qcnf_is_existential(c2->qcnf, v_help->var_id));
+    if (conflicted_var != 0) {
+        Var* v_help = var_vector_get(c2->qcnf->vars, conflicted_var);
+        assert(qcnf_is_existential(c2->qcnf, v_help->var_id));
+    }
 #endif
-    
-    assert(domain_get_decision_lvl(domain, conflicted_var) != 0 || c2->skolem->decision_lvl == 0 || c2->options->delay_conflict_checks);
     
     conflict_analysis* ca = malloc(sizeof(conflict_analysis));
     ca->c2 = c2;
@@ -261,17 +264,14 @@ int_vector* analyze_assignment_conflict(C2* c2,
             Lit l = conflicted_clause->occs[i];
             unsigned var_id = lit_to_var(l);
             assert(var_id == conflicted_var || ca->domain_get_value(ca->domain, l) == -1);
-            assert(ca->domain_get_value(ca->domain, - l) == 1);
             worklist_push(ca->queue, (void*) (int64_t) - l);
             if (domain_get_decision_lvl(domain, var_id) > ca->conflict_decision_lvl) {
                 ca->conflict_decision_lvl = domain_get_decision_lvl(domain, var_id);
             }
         }
     } else {
+        assert(conflicted_var != 0);
         ca->conflict_decision_lvl = domain_get_decision_lvl(domain, conflicted_var); // ca->c2->skolem->decision_lvl;
-        if (c2_is_decision_var(c2, conflicted_var)) {
-            ca->conflict_decision_lvl -= 1;
-        }
         
         assert(domain_get_value(domain,   (Lit) conflicted_var) == 1);
         assert(domain_get_value(domain, - (Lit) conflicted_var) == 1);

@@ -1,0 +1,34 @@
+c 2017-02-04 15:58:15 by qbfdd.py,v 1.2.2
+c qbfdd.py /Users/markus/work/cadet/rf28_reduced.qdimacs /Users/markus/work/cadet/cadet -m qobo -g b -S
+c 
+c mode: qobo
+c rounds: 2
+c test runs: 662
+c time elapsed:  9.49s
+c total: clauses  : -128 (86.49%)
+c        variables: -168 (89.36%)
+c        literals : -399 (90.48%)
+c 
+p cnf 20 20
+a 1 2 0
+e 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 0
+-3 -2 0
+3 4 0
+-5 -3 0
+6 -5 0
+-6 5 0
+10 -8 0
+11 -10 0
+12 -9 -11 0
+7 -11 0
+13 -12 0
+15 -6 0
+15 14 0
+-15 -13 0
+-16 -1 0
+17 16 0
+18 8 0
+19 -7 9 0
+20 -17 0
+20 19 0
+-20 -19 0

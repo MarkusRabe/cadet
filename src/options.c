@@ -19,7 +19,6 @@ Options* default_options() {
     o->cegar_only = false;
     o->delay_conflict_checks = false;
     o->use_qbf_engine_also_for_propositional_problems = false;
-    o->reencode3QBF = false;
 
     // Examples domain
     o->examples_max_num = 0; // 0 corresponds to not doing examples at all
@@ -47,7 +46,6 @@ Options* default_options() {
     o->minimize_conflicts = false;
     o->preprocess = false;
     o->delete_clauses_on_restarts = false;
-    o->reencode_existentials = false;
     o->propagate_pure_literals = true;
     o->enhance_pure_literals_by_blocked_literals = false;
     

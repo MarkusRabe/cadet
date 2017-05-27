@@ -184,10 +184,6 @@ int main(int argc, const char* argv[]) {
                         log_colors = false;
                     } else if (strcmp(argv[i], "--aiger_negated") == 0) {
                         options->aiger_negated_encoding = true;
-                    } else if (strcmp(argv[i], "--reencode3QBF") == 0) {
-                        options->reencode3QBF = true;
-                    } else if (strcmp(argv[i], "--reencode_existentials") == 0) {
-                        options->reencode_existentials = ! options->reencode_existentials;
                     } else if (strcmp(argv[i], "--aiger_controllable_inputs") == 0) {
                         if (i + 1 >= argc) {
                             LOG_ERROR("Missing string for argument --aiger_controllable_inputs\n");

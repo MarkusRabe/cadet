@@ -18,7 +18,6 @@
 #include "c2_casesplits.h"
 #include "skolem_dependencies.h"
 #include "c2_cegar.h"
-#include "reencode.h"
 #include "satsolver.h"
 
 #include <math.h>
@@ -871,9 +870,6 @@ cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
     fclose(f);
     abortif(!qcnf,"Failed to create QCNF.");
     
-    if (options->reencode_existentials) { // experimental feature
-        reencode_existentials(qcnf, options);
-    }
     if (options->print_qdimacs) {
         qcnf_print_qdimacs(qcnf);
         return 1;
@@ -882,15 +878,6 @@ cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
     V1("Maximal variable index: %u\n", var_vector_count(qcnf->vars));
     V1("Number of clauses: %u\n", vector_count(qcnf->clauses));
     V1("Number of scopes: %u\n", vector_count(qcnf->scopes));
-    
-    if (! qcnf_is_2QBF(qcnf) && ! qcnf_is_propositional(qcnf)
-        && vector_count(qcnf->scopes) == 2 && options->reencode3QBF) {
-        aiger* aig = qbf2aiger(qcnf,options);
-        
-        // Generate 2QBF from aiger
-        assert( ! options->aiger_negated_encoding);
-        qcnf = create_qcnf_from_aiger(aig, options);
-    }
     
     C2* c2 = c2_init_qcnf(qcnf, options);
     

@@ -29,7 +29,6 @@ typedef struct {
     bool cegar_only;
     bool delay_conflict_checks;
     bool use_qbf_engine_also_for_propositional_problems;
-    bool reencode3QBF;
     unsigned examples_max_num;
     unsigned initial_examples;
     
@@ -55,7 +54,6 @@ typedef struct {
     bool minimize_conflicts;
     bool preprocess;
     bool delete_clauses_on_restarts;
-    bool reencode_existentials;
     bool propagate_pure_literals;
     bool enhance_pure_literals_by_blocked_literals;
     

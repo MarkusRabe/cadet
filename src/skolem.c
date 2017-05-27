@@ -110,8 +110,12 @@ void skolem_push(Skolem* s) {
     abortif(worklist_count(s->clauses_to_check) != 0, "s->clauses_to_check nonempty upon push. Serious because the remaining elements might be forgotten to be tracked upon a pop.");
 }
 void skolem_pop(Skolem* s) {
-    pqueue_reset(s->determinicity_queue);
-    worklist_reset(s->clauses_to_check);
+    if (pqueue_count(s->determinicity_queue) > 0) {
+        pqueue_reset(s->determinicity_queue);
+    }
+    if (worklist_count(s->clauses_to_check) > 0) {
+        worklist_reset(s->clauses_to_check);
+    }
     
     stack_pop(s->stack, s);
     satsolver_pop(s->skolem);
@@ -1406,8 +1410,6 @@ void skolem_propagate_explicit_assignments(Skolem* s) {
         skolem_propagate_constants_over_clause(s, c);
         
         if (skolem_is_conflicted(s)) {
-            worklist_free(s->clauses_to_check);
-            s->clauses_to_check = worklist_init(qcnf_compare_clauses_by_size);
             return;
         }
     }

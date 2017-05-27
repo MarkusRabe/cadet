@@ -72,8 +72,7 @@ STRATEGIC_COMPANIES = ['strategiccompanies']
 QREVENGE_ADDER_SELF = ['qrevenge-adder-self-2QBF']
 FUNCTION_SYNTHESIS = ['function-synthesis']
 ALL_INSTANCES = HANDMADE_INSTANCES + EASY_INSTANCES + QBFLIB2010_INSTANCES + QBFEVAL2016_2QBF_INSTANCES + QBFEVAL2016_INSTANCES + CIRCUIT_UNDERSTANDING_3QBF + HARDWAREFIXPOINT + PEC_2QBF + COMPLEXITY + SYNTHESIS + RANKING + RANDOM2QBF + TERMINATOR + HORN + RENHORN + RF_1133qd + IRQ + WMI + SORTING + HOLCOMB + SYGUS_MINITEST + SYGUS_PERFORMANCE + SYGUS_GALLERY + SYGUS_MINITEST3QBF + SYGUS_PERFORMANCE3QBF + SYGUS_GALLERY3QBF + TICTACTOE3x3 + TICTACTOE4x4 + TICTACTOE5x5 + TICTACTOE6x6 + EVAL2012r2 + RIENER + BMC2006 + STRATEGIC_COMPANIES + QREVENGE_ADDER_SELF + FUNCTION_SYNTHESIS
-CUSTOM_INSTANCES = ['custom']
-custom_instances = []
+PERFORMANCE_BENCHMARKS = QBFEVAL2016_2QBF_INSTANCES + HARDWAREFIXPOINT + SYGUS_PERFORMANCE + FUNCTION_SYNTHESIS
 
 TIME_UTIL = '/usr/bin/time -v '
 if sys.platform == 'darwin':
@@ -497,10 +496,6 @@ def getTestCases():
                 test_case, return_value = [v.strip() for v in line.split('|')]
                 values = (test_case, int(return_value))
                 last_category.append(values)
-            
-                # get correct result for custom selection
-                if test_case in custom_instances and values not in test_cases['custom']:
-                    test_cases['custom'].append(values)
     
         test_cases[category] = last_category
         return test_cases
@@ -541,7 +536,7 @@ if __name__ == "__main__":
                         help='Show additional runtime information (tool output)')
     parser.add_argument('-t', '--test', dest='test', action='store_true',
                         help='Run on a subset of test benchmarks')
-    parser.add_argument('--benchmark', action='store', nargs='?', const=5, type=int, metavar='rounds',
+    parser.add_argument('--average', action='store', nargs='?', const=5, type=int, metavar='rounds',
                         help='Run the tests multiple times and take the average')
     parser.add_argument('--timeout', dest='timeout', action='store', type=int, default=10,
                         help='Timeout in seconds (default: 10)')
@@ -560,12 +555,14 @@ if __name__ == "__main__":
     parser.add_argument('--certify', dest='certify', action='store_true',
                         help='Also test certificates. CADET only.')
     parser.add_argument('-d', '--directory', dest='directory', action='store', default=None,
-                        help='Specify folder of instances to execute.')
+                        help='Specify folder of formulas to solve.')
     parser.add_argument('-p', '--profile', dest='profile', action='store_true', default=None,
                         help='Run in profiling mode. Evaluate statistics.')
                         
     for instance in ALL_INSTANCES:
-        parser.add_argument('--{}'.format(instance), dest=instance, action='store_true', help='Run the {} instances'.format(instance))
+        parser.add_argument('--{}'.format(instance), dest=instance, action='store_true', help='Run the {} formulas'.format(instance))
+    
+    parser.add_argument('--benchmark', dest='benchmark', action='store_true', help='Run a set of performance-critical formulas, folders: {}'.format(str(PERFORMANCE_BENCHMARKS)))
 
     ARGS = parser.parse_args()
     
@@ -580,10 +577,6 @@ if __name__ == "__main__":
         # ARGS.certify = False
         categories = ['test']
     
-    if ARGS.instances:
-        categories = CUSTOM_INSTANCES
-        custom_instances = ARGS.instances
-    
     if ARGS.directory:
         categories = ['directory']
     
@@ -591,6 +584,11 @@ if __name__ == "__main__":
         if getattr(ARGS, instance):
             if not instance in categories:
                 categories.append(instance)
+        
+    if ARGS.benchmark:
+        for benchmark_family in PERFORMANCE_BENCHMARKS:
+            if not benchmark_family in categories:
+                categories.append(benchmark_family)
         
     if not categories:
         parser.print_help()

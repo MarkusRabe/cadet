@@ -1,5 +1,6 @@
-# Build system
+# Build system and binaries
 Makefile
+cadet
 
 # Compiled source #
 ###################

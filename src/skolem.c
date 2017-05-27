@@ -73,6 +73,7 @@ Skolem* skolem_init(QCNF* qcnf, Options* o,
     s->statistics.local_conflict_checks = 0;
     s->statistics.global_conflict_checks = 0;
     s->statistics.pure_vars = 0;
+    s->statistics.pure_constants = 0;
     
     s->statistics.successfully_avoided_conflict_checks = 0;
     s->statistics.delayed_conflict_checks = 0;
@@ -680,7 +681,13 @@ void skolem_propagate_pure_variable(Skolem* s, unsigned var_id) {
                 skolem_check_occs_for_unique_consequences(s,   (Lit) var_id);
             }
         }
-        // END OF PURE LITERALS
+        
+        // If this pure variable turned out to be constant, update the worklist for constant propagation
+        int val = skolem_get_constant_value(s, (Lit) var_id);
+        if (val != 0) {
+            s->statistics.pure_constants++;
+            skolem_update_clause_worklist(s, val * (Lit) var_id);
+        }
     } else {
         V4("Var %d not pure\n", var_id);
     }
@@ -1151,7 +1158,8 @@ void skolem_print_statistics(Skolem* s) {
     V0("  Local conflict checks: %zu\n",s->statistics.local_conflict_checks);
     V0("  Global conflict checks: %zu\n",s->statistics.global_conflict_checks);
     V0("  Propagations: %zu\n", s->statistics.propagations);
-    V0("  Pure variables: %zu\n",s->statistics.pure_vars);
+    V0("  Pure variables: %zu\n", s->statistics.pure_vars);
+    V0("    of which are constants: %zu\n", s->statistics.pure_constants);
     V0("  Propagations of constants: %zu\n", s->statistics.explicit_propagations);
     V0("  Currently deterministic vars: %zu\n",s->deterministic_variables);
     if (s->options->delay_conflict_checks) {
@@ -1218,9 +1226,9 @@ int skolem_get_constant_value(Skolem* s, Lit lit) {
 
 void skolem_update_clause_worklist(Skolem* s, int unassigned_lit) {
     Var* v = var_vector_get(s->qcnf->vars, lit_to_var(unassigned_lit));
-    vector* occs = unassigned_lit > 0 ? &v->neg_occs : &v->pos_occs;
-    for (unsigned i = 0; i < vector_count(occs); i++) {
-        worklist_push(s->clauses_to_check, vector_get(occs, i));
+    vector* opp_occs = unassigned_lit > 0 ? &v->neg_occs : &v->pos_occs;
+    for (unsigned i = 0; i < vector_count(opp_occs); i++) {
+        worklist_push(s->clauses_to_check, vector_get(opp_occs, i));
     }
 }
 

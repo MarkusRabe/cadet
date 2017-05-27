@@ -50,6 +50,7 @@ struct Skolem_Statistics {
     // Statistics
     size_t propagations;
     size_t pure_vars;
+    size_t pure_constants;
     size_t local_determinicity_checks;
     size_t local_conflict_checks;
     size_t global_conflict_checks;
@@ -138,6 +139,11 @@ bool skolem_clause_satisfied(Skolem* s, Clause* c);
 bool skolem_can_propagate(Skolem*);
 void skolem_propagate(Skolem* s);
 
+void skolem_push(Skolem*);
+void skolem_pop(Skolem*);
+
+void skolem_increase_decision_lvl(Skolem*);
+
 unsigned skolem_global_conflict_check(Skolem*, bool can_delay);
 bool skolem_is_conflicted(Skolem*);
 
@@ -173,11 +179,8 @@ typedef enum {
     SKOLEM_OP_DECISION
 } SKOLEM_OP;
 
-void skolem_push(Skolem*);
-void skolem_pop(Skolem*);
 void skolem_undo(void*,char,void*);
-void skolem_increase_decision_lvl(Skolem*);
-
+void skolem_update_clause_worklist(Skolem* s, int unassigned_lit);
 void skolem_propagate_determinicity_over_clause(Skolem*,QCNF*,Clause*);
 void skolem_propagate_explicit_assignments(Skolem* s);
 

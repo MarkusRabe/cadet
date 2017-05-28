@@ -62,6 +62,8 @@ struct Skolem_Statistics {
     size_t delayed_conflict_checks;
     size_t unnecessary_propagations;
     
+    size_t decisions;
+    
     Stats* global_conflict_checks_sat;
     Stats* global_conflict_checks_unsat;
 };
@@ -137,7 +139,8 @@ bool skolem_lit_satisfied(Skolem* s, Lit lit);
 bool skolem_clause_satisfied(Skolem* s, Clause* c);
 
 bool skolem_can_propagate(Skolem*);
-void skolem_propagate(Skolem* s);
+void skolem_propagate(Skolem*);
+void skolem_decision(Skolem*, Lit lit);
 
 void skolem_push(Skolem*);
 void skolem_pop(Skolem*);

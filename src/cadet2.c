@@ -386,129 +386,6 @@ unsigned c2_determine_backtracking_lvl(C2* c2, int_vector* conflict) {
     return second_largest;
 }
 
-// fixes the __remaining__ cases to be value
-void c2_decision(C2* c2, unsigned decision_var_id, int value) {
-    V3("Decision %d for variable %d, new dlvl is %u\n", value, decision_var_id, c2->skolem->decision_lvl + 1);
-    assert(value == -1 || value == 1);
-    assert(skolem_get_decision_lvl(c2->skolem, decision_var_id) == 0);
-    assert(!skolem_is_deterministic(c2->skolem, decision_var_id));
-    
-    assert(!skolem_can_propagate(c2->skolem));
-    
-    // Pushing before the first things are added to the Skolem solver is important to keep
-    // things clean (think of decisions on level 0). This is not a decision yet, so decision_lvl
-    // is not yet increased.
-    stack_push(c2->stack);
-    c2_push(c2);
-    
-    // Increase decision level, set
-    skolem_increase_decision_lvl(c2->skolem);
-    skolem_update_decision_lvl(c2->skolem, decision_var_id, c2->skolem->decision_lvl);
-    
-    c2->statistics.decisions += 1;
-    c2->decisions_since_last_conflict += 1;
-    
-//    examples_is_decision_consistent_with_skolem(c2->examples, c2->skolem, value * (Lit) decision_var_id);
-//    examples_decision(c2->examples, value * (Lit) decision_var_id);
-    examples_decision_consistent_with_skolem(c2->examples,c2->skolem, value * (Lit) decision_var_id);
-    if (examples_is_conflicted(c2->examples)) {
-        // TODO: unify these statements with their copies later in the decision function
-        c2_set_decision_val(c2, decision_var_id, value);
-        return;
-    }
-    
-    /* Tricky bug: In case the decision var is conflicted and both lits are true, the definitions below
-     * allowed the decision var to be set only to one value. For a conflict check over the decision var
-     * only that's not a problem, but it is a problem if the check gets delayed, multiple variables are
-     * checked at the same time, and a later variable is determined to be conflicted even though for 
-     * the same input the decision var would be conflicted as well. 
-     */
-    bool positive_side_needs_complete_definitions_too = c2->options->delay_conflict_checks;
-    
-    skolem_fix_lit_for_unique_antecedents(c2->skolem,  value * (Lit) decision_var_id, positive_side_needs_complete_definitions_too, FUAM_ONLY_LEGALS);
-    bool opposite_case_exists = skolem_fix_lit_for_unique_antecedents(c2->skolem, - value * (Lit) decision_var_id, true, FUAM_ONLY_LEGALS);
-    
-    // Here we already fix the function domain decisions
-    // This is essentially a precautionary measure to prevent conflict analysis from interpreting the decision as a
-    // reason for setting the decision_var to value in cases where there should also be a different reason. Decision
-    // can only be taken as a reason when -opposite_satlit.
-    Lit val_satlit =      skolem_get_satsolver_lit(c2->skolem,   value * (int) decision_var_id);
-    Lit opposite_satlit = skolem_get_satsolver_lit(c2->skolem, - value * (int) decision_var_id);
-    int new_val_satlit = satsolver_inc_max_var(c2->skolem->skolem);
-    
-    // define:  new_val_satlit := (val_satlit || - opposite_satlit)
-    // first clause: new_val_satlit => (val_satlit || - opposite_satlit)
-    satsolver_add(c2->skolem->skolem, - new_val_satlit);
-    satsolver_add(c2->skolem->skolem, val_satlit);
-    satsolver_add(c2->skolem->skolem, - opposite_satlit);
-    satsolver_clause_finished(c2->skolem->skolem);
-    
-    // second and third clause: (val_satlit || - opposite_satlit) => new_val_satlit
-    satsolver_add(c2->skolem->skolem, - val_satlit);
-    satsolver_add(c2->skolem->skolem, new_val_satlit);
-    satsolver_clause_finished(c2->skolem->skolem);
-    
-    satsolver_add(c2->skolem->skolem, opposite_satlit);
-    satsolver_add(c2->skolem->skolem, new_val_satlit);
-    satsolver_clause_finished(c2->skolem->skolem);
-
-    if (value > 0) {
-        skolem_update_pos_lit(c2->skolem, decision_var_id, new_val_satlit);
-    } else {
-        skolem_update_neg_lit(c2->skolem, decision_var_id, new_val_satlit);
-    }
-    
-    skolem_update_deterministic(c2->skolem, decision_var_id, 1);
-    
-    skolem_var si = skolem_get_info(c2->skolem, decision_var_id);
-    union Dependencies new_deps = skolem_copy_dependencies(c2->skolem, si.dep);
-    skolem_update_dependencies(c2->skolem, decision_var_id, new_deps);
-    
-    // now define helper variable and clause to make sure the decision variable always has a reason
-    Var* fresh = qcnf_fresh_var(c2->qcnf, var_vector_get(c2->qcnf->vars, decision_var_id)->scope_id);
-    fresh->original = 0;
-    skolem_update_decision_lvl(c2->skolem, fresh->var_id, c2->skolem->decision_lvl);
-    
-    qcnf_add_lit(c2->qcnf, - (int) fresh->var_id);
-    qcnf_add_lit(c2->qcnf, value * (int) decision_var_id);
-    Clause* helper_clause = qcnf_close_clause(c2->qcnf);
-    helper_clause->original = 0;
-    helper_clause->consistent_with_originals = 0;
-    skolem_set_unique_consequence(c2->skolem, helper_clause, value * (int) decision_var_id);
-    
-    skolem_update_pos_lit(c2->skolem, fresh->var_id, - opposite_satlit);
-    skolem_update_neg_lit(c2->skolem, fresh->var_id,   opposite_satlit);
-    skolem_update_deterministic(c2->skolem, fresh->var_id, 1);
-    skolem_update_dependencies(c2->skolem, fresh->var_id, new_deps);
-    
-    // Decision variable needs to be deterministic before we can do conflict checks. Also this is why we have to check exactly here.
-    if (skolem_is_locally_conflicted(c2->skolem, decision_var_id)) {
-        skolem_add_potentially_conflicted(c2->skolem, decision_var_id);
-        skolem_global_conflict_check(c2->skolem, true);
-        if (skolem_is_conflicted(c2->skolem)) {
-            V2("Decision variable %d is conflicted, going into conflict analysis instead.\n", decision_var_id);
-            return;
-        }
-    }
-    
-    c2_set_decision_val(c2, decision_var_id, value);
-    
-    // Determine whether we decide on a value or a function
-    bool value_decision = ! opposite_case_exists;
-    
-    if (value_decision) {
-        V3("Value decision for var %u\n", decision_var_id);
-        assert(opposite_satlit == - c2->skolem->satlit_true);
-        //        skolem_assign_constant_value(c2->skolem, (Lit) fresh->var_id);
-        skolem_assign_constant_value(c2->skolem, value * (Lit) decision_var_id, c2->skolem->empty_dependencies, NULL);
-    } else {
-        //        V2("\n");
-    }
-    
-    skolem_check_occs_for_unique_consequences(c2->skolem,   (Lit) decision_var_id);
-    skolem_check_occs_for_unique_consequences(c2->skolem, - (Lit) decision_var_id);
-}
-
 void c2_decay_activity(C2* c2) {
     assert(c2->activity_factor > 0);
     assert(isfinite(c2->activity_factor));
@@ -743,7 +620,24 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                 
                 c2_scale_activity(c2, decision_var->var_id, c2->magic.decision_var_activity_modifier);
                 
-                c2_decision(c2, decision_var->var_id, phase);
+                // Pushing before the actual decision is important to keep things
+                // clean (think of decisions on level 0). This is not a decision yet,
+                // so decision_lvl is not yet increased.
+                stack_push(c2->stack);
+                c2_push(c2);
+                
+                c2->statistics.decisions += 1;
+                c2->decisions_since_last_conflict += 1;
+                
+                // examples_decision(c2->examples, value * (Lit) decision_var_id);
+                examples_decision_consistent_with_skolem(c2->examples, c2->skolem, phase * (Lit) decision_var->var_id);
+                if (examples_is_conflicted(c2->examples)) {
+                    V2("Examples domain is conflicted.\n");
+                } else {
+                    // Regular decision
+                    skolem_decision(c2->skolem, phase * (Lit) decision_var->var_id);
+                    c2_set_decision_val(c2, decision_var->var_id, phase);
+                }
             }
             
         }

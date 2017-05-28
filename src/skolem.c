@@ -1351,7 +1351,7 @@ void skolem_propagate_constants_over_clause(Skolem* s, Clause* c) {
                 }
                 break;
             case 1:
-                goto cleanup;
+                goto cleanup; // clause satisfied
 //            default: // cannot happen
 //                abort();
         }
@@ -1392,6 +1392,110 @@ cleanup:
         int_vector_free(maximal_deps.dependencies);
     }
 }
+
+// fixes the __remaining__ cases to be value
+void skolem_decision(Skolem* s, Lit decision_lit) {
+    assert(!skolem_can_propagate(s));
+    
+    V3("Decision %d, new dlvl is %u\n", decision_lit, s->decision_lvl + 1);
+    unsigned decision_var_id = lit_to_var(decision_lit);
+    
+    assert(skolem_get_decision_lvl(s, decision_var_id) == 0);
+    assert(!skolem_is_deterministic(s, decision_var_id));
+    
+    // Increase decision level, set
+    skolem_increase_decision_lvl(s);
+    skolem_update_decision_lvl(s, decision_var_id, s->decision_lvl);
+    
+    /* Tricky bug: In case the decision var is conflicted and both lits are true, the definitions below
+     * allowed the decision var to be set only to one value. For a conflict check over the decision var
+     * only that's not a problem, but it is a problem if the check gets delayed, multiple variables are
+     * checked at the same time, and a later variable is determined to be conflicted even though for
+     * the same input the decision var would be conflicted as well.
+     */
+    bool positive_side_needs_complete_definitions_too = s->options->delay_conflict_checks;
+    
+    skolem_fix_lit_for_unique_antecedents(s,  decision_lit, positive_side_needs_complete_definitions_too, FUAM_ONLY_LEGALS);
+    bool opposite_case_exists = skolem_fix_lit_for_unique_antecedents(s, - decision_lit, true, FUAM_ONLY_LEGALS);
+    
+    // Here we already fix the function domain decisions
+    // This is essentially a precautionary measure to prevent conflict analysis from interpreting the decision as a
+    // reason for setting the decision_var to value in cases where there should also be a different reason. Decision
+    // can only be taken as a reason when -opposite_satlit.
+    Lit val_satlit =      skolem_get_satsolver_lit(s,   decision_lit);
+    Lit opposite_satlit = skolem_get_satsolver_lit(s, - decision_lit);
+    int new_val_satlit = satsolver_inc_max_var(s->skolem);
+    
+    // define:  new_val_satlit := (val_satlit || - opposite_satlit)
+    // first clause: new_val_satlit => (val_satlit || - opposite_satlit)
+    satsolver_add(s->skolem, - new_val_satlit);
+    satsolver_add(s->skolem, val_satlit);
+    satsolver_add(s->skolem, - opposite_satlit);
+    satsolver_clause_finished(s->skolem);
+    
+    // second and third clause: (val_satlit || - opposite_satlit) => new_val_satlit
+    satsolver_add(s->skolem, - val_satlit);
+    satsolver_add(s->skolem, new_val_satlit);
+    satsolver_clause_finished(s->skolem);
+    
+    satsolver_add(s->skolem, opposite_satlit);
+    satsolver_add(s->skolem, new_val_satlit);
+    satsolver_clause_finished(s->skolem);
+    
+    if (decision_lit > 0) {
+        skolem_update_pos_lit(s, decision_var_id, new_val_satlit);
+    } else {
+        skolem_update_neg_lit(s, decision_var_id, new_val_satlit);
+    }
+    
+    skolem_update_deterministic(s, decision_var_id, 1);
+    
+    skolem_var si = skolem_get_info(s, decision_var_id);
+    union Dependencies new_deps = skolem_copy_dependencies(s, si.dep);
+    skolem_update_dependencies(s, decision_var_id, new_deps);
+    
+    // now define helper variable and clause to make sure the decision variable always has a reason
+    Var* decision_var = var_vector_get(s->qcnf->vars, decision_var_id);
+    assert(decision_var->var_id != 0);
+    Var* fresh = qcnf_fresh_var(s->qcnf, decision_var->scope_id);
+    fresh->original = 0;
+    skolem_update_decision_lvl(s, fresh->var_id, s->decision_lvl);
+    
+    qcnf_add_lit(s->qcnf, - (int) fresh->var_id);
+    qcnf_add_lit(s->qcnf, decision_lit);
+    Clause* helper_clause = qcnf_close_clause(s->qcnf);
+    helper_clause->original = 0;
+    helper_clause->consistent_with_originals = 0;
+    skolem_set_unique_consequence(s, helper_clause, decision_lit);
+    
+    skolem_update_pos_lit(s, fresh->var_id, - opposite_satlit);
+    skolem_update_neg_lit(s, fresh->var_id,   opposite_satlit);
+    skolem_update_deterministic(s, fresh->var_id, 1);
+    skolem_update_dependencies(s, fresh->var_id, new_deps);
+    
+    // Decision variable needs to be deterministic before we can do conflict checks. Also this is why we have to check exactly here.
+    if (skolem_is_locally_conflicted(s, decision_var_id)) {
+        skolem_add_potentially_conflicted(s, decision_var_id);
+        skolem_global_conflict_check(s, true);
+        if (skolem_is_conflicted(s)) {
+            V2("Decision variable %d is conflicted, going into conflict analysis instead.\n", decision_var_id);
+            return;
+        }
+    }
+    
+    // Determine whether we decide on a value or a function
+    bool value_decision = ! opposite_case_exists;
+    
+    if (value_decision) {
+        V3("Value decision for var %u\n", decision_var_id);
+        assert(opposite_satlit == - s->satlit_true);
+        skolem_assign_constant_value(s, decision_lit, s->empty_dependencies, NULL);
+    }
+    
+    skolem_check_occs_for_unique_consequences(s,   (Lit) decision_var_id);
+    skolem_check_occs_for_unique_consequences(s, - (Lit) decision_var_id);
+}
+
 
 void skolem_propagate(Skolem* s) {
     V3("Propagating in Skolem domain\n");

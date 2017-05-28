@@ -119,9 +119,7 @@ void c2_print_debug_info(C2*);
 
 // PRIVATE FUNCTIONS
 typedef enum {
-    C2_OP_ASSIGN_DECISION_VAL,
-    C2_OP_DECISION,
-//    C2_OP_CASE_SPLIT
+    C2_OP_ASSIGN_DECISION_VAL
 } C2_OPERATION;
 void c2_undo(void* parent, char type, void* obj);
 

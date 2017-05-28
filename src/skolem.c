@@ -64,6 +64,7 @@ Skolem* skolem_init(QCNF* qcnf, Options* o,
     
     s->clauses_to_check = worklist_init(qcnf_compare_clauses_by_size);
     
+    s->decision_indicator_vars = int_vector_init();
     
     // Statistics
     s->statistics.propagations = 0;
@@ -101,6 +102,7 @@ void skolem_free(Skolem* s) {
     worklist_free(s->clauses_to_check);
     int_vector_free(s->potentially_conflicted_variables);
     int_vector_free(s->unique_consequence);
+    int_vector_free(s->decision_indicator_vars);
     stack_free(s->stack);
     free(s);
 }
@@ -791,84 +793,6 @@ void skolem_propagate_partial_over_clause_for_lit(Skolem* s, Clause* c, Lit lit,
     skolem_update_dependencies(s, lit_to_var(lit), dependencies_copy);
 }
 
-//// find satisfied antecedents, if possible with legal dependencies only
-//Clause* find_satisfied_antecedent(Skolem* s, Lit lit) {
-//    vector* occs = qcnf_get_occs_of_lit(s->qcnf, lit);
-//    Clause* candidate = NULL;
-//    for (unsigned i = 0; i < vector_count(occs); i++) {
-//        Clause* c = vector_get(occs, i);
-//        assert(skolem_get_unique_consequence(s, c) != - lit);
-//        if (skolem_get_unique_consequence(s, c) == lit) {
-//            bool legal_deps_of_antecedent_satisfied = true;
-//            bool illegal_deps_of_antecedent_satisfied = true;
-//            for (unsigned j = 0; j < c->size; j++) {
-//                if (lit_to_var(c->occs[j]) != lit_to_var(lit)) {
-//                    int val = skolem_get_value_for_conflict_analysis(s, - c->occs[j]);
-//                    assert(val == 1 || val ==  -1 || val == 0);
-//                    if (val != 1) {
-//                        if (skolem_may_depend_on(s, lit_to_var(lit), lit_to_var(c->occs[j]))) {
-//                            legal_deps_of_antecedent_satisfied = false;
-//                            break;
-//                        } else {
-//                            illegal_deps_of_antecedent_satisfied = false;
-//                            if (candidate != NULL) {
-//                                break;
-//                            }
-//                            // not break, this is fine
-//                        }
-//                    }
-//                }
-//            }
-//            if (legal_deps_of_antecedent_satisfied && illegal_deps_of_antecedent_satisfied) {
-//                return c; // all that we wanted
-//            }
-//            if (legal_deps_of_antecedent_satisfied && candidate == NULL) {
-//                candidate = c;
-//            }
-//        }
-//    }
-//    assert(candidate);
-//    return candidate;
-//}
-
-//// Are also the illegal dependencies satisfied? These are partially omitted in the global conflict check.
-//bool antecedent_is_satisfied_including_illegal_dependencies(Skolem* s, Clause* c, unsigned unique_consequence) {
-//    assert(lit_to_var(skolem_get_unique_consequence(s, c)) == unique_consequence);
-//    for (unsigned i = 0; i < c->size; i++) {
-//        unsigned other_var_id = lit_to_var(c->occs[i]);
-//        if (other_var_id != unique_consequence) {
-//            int val = skolem_get_value_for_conflict_analysis(s, - c->occs[i]);
-//            assert(val == 1 || val ==  -1);
-//            if (val != 1) {
-//                assert(! skolem_may_depend_on(s, unique_consequence, other_var_id));
-//                return false;
-//            }
-//        }
-//    }
-//    return true;
-//}
-
-// Add the illegal dependencies and require with the variables s->dependency_choice_sat_lit
-// that one of the sides of the conflict check must have
-//
-//void skolem_add_clauses_with_illegal_dependencies(Skolem* s, unsigned var_id) {
-//    if (qcnf_is_propositional(s->qcnf) || qcnf_is_2QBF(s->qcnf)) {
-//        return;
-//    }
-//    // add illegal dependencies, guarded by s->dependency_choice_sat_lit
-//    skolem_fix_lit_for_unique_antecedents(s,   (Lit) var_id, false, FUAM_ONLY_ILLEGALS_GUARDED);
-//    skolem_fix_lit_for_unique_antecedents(s, - (Lit) var_id, false, FUAM_ONLY_ILLEGALS_GUARDED);
-//    
-//    // optimization: if one of the sides does not contain illegal deps, make the check precise.
-//    if (!skolem_occs_contain_illegal_dependence(s, (Lit) var_id)) {
-//        satsolver_add(s->skolem,   s->dependency_choice_sat_lit);
-//        satsolver_clause_finished(s->skolem);
-//    } else if (!skolem_occs_contain_illegal_dependence(s, - (Lit) var_id)) {
-//        satsolver_add(s->skolem, - s->dependency_choice_sat_lit);
-//        satsolver_clause_finished(s->skolem);
-//    }
-//}
-
 unsigned skolem_global_conflict_check(Skolem* s, bool can_delay) {
     
     if (skolem_is_conflicted(s)) {
@@ -1135,8 +1059,10 @@ void skolem_undo(void* parent, char type, void* obj) {
                 abortif(elem != (int) var_id, "Popping potentially conflicted variable failed.");
             }
             break;
+            
         case SKOLEM_OP_DECISION:
             s->decision_lvl -= 1;
+            int_vector_pop(s->decision_indicator_vars);
             break;
             
         default:
@@ -1419,7 +1345,7 @@ void skolem_decision(Skolem* s, Lit decision_lit) {
     bool opposite_case_exists = skolem_fix_lit_for_unique_antecedents(s, - decision_lit, true, FUAM_ONLY_LEGALS);
     
     // Here we already fix the function domain decisions
-    // This is essentially a precautionary measure to prevent conflict analysis from interpreting the decision as a
+    // This is a precautionary measure to prevent conflict analysis from interpreting the decision as a
     // reason for setting the decision_var to value in cases where there should also be a different reason. Decision
     // can only be taken as a reason when -opposite_satlit.
     Lit val_satlit =      skolem_get_satsolver_lit(s,   decision_lit);
@@ -1454,10 +1380,11 @@ void skolem_decision(Skolem* s, Lit decision_lit) {
     union Dependencies new_deps = skolem_copy_dependencies(s, si.dep);
     skolem_update_dependencies(s, decision_var_id, new_deps);
     
-    // now define helper variable and clause to make sure the decision variable always has a reason
+    // Define helper variable and clause to make sure the decision variable always has a reason
     Var* decision_var = var_vector_get(s->qcnf->vars, decision_var_id);
     assert(decision_var->var_id != 0);
     Var* fresh = qcnf_fresh_var(s->qcnf, decision_var->scope_id);
+    int_vector_add(s->decision_indicator_vars, (int) fresh->var_id);
     fresh->original = 0;
     skolem_update_decision_lvl(s, fresh->var_id, s->decision_lvl);
     

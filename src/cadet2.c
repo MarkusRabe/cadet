@@ -847,18 +847,7 @@ void c2_undo(void* parent, char type, void* obj) {
     C2* c2 = (C2*) parent;
     unsigned var_id = (unsigned) (int64_t) obj; // is 0 in case of type == C2_OP_CASE_SPLIT
     
-#ifdef DEBUG
-    if (type == C2_OP_DECISION /* || type == C2_OP_ASSIGN_DECISION_VAL */) {
-        Var* v = var_vector_get(c2->qcnf->vars, var_id);
-        assert(skolem_get_decision_lvl(c2->skolem, var_id) != 0 || v->original == 0 || c2_is_decision_var(c2,var_id) || int_vector_count(c2->case_split_stack) > 0);
-    }
-#endif
-    
     switch ((C2_OPERATION) type) {
-        case C2_OP_DECISION:
-            assert(c2->skolem->decision_lvl > 0);
-            c2->skolem->decision_lvl--;
-            break;
             
         case C2_OP_ASSIGN_DECISION_VAL:
             assert(true);

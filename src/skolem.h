@@ -78,42 +78,62 @@ struct Skolem_Magic_Values {
 };
 
 struct Skolem {
+    // Links to objects outside of Skolem domain
     Options* options;
     QCNF* qcnf;
+    
+    
+    // Dependent objects
     SATSolver* skolem;
     Cegar* cegar;
     
-    unsigned u_initially_deterministic;
-    unsigned e_initially_deterministic;
-    SKOLEM_MODE mode;
-    SKOLEM_STATE state;
+    
+    // Core Skolem state and data structures
     unsigned decision_lvl;
-    
-    int satlit_true;
-    int dependency_choice_sat_lit;
-    
+    SKOLEM_STATE state;
+    unsigned conflict_var_id; // only assigned in case of conflict
+    Clause* conflicted_clause; // only assigned in case of conflict
+    // All information about the variables that is relevant to the Skolem domain
     skolem_var_vector* infos; // contains skolem_var; indexed by var_id
-    unsigned conflict_var_id;
-    Clause* conflicted_clause;
+    // All information Skolem domain needs about clauses: the unique consequences for all clauses
+    int_vector* unique_consequence; // contains lit indexed by clause_id
     
-    union Dependencies empty_dependencies; // needed because we would otherwise create plenty of empty dependency objects which we would fail to disallocate; used when non-existent skolem_vars should return a dependency set
-    
-    /* Data structures for skolem function propagation.
-     * For propagation, variables are first added to determinicity_queue, if they are not deterministic, they are added to pure_var_queue.
-     */
-    pqueue* determinicity_queue; // contains Var*
-    pqueue* pure_var_queue;
-    int_vector* unique_consequence; // vector of lit indexed by clause_id
-    
-    // Data structures for explicit propagation
-    worklist* clauses_to_check; // stores Clause pointers
-    
-    // Data structures for conflict checks
+    // Extra data structure required for delayed conflict checks (if option is activated)
+    // Stores all the variables that are potentially
     int_vector* potentially_conflicted_variables; // contains var_id
     
-    // Keeping track of progress
+    // Extra data structure required for functional synthesis
+    int_vector* decision_indicator_vars; // contains var_id of temporary vars
+    
+    /* Propagation worklists:
+     * Constants are propagated through the clauses_to_check worklist.
+     * For determinicity propagation, variables are first added to determinicity_queue,
+     * if they are not deterministic, they are added to pure_var_queue to later check 
+     * if they are pure.
+     */
+    worklist* clauses_to_check; // stores Clause*
+    pqueue* determinicity_queue; // contains unsigned var_id
+    pqueue* pure_var_queue; // contains unsigned var_id
+    
+    
+    // Configuration
+    SKOLEM_MODE mode; // can be used to switch of all or certain types of conflicts
+    unsigned u_initially_deterministic; // what should be considered deterministic?
+    unsigned e_initially_deterministic; // what should be considered deterministic?
+    
+    
+    // Static objects
+    // Helper variables in the SAT solver
+    int satlit_true; // this satlit represents constant true; so far always assigned 1
+    int dependency_choice_sat_lit; // something related to an earlier
+    // THE empty_dependency object
+    // Used when non-existent skolem_vars should return a dependency set; avoids alloc/free management
+    union Dependencies empty_dependencies;
+    
+    // Keeping track of progress; not essential currently
     size_t deterministic_variables;
     
+    // Backtracking
     Stack* stack;
     
     struct Skolem_Statistics statistics;

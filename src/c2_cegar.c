@@ -38,6 +38,10 @@ Cegar* cegar_init(QCNF* qcnf) {
     return cegar;
 }
 
+bool cegar_is_initialized(Cegar* cegar) {
+    return cegar->interface_vars;
+}
+
 void cegar_update_interface(Skolem* s) {
     
     Cegar* cegar = s->cegar;
@@ -163,6 +167,8 @@ void cegar_free(Cegar* c) {
 
 cadet_res cegar_solve_2QBF(C2* c2, int rounds_num) {
     
+    assert(cegar_is_initialized(c2->skolem->cegar));
+    
     // solver loop
     while (c2->result == CADET_RESULT_UNKNOWN && rounds_num--) {
         if (satsolver_sat(c2->skolem->skolem) == SATSOLVER_RESULT_SAT) {
@@ -175,6 +181,7 @@ cadet_res cegar_solve_2QBF(C2* c2, int rounds_num) {
 }
 
 void cegar_do_cegar_if_effective(C2* c2) {
+    assert(cegar_is_initialized(c2->skolem->cegar));
     unsigned i = 0;
     while (c2->result == CADET_RESULT_UNKNOWN &&
            c2->skolem->cegar->recent_average_cube_size < c2->skolem->cegar->cegar_effectiveness_threshold) {
@@ -200,6 +207,7 @@ int cegar_get_val(void* domain, Lit lit) {
 }
 
 cadet_res cegar_build_abstraction_for_assignment(C2* c2) {
+    assert(cegar_is_initialized(c2->skolem->cegar));
     assert(c2->result == CADET_RESULT_UNKNOWN);
     Cegar* cegar = c2->skolem->cegar;
     
@@ -260,6 +268,7 @@ cadet_res cegar_build_abstraction_for_assignment(C2* c2) {
 
 
 bool cegar_try_to_handle_conflict(Skolem* s) {
+    assert(cegar_is_initialized(s->cegar));
     Cegar* cegar = s->cegar;
     
     V3("Assuming: ");
@@ -330,7 +339,7 @@ bool cegar_try_to_handle_conflict(Skolem* s) {
 }
 
 void cegar_print_statistics(Cegar* cegar) {
-    if (cegar && cegar->interface_vars && cegar->exists_solver) {
+    if (cegar && cegar_is_initialized(cegar)) {
         V0("Cegar statistics:\n");
         V0("  Interface size: %u\n", int_vector_count(cegar->interface_vars));
         V0("  Number of cubes: %u\n", cegar->cubes_num);

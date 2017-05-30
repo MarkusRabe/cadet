@@ -54,5 +54,6 @@ void cegar_do_cegar_if_effective(C2* c2);
 bool cegar_try_to_handle_conflict(Skolem* s);
 void cegar_print_statistics(Cegar*);
 void cegar_update_interface(Skolem*);
+bool cegar_is_initialized(Cegar*);
 
 #endif /* c2_cegar_h */

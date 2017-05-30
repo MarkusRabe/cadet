@@ -900,7 +900,7 @@ unsigned skolem_global_conflict_check(Skolem* s, bool can_delay) {
     unsigned max_iter = 100;
     while (true) {
         result = satsolver_sat(s->skolem);
-        if (result == SATSOLVER_SATISFIABLE && s->options->cegar && s->cegar && s->cegar->recent_average_cube_size < s->cegar->cegar_effectiveness_threshold && max_iter-- > 0) {
+        if (result == SATSOLVER_SATISFIABLE && s->options->cegar && cegar_is_initialized(s->cegar) && s->cegar->recent_average_cube_size < s->cegar->cegar_effectiveness_threshold && max_iter-- > 0) {
             // Added "s->cegar" to the condition to make sure that this is only called after the initial propagation.
             
             if (cegar_try_to_handle_conflict(s)) {

@@ -36,7 +36,7 @@ struct Cegar {
 /* Initializes a cegar object, including the SAT solver using 
  * the current determinicity information in c2->skolem. 
  */
-Cegar* cegar_init(C2*);
+Cegar* cegar_init(QCNF*);
 void cegar_free(Cegar* c);
 
 /*
@@ -53,5 +53,6 @@ cadet_res cegar_solve_2QBF(C2* c2, int rounds_num);
 void cegar_do_cegar_if_effective(C2* c2);
 bool cegar_try_to_handle_conflict(Skolem* s);
 void cegar_print_statistics(Cegar*);
+void cegar_update_interface(Skolem*);
 
 #endif /* c2_cegar_h */

@@ -226,7 +226,7 @@ void c2_replenish_skolem_satsolver(C2* c2) {
     c2_initial_propagation(c2);
     abortif(skolem_is_conflicted(c2->skolem), "Skolem domain was conflicted after replenishing.");
     
-    c2->skolem->cegar = cegar_init(c2);
+    cegar_update_interface(c2->skolem);
     
     assert(vector_count(old_skolem->cegar->solved_cubes) == 0 || c2->options->cegar || c2->options->case_splits);
     
@@ -550,6 +550,20 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                 c2->state = C2_READY;
                 
             } else { // actual conflict
+                if (c2->options->functional_synthesis && int_vector_count(conflict) > 0) {
+                    
+                    c2_backtrack_to_decision_lvl(c2, c2->restart_base_decision_lvl);
+                    c2->state = C2_READY;
+                    
+                    for (unsigned i = 0; i < int_vector_count(conflict); i++) {
+                        int lit = int_vector_get(conflict, i);
+                        satsolver_add(c2->skolem->skolem, skolem_get_satsolver_lit(c2->skolem, lit));
+                    }
+                    satsolver_clause_finished(c2->skolem->skolem);
+                    vector_add(c2->skolem->cegar->solved_cubes, conflict);
+                    V1("Functional synthesis detected a cube that is over dlvl0 only, which we simply exclude from future conflict calls.\n");
+                    continue;
+                }
                 
                 if (debug_verbosity >= VERBOSITY_LOW) {
                     c2_print_universals_assignment(c2);
@@ -702,9 +716,9 @@ cadet_res c2_sat(C2* c2) {
         if (c2->options->miniscoping) {
             c2_analysis_determine_number_of_partitions(c2);
         }
-        if (c2->options->cegar || c2->options->cegar_only) {
-            c2->skolem->cegar = cegar_init(c2);
-        }
+        
+        cegar_update_interface(c2->skolem);
+        
         if (c2->options->cegar_only) {
             return cegar_solve_2QBF(c2, -1);
         }
@@ -807,17 +821,21 @@ cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
             case C2_SKOLEM_CONFLICT:
                 c2_print_qdimacs_certificate(c2, c2->skolem, skolem_get_value_for_conflict_analysis);
                 abortif(! c2_cert_check_UNSAT(c2->qcnf, c2->skolem, skolem_get_value_for_conflict_analysis) , "Check failed! UNSAT result could not be certified.");
+                abortif(c2->options->functional_synthesis, "Should not reach UNSAT output in functional synthesis mode.");
                 break;
             case C2_CEGAR_CONFLICT:
                 c2_print_qdimacs_certificate(c2, c2->skolem, cegar_get_val);
                 abortif(! c2_cert_check_UNSAT(c2->qcnf, c2->skolem, cegar_get_val), "Check failed! UNSAT result could not be certified.");
+//                abortif(c2->options->functional_synthesis, "Should not reach UNSAT output in functional synthesis mode.");
+
                 break;
             case C2_EXAMPLES_CONFLICT:
                 c2_print_qdimacs_certificate(c2, c2->examples, examples_get_value_for_conflict_analysis);
                 abortif(! c2_cert_check_UNSAT(c2->qcnf, c2->examples, examples_get_value_for_conflict_analysis) , "Check failed! UNSAT result could not be certified.");
+                abortif(c2->options->functional_synthesis, "Should not reach UNSAT output in functional synthesis mode.");
                 break;
             case C2_EMPTY_CLAUSE_CONFLICT:
-                if (log_qdimacs_compliant) {V0("Unable to provide qdimacs certificate. Found an empty clause, but that may have resulted from universal reduction.\n");} 
+                if (log_qdimacs_compliant) {V0("Unable to provide qdimacs certificate. Found an empty clause, but that may have resulted from universal reduction.\n");}
                 abortif(!c2->qcnf->empty_clause || (! c2->qcnf->empty_clause->original && !c2->qcnf->empty_clause->consistent_with_originals), "Inconsistency after empty clause conflict.");
                 break;
             default:

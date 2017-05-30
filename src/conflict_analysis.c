@@ -33,6 +33,7 @@ void conflict_analysis_schedule_causing_vars_in_work_queue(conflict_analysis* ca
     assert(ca->c2->skolem->conflict_var_id == lit_to_var(consequence)
            || ca->domain_get_value(ca->domain, consequence) == 1);
     assert(ca->domain != ca->c2->skolem || skolem_get_unique_consequence(ca->c2->skolem, reason) == consequence || skolem_get_constant_value(ca->c2->skolem, consequence) == 1); // a bit hacky
+    
     for (unsigned i = 0; i < reason->size; i++) {
         Lit l = reason->occs[i];
         if (consequence == l) { // not strictly necessary
@@ -41,6 +42,7 @@ void conflict_analysis_schedule_causing_vars_in_work_queue(conflict_analysis* ca
         assert(ca->domain_get_decision_lvl(ca->domain, lit_to_var(consequence)) >= ca->domain_get_decision_lvl(ca->domain, lit_to_var(l)) || ca->domain_get_value(ca->domain, consequence) == 1);
         
         if (! ca->domain_is_legal_dependence(ca->c2->skolem, lit_to_var(consequence), lit_to_var(l))) {
+            assert(ca->domain_get_value(ca->domain, l) == -1);
             int_vector_add(ca->conflicting_assignment, - l);
             continue;
         }
@@ -48,6 +50,7 @@ void conflict_analysis_schedule_causing_vars_in_work_queue(conflict_analysis* ca
         assert(ca->c2->state != C2_SKOLEM_CONFLICT || skolem_get_unique_consequence((Skolem*) ca->domain, reason) == consequence || skolem_get_constant_value(ca->c2->skolem, consequence) == 1);
         
         assert(ca->domain_get_value(ca->domain, l) == -1);
+        assert(ca->domain_get_value(ca->domain, -l) == 1);
         
         // activity heuristics
         if (!set_contains(ca->queue->s, (void*) (int64_t) - l)) {
@@ -233,7 +236,12 @@ int_vector* analyze_assignment_conflict(C2* c2,
                                         bool (*domain_is_relevant_clause)(void* domain, Clause* c, Lit lit),
                                         bool (*domain_is_legal_dependence)(void* domain, unsigned var_id, unsigned depending_on),
                                         unsigned (*domain_get_decision_lvl)(void* domain, unsigned var_id)) {
-    V3("Computing conflict clause. Conflicted var: %u. Conflicted clause: %u\n", conflicted_var, conflicted_clause ? conflicted_clause->clause_id : 0);
+    V3("Computing conflict clause. Conflicted var: %u. Conflicted clause:", conflicted_var);
+    if (conflicted_clause) {
+        V3("%u\n", conflicted_clause->clause_id);
+    } else {
+        V3("NULL\n");
+    }
     
 #ifdef DEBUG
     if (conflicted_var != 0) {

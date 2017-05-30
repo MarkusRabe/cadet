@@ -27,7 +27,7 @@ Skolem* skolem_init(QCNF* qcnf, Options* o,
     Skolem* s = malloc(sizeof(Skolem));
     s->options = o;
     s->qcnf = qcnf;
-    s->cegar = NULL;
+    s->cegar = cegar_init(qcnf);
     s->u_initially_deterministic = u_initially_deterministic;
     s->e_initially_deterministic = e_initially_deterministic;
     
@@ -96,7 +96,7 @@ Skolem* skolem_init(QCNF* qcnf, Options* o,
 }
 
 void skolem_free(Skolem* s) {
-    cegar_free(s->cegar);
+    if (s->cegar) {cegar_free(s->cegar); s->cegar = NULL;}
     satsolver_free(s->skolem);
     skolem_var_vector_free(s->infos);
     pqueue_free(s->determinicity_queue);
@@ -630,7 +630,7 @@ void skolem_propagate_pure_variable(Skolem* s, unsigned var_id) {
                 satsolver_add(s->skolem, - new_opposite_sat_lit);
                 satsolver_clause_finished(s->skolem);
                 
-                if (s->options->delay_conflict_checks) {
+                if (s->options->delay_conflict_checks || s->options->functional_synthesis) {
                     satsolver_add(s->skolem,   skolem_get_satsolver_lit(s,   (Lit) var_id));
                     satsolver_add(s->skolem,   new_opposite_sat_lit);
                     satsolver_clause_finished(s->skolem);
@@ -653,7 +653,7 @@ void skolem_propagate_pure_variable(Skolem* s, unsigned var_id) {
                 satsolver_add(s->skolem, - new_opposite_sat_lit);
                 satsolver_clause_finished(s->skolem);
                 
-                if (s->options->delay_conflict_checks) {
+                if (s->options->delay_conflict_checks || s->options->functional_synthesis) {
                     satsolver_add(s->skolem,   skolem_get_satsolver_lit(s, - (Lit) var_id));
                     satsolver_add(s->skolem,   new_opposite_sat_lit);
                     satsolver_clause_finished(s->skolem);
@@ -676,23 +676,24 @@ void skolem_propagate_pure_variable(Skolem* s, unsigned var_id) {
             }
         }
         
-        // Which clauses may be affected?
-        if (s->options->enhanced_pure_literals) {
-            skolem_check_occs_for_unique_consequences(s,   (Lit) var_id);
-            skolem_check_occs_for_unique_consequences(s, - (Lit) var_id);
-        } else {
-            if (pure_polarity > 0) {
-                skolem_check_occs_for_unique_consequences(s, - (Lit) var_id);
-            } else {
-                skolem_check_occs_for_unique_consequences(s,   (Lit) var_id);
-            }
-        }
-        
         // If this pure variable turned out to be constant, update the worklist for constant propagation
         int val = skolem_get_constant_value(s, (Lit) var_id);
         if (val != 0) {
+            V3("Pure variable %u gets constant value.\n", var_id);
             s->statistics.pure_constants++;
-            skolem_update_clause_worklist(s, val * (Lit) var_id);
+            skolem_assign_constant_value(s, val * (Lit) var_id, skolem_create_fresh_empty_dep(s), NULL);
+        } else {
+            // Which clauses may be affected?
+            if (s->options->enhanced_pure_literals) {
+                skolem_check_occs_for_unique_consequences(s,   (Lit) var_id);
+                skolem_check_occs_for_unique_consequences(s, - (Lit) var_id);
+            } else {
+                if (pure_polarity > 0) {
+                    skolem_check_occs_for_unique_consequences(s, - (Lit) var_id);
+                } else {
+                    skolem_check_occs_for_unique_consequences(s,   (Lit) var_id);
+                }
+            }
         }
     } else {
         V4("Var %d not pure\n", var_id);
@@ -714,13 +715,13 @@ void skolem_propagate_partial_over_clause_for_lit(Skolem* s, Clause* c, Lit lit,
     assert(!skolem_is_deterministic(s, lit_to_var(lit)) || ide == IDE_GUARDED);
     assert( skolem_get_unique_consequence(s, c) == 0 || skolem_get_unique_consequence(s, c) == lit );
     
-    if (s->options->delay_conflict_checks) {
+    if (s->options->delay_conflict_checks || s->options->functional_synthesis) {
         define_both_sides = true;
     }
     
     // Example and transformation. Let clause be (x y z lit):
     //
-    // newlit -> prevlit || -x && -y && -z
+    // newlit -> (prevlit || -x && -y && -z)
     // newlit -> (prevlit || -x) && (prevlit || -y) && (prevlit || -z)
     // -newlit || (prevlit || -x) && (prevlit || -y) && (prevlit || -z)
     // (-newlit || prevlit || -x) && (-newlit || prevlit || -y) && (-newlit || prevlit || -z)
@@ -1200,7 +1201,7 @@ void skolem_assign_constant_value(Skolem* s, Lit lit, union Dependencies propaga
     assert(lit != 0);
     unsigned var_id = lit_to_var(lit);
     assert(!skolem_is_conflicted(s));
-    assert(skolem_get_satsolver_lit(s, lit) != s->satlit_true); // not constant already, not a big problem, but why should this happen?
+//    assert(skolem_get_satsolver_lit(s, lit) != s->satlit_true); // not constant already, not a big problem, but why should this happen?
     abortif(skolem_get_satsolver_lit(s, -lit) == s->satlit_true, "Propagation ended in inconsistent state.\n");
     
     V3("Skolem: Assign value %d.\n",lit);
@@ -1341,6 +1342,7 @@ void skolem_decision(Skolem* s, Lit decision_lit) {
     
     assert(skolem_get_decision_lvl(s, decision_var_id) == 0);
     assert(!skolem_is_deterministic(s, decision_var_id));
+    assert(skolem_get_constant_value(s, decision_lit) == 0);
     
     // Increase decision level, set
     skolem_increase_decision_lvl(s);
@@ -1352,7 +1354,7 @@ void skolem_decision(Skolem* s, Lit decision_lit) {
      * checked at the same time, and a later variable is determined to be conflicted even though for
      * the same input the decision var would be conflicted as well.
      */
-    bool positive_side_needs_complete_definitions_too = s->options->delay_conflict_checks;
+    bool positive_side_needs_complete_definitions_too = s->options->delay_conflict_checks || s->options->functional_synthesis;
     
     skolem_fix_lit_for_unique_antecedents(s,  decision_lit, positive_side_needs_complete_definitions_too, FUAM_ONLY_LEGALS);
     bool opposite_case_exists = skolem_fix_lit_for_unique_antecedents(s, - decision_lit, true, FUAM_ONLY_LEGALS);
@@ -1397,21 +1399,11 @@ void skolem_decision(Skolem* s, Lit decision_lit) {
     if (s->options->functional_synthesis) {
         // For functional synthesis, we will require that all conflicts involve at least one decision var. For that we introduce a sat_lit that represents exactly that.
         
-        // Define helper variable and clause to make sure the decision variable always has a reason
-//          Var* fresh = qcnf_fresh_var(s->qcnf, decision_var->scope_id);
-//        fresh->original = 0;
-//        skolem_update_decision_lvl(s, fresh->var_id, s->decision_lvl);
-        
-        // Define the fresh var as new_val_satlit && -val_satlit
+        // Define the sat_lit_fresh := new_val_satlit && -val_satlit  // - opposite_satlit && - val_satlit
         int sat_lit_fresh = satsolver_inc_max_var(s->skolem);
         
         int_vector_add(s->decision_indicator_sat_lits, sat_lit_fresh);
 
-//        skolem_update_pos_lit(s, fresh->var_id,    sat_lit_fresh);
-//        skolem_update_neg_lit(s, fresh->var_id, -  sat_lit_fresh);
-//        skolem_update_deterministic(s, fresh->var_id, 1);
-//        skolem_update_dependencies(s, fresh->var_id, skolem_copy_dependencies(s, si.dep));
-        
         satsolver_add(s->skolem, sat_lit_fresh);
         satsolver_add(s->skolem, - new_val_satlit);
         satsolver_add(s->skolem,   val_satlit);
@@ -1424,15 +1416,6 @@ void skolem_decision(Skolem* s, Lit decision_lit) {
         satsolver_add(s->skolem, - sat_lit_fresh);
         satsolver_add(s->skolem, - val_satlit);
         satsolver_clause_finished(s->skolem);
-        
-        // This is one purpose of the fresh var: make sure the decision var definitely has the desired value. But we don't strictly need this clause.
-        //        qcnf_add_lit(s->qcnf, - (int) fresh->var_id);
-        //        qcnf_add_lit(s->qcnf, decision_lit);
-        //        Clause* helper_clause = qcnf_close_clause(s->qcnf);
-        //        helper_clause->original = 0;
-        //        helper_clause->consistent_with_originals = 0;
-        //        skolem_set_unique_consequence(s, helper_clause, decision_lit);
-        
     }
     
     // Decision variable needs to be deterministic before we can do conflict checks. Also this is why we have to check exactly here.

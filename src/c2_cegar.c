@@ -10,15 +10,13 @@
 #include "log.h"
 
 
-Cegar* cegar_init(C2* c2) {
+Cegar* cegar_init(QCNF* qcnf) {
     Cegar* cegar = malloc(sizeof(Cegar));
-    cegar->qcnf = c2->qcnf;
+    cegar->qcnf = qcnf;
     cegar->additional_assignment = int_vector_init();
     cegar->solved_cubes = vector_init();
-    
-    const unsigned max_var_id = var_vector_count(cegar->qcnf->vars);
-    cegar->exists_solver = satsolver_init();
-    satsolver_set_max_var(cegar->exists_solver, (int) max_var_id);
+    cegar->exists_solver = NULL; // no initialized yet; see cegar_update_interface
+    cegar->interface_vars = NULL;
     
     // Magic values
     cegar->cegar_effectiveness_threshold = 20;
@@ -30,14 +28,32 @@ Cegar* cegar_init(C2* c2) {
     cegar->cubes_num = 0;
     cegar->recent_average_cube_size = 0;
     
+    
+    cegar->is_used_in_lemma = int_vector_init();
+    // initialize vector of bits saying we need this variable in the blocking clause
+    for (unsigned i = 0; i < var_vector_count(qcnf->vars); i++) {
+        int_vector_add(cegar->is_used_in_lemma, 1);
+    }
+    
+    return cegar;
+}
+
+void cegar_update_interface(Skolem* s) {
+    
+    Cegar* cegar = s->cegar;
+    
+    const unsigned max_var_id = var_vector_count(cegar->qcnf->vars);
+    cegar->exists_solver = satsolver_init();
+    satsolver_set_max_var(cegar->exists_solver, (int) max_var_id);
+    
     // set up satsolver for existentials
-    for (unsigned i = 0; i < vector_count(c2->qcnf->clauses); i++) {
-        Clause* c = vector_get(c2->qcnf->clauses, i);
+    for (unsigned i = 0; i < vector_count(s->qcnf->clauses); i++) {
+        Clause* c = vector_get(s->qcnf->clauses, i);
         if (!c) {
             continue;
         }
-        unsigned uc_var = lit_to_var(skolem_get_unique_consequence(c2->skolem, c));
-        if (uc_var != 0 && skolem_is_deterministic(c2->skolem, uc_var)) {
+        unsigned uc_var = lit_to_var(skolem_get_unique_consequence(s, c));
+        if (uc_var != 0 && skolem_is_deterministic(s, uc_var)) {
             continue;
         }
         for (unsigned j = 0; j < c->size; j++) {
@@ -48,18 +64,19 @@ Cegar* cegar_init(C2* c2) {
     }
     
     // determine interface variables; variables that are deterministic and occur in clauses together with nondeterministic variables.
+    int_vector* old_interface = cegar->interface_vars;
     cegar->interface_vars = int_vector_init();
-    for (unsigned i = 0; i < vector_count(c2->qcnf->clauses); i++) {
-        Clause* c = vector_get(c2->qcnf->clauses, i);
+    for (unsigned i = 0; i < vector_count(s->qcnf->clauses); i++) {
+        Clause* c = vector_get(s->qcnf->clauses, i);
         if (!c) {
             continue;
         }
-        unsigned uc_var = lit_to_var(skolem_get_unique_consequence(c2->skolem, c));
-        if (uc_var != 0 && skolem_is_deterministic(c2->skolem, uc_var)) {
+        unsigned uc_var = lit_to_var(skolem_get_unique_consequence(s, c));
+        if (uc_var != 0 && skolem_is_deterministic(s, uc_var)) {
             continue;
         }
         for (unsigned j = 0; j < c->size; j++) {
-            if (skolem_is_deterministic(c2->skolem, lit_to_var(c->occs[j]))) {
+            if (skolem_is_deterministic(s, lit_to_var(c->occs[j]))) {
                 int_vector_add(cegar->interface_vars, (int) lit_to_var(c->occs[j]));
             }
         }
@@ -74,13 +91,13 @@ Cegar* cegar_init(C2* c2) {
         V1("\n");
     }
     
-    cegar->is_used_in_lemma = int_vector_init();
-    // initialize vector of bits saying we need this variable in the blocking clause
-    for (unsigned i = 0; i < var_vector_count(c2->qcnf->vars); i++) {
-        int_vector_add(cegar->is_used_in_lemma, 1);
+    // Interface should only extend; otherwise the cubes in solved_cubes may refer to non-deterministic variables
+    if (debug_verbosity >= VERBOSITY_HIGH && old_interface != NULL) {
+        for (unsigned i = 0; i < int_vector_count(old_interface); i++) {
+            assert(int_vector_contains(cegar->interface_vars, int_vector_get(old_interface, i)));
+        }
     }
-    
-    return cegar;
+    free(old_interface);
 }
 
 bool cegar_var_needs_to_be_set(Cegar* cegar, unsigned var_id) {
@@ -313,7 +330,7 @@ bool cegar_try_to_handle_conflict(Skolem* s) {
 }
 
 void cegar_print_statistics(Cegar* cegar) {
-    if (cegar) {
+    if (cegar && cegar->interface_vars && cegar->exists_solver) {
         V0("Cegar statistics:\n");
         V0("  Interface size: %u\n", int_vector_count(cegar->interface_vars));
         V0("  Number of cubes: %u\n", cegar->cubes_num);

@@ -65,7 +65,7 @@ Skolem* skolem_init(QCNF* qcnf, Options* o,
     s->clauses_to_check = worklist_init(qcnf_compare_clauses_by_size);
     
     if (s->options->functional_synthesis) {
-        s->decision_indicator_vars = int_vector_init();
+        s->decision_indicator_sat_lits = int_vector_init();
     }
     
     // Statistics
@@ -105,7 +105,7 @@ void skolem_free(Skolem* s) {
     int_vector_free(s->potentially_conflicted_variables);
     int_vector_free(s->unique_consequence);
     if (s->options->functional_synthesis) {
-        int_vector_free(s->decision_indicator_vars);
+        int_vector_free(s->decision_indicator_sat_lits);
     }
     stack_free(s->stack);
     free(s);
@@ -838,6 +838,13 @@ unsigned skolem_global_conflict_check(Skolem* s, bool can_delay) {
     
     satsolver_push(s->skolem);
     
+    if (s->options->functional_synthesis) {
+        for (unsigned i = 0; i < int_vector_count(s->decision_indicator_sat_lits); i++) {
+            satsolver_add(s->skolem, int_vector_get(s->decision_indicator_sat_lits, i));
+        }
+        satsolver_clause_finished(s->skolem);
+    }
+    
     int_vector* conjunction_lits = int_vector_init();
     
     for (unsigned i = 0; i < int_vector_count(s->potentially_conflicted_variables); i++) {
@@ -1067,7 +1074,7 @@ void skolem_undo(void* parent, char type, void* obj) {
         case SKOLEM_OP_DECISION:
             s->decision_lvl -= 1;
             if (s->options->functional_synthesis) {
-                int_vector_pop(s->decision_indicator_vars);
+                int_vector_pop(s->decision_indicator_sat_lits);
             }
             break;
             
@@ -1388,29 +1395,44 @@ void skolem_decision(Skolem* s, Lit decision_lit) {
     skolem_update_dependencies(s, decision_var_id, new_deps);
     
     if (s->options->functional_synthesis) {
+        // For functional synthesis, we will require that all conflicts involve at least one decision var. For that we introduce a sat_lit that represents exactly that.
+        
         // Define helper variable and clause to make sure the decision variable always has a reason
-        Var* decision_var = var_vector_get(s->qcnf->vars, decision_var_id);
-        assert(decision_var->var_id != 0);
-        Var* fresh = qcnf_fresh_var(s->qcnf, decision_var->scope_id);
-        int_vector_add(s->decision_indicator_vars, (int) fresh->var_id);
-//    TODO: which is actually the variable that indicates that this decision is involved?
-        // Actually it seems that the situation we are looking for is new_val_satlit && -val_satlit
-        // Can we define fresh_var like this?
+//          Var* fresh = qcnf_fresh_var(s->qcnf, decision_var->scope_id);
+//        fresh->original = 0;
+//        skolem_update_decision_lvl(s, fresh->var_id, s->decision_lvl);
         
-        fresh->original = 0;
-        skolem_update_decision_lvl(s, fresh->var_id, s->decision_lvl);
+        // Define the fresh var as new_val_satlit && -val_satlit
+        int sat_lit_fresh = satsolver_inc_max_var(s->skolem);
         
-        qcnf_add_lit(s->qcnf, - (int) fresh->var_id);
-        qcnf_add_lit(s->qcnf, decision_lit);
-        Clause* helper_clause = qcnf_close_clause(s->qcnf);
-        helper_clause->original = 0;
-        helper_clause->consistent_with_originals = 0;
-        skolem_set_unique_consequence(s, helper_clause, decision_lit);
+        int_vector_add(s->decision_indicator_sat_lits, sat_lit_fresh);
+
+//        skolem_update_pos_lit(s, fresh->var_id,    sat_lit_fresh);
+//        skolem_update_neg_lit(s, fresh->var_id, -  sat_lit_fresh);
+//        skolem_update_deterministic(s, fresh->var_id, 1);
+//        skolem_update_dependencies(s, fresh->var_id, skolem_copy_dependencies(s, si.dep));
         
-        skolem_update_pos_lit(s, fresh->var_id, - opposite_satlit);
-        skolem_update_neg_lit(s, fresh->var_id,   opposite_satlit);
-        skolem_update_deterministic(s, fresh->var_id, 1);
-        skolem_update_dependencies(s, fresh->var_id, new_deps);
+        satsolver_add(s->skolem, sat_lit_fresh);
+        satsolver_add(s->skolem, - new_val_satlit);
+        satsolver_add(s->skolem,   val_satlit);
+        satsolver_clause_finished(s->skolem);
+        
+        satsolver_add(s->skolem, - sat_lit_fresh);
+        satsolver_add(s->skolem,   new_val_satlit);
+        satsolver_clause_finished(s->skolem);
+        
+        satsolver_add(s->skolem, - sat_lit_fresh);
+        satsolver_add(s->skolem, - val_satlit);
+        satsolver_clause_finished(s->skolem);
+        
+        // This is one purpose of the fresh var: make sure the decision var definitely has the desired value. But we don't strictly need this clause.
+        //        qcnf_add_lit(s->qcnf, - (int) fresh->var_id);
+        //        qcnf_add_lit(s->qcnf, decision_lit);
+        //        Clause* helper_clause = qcnf_close_clause(s->qcnf);
+        //        helper_clause->original = 0;
+        //        helper_clause->consistent_with_originals = 0;
+        //        skolem_set_unique_consequence(s, helper_clause, decision_lit);
+        
     }
     
     // Decision variable needs to be deterministic before we can do conflict checks. Also this is why we have to check exactly here.

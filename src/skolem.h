@@ -103,7 +103,7 @@ struct Skolem {
     int_vector* potentially_conflicted_variables; // contains var_id
     
     // Extra data structure required for functional synthesis
-    int_vector* decision_indicator_vars; // contains var_id of temporary vars
+    int_vector* decision_indicator_sat_lits; // contains var_id of temporary vars
     
     /* Propagation worklists:
      * Constants are propagated through the clauses_to_check worklist.

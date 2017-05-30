@@ -28,6 +28,7 @@ void print_usage(const char* name) {
                                 "  Options for the QBF engine\n"
                                     "\t-p \t\t\tEasy debugging configuration (default off)\n"
                                     "\t--case_splits \t\tCase distinctions (default off) \n"
+                                    "\t--functional-synthesis\tFunctional synthesis. I.e. compute skolem functions for UNSAT instances.\n"
                                     "\t--miniscoping \t\tEnables miniscoping \n"
                                     "\t--miniscoping_info \tPrint additional info on miniscoping (default off)\n"
                                     "\t--minimize_conflicts \tConflict minimization (default off) \n"
@@ -194,6 +195,12 @@ int main(int argc, const char* argv[]) {
                         i++;
                     } else if (strcmp(argv[i], "--case_splits") == 0) {
                         options->case_splits = ! options->case_splits;
+                    } else if (strcmp(argv[i], "--functional-synthesis") == 0) {
+                        options->functional_synthesis = true;
+                        if (options->cegar) {
+                            V0("Functional synthesis currently incompatible with CEGAR. Deactivating CEGAR.\n");
+                            options->cegar = false;
+                        }
                     } else if (strcmp(argv[i], "--minimize_conflicts") == 0) {
                         options->minimize_conflicts = ! options->minimize_conflicts;
                     } else if (strcmp(argv[i], "--miniscoping") == 0) {

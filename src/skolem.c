@@ -358,7 +358,7 @@ bool skolem_clause_satisfied_when_in_doubt(Skolem* s, Clause* c, Lit lit) {
 
 /* Is there a clause containing this lit, but this lit is not a UC?
  * 
- * options->enhance_pure_literals_by_blocked_literals :
+ * options->enhanced_pure_literals :
  * Disregarding clauses that are satisfied whenever a UC of -lit fires.
  */
 bool skolem_is_lit_pure(Skolem* s, Lit lit) {
@@ -367,7 +367,7 @@ bool skolem_is_lit_pure(Skolem* s, Lit lit) {
     for (unsigned i = 0; i < vector_count(occs); i++) {
         Clause* c = vector_get(occs, i);
         if ((skolem_get_unique_consequence(s, c) != lit || skolem_has_illegal_dependence(s, c) ) && ! skolem_clause_satisfied(s, c) // std condition for pure vars
-            && (! s->options->enhance_pure_literals_by_blocked_literals || ! skolem_clause_satisfied_when_in_doubt(s, c, lit)))         // can consider variable as pure, when the UCs are blocked by this literal
+            && (! s->options->enhanced_pure_literals || ! skolem_clause_satisfied_when_in_doubt(s, c, lit)))         // can consider variable as pure, when the UCs are blocked by this literal
         {
             return false;
         }
@@ -677,7 +677,7 @@ void skolem_propagate_pure_variable(Skolem* s, unsigned var_id) {
         }
         
         // Which clauses may be affected?
-        if (s->options->enhance_pure_literals_by_blocked_literals) {
+        if (s->options->enhanced_pure_literals) {
             skolem_check_occs_for_unique_consequences(s,   (Lit) var_id);
             skolem_check_occs_for_unique_consequences(s, - (Lit) var_id);
         } else {

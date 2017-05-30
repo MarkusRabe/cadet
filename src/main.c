@@ -27,21 +27,21 @@ void print_usage(const char* name) {
                                     "\n"
                                 "  Options for the QBF engine\n"
                                     "\t-p \t\t\tEasy debugging configuration (default off)\n"
+                                    "\t--cegar\t\t\tUse CEGAR strategy in addition to incremental determinization (default off).\n"
+                                    "\t--cegar_only\t\tUse CEGAR strategy exclusively.\n"
                                     "\t--case_splits \t\tCase distinctions (default off) \n"
                                     "\t--functional-synthesis\tFunctional synthesis. I.e. compute skolem functions for UNSAT instances.\n"
+                                    "\t--sat_by_qbf\t\tUse QBF engine also for propositional problems. Uses SAT solver by default.\n"
                                     "\t--miniscoping \t\tEnables miniscoping \n"
                                     "\t--miniscoping_info \tPrint additional info on miniscoping (default off)\n"
                                     "\t--minimize_conflicts \tConflict minimization (default off) \n"
+                                    "\t--delay_conflicts\tDelay conflict checks and instead check conflicted variables in bulk.\n"
+                                "  Visualization options\n"
                                     "\t--trace_learnt_clauses\tPrint (colored) learnt clauses; independent of verbosity.\n"
                                     "\t--trace_for_visualization\tPrint trace of solver states at every conflict point.\n"
                                     "\t--trace_for_profiling\tPrint trace of learnt clauses with timestamps and SAT solver time consumption.\n"
                                     "\t--print_variable_names\tReplace variable numbers by names where available\n"
-                                    "\t--cegar\t\t\tUse CEGAR strategy in addition to incremental determinization (default off).\n"
-                                    "\t--cegar_only\t\tUse CEGAR strategy exclusively.\n"
-                                    "\t--delay_conflicts\tDelay conflict checks and instead check conflicted variables in bulk.\n"
-                                    "\t--sat_by_qbf\t\tUse QBF engine also for propositional problems. Uses SAT solver by default.\n"
-                                    "\t--reencode_existentials\tLift existentials to their defining quantifier level.\n"
-                                    "\t--reencode3QBF\t\tParse a 3QBF instance and try to convert it to a 2QBF AIG.\n"
+                                "  Aiger options\n"
                                     "\t--aiger_negated\t\tNegate encoding of aiger files. Can be combined with --print.\n"
                                     "\t--aiger_controllable_inputs [string] Set prefix of controllable inputs of AIGER files (default 'pi_')\n"
                                     "\n"
@@ -203,6 +203,8 @@ int main(int argc, const char* argv[]) {
                         }
                     } else if (strcmp(argv[i], "--minimize_conflicts") == 0) {
                         options->minimize_conflicts = ! options->minimize_conflicts;
+                    } else if (strcmp(argv[i], "--enhanced_pure_literals") == 0) {
+                        options->enhanced_pure_literals = true;
                     } else if (strcmp(argv[i], "--miniscoping") == 0) {
                         options->miniscoping = ! options->miniscoping;
                     } else if (strcmp(argv[i], "--miniscoping_info") == 0) {

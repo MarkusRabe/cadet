@@ -48,7 +48,7 @@ Options* default_options() {
     o->preprocess = false;
     o->delete_clauses_on_restarts = false;
     o->propagate_pure_literals = true;
-    o->enhance_pure_literals_by_blocked_literals = false;
+    o->enhanced_pure_literals = false;
     
     // Printing
     o->print_detailed_miniscoping_stats = false;

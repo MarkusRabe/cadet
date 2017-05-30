@@ -13,23 +13,28 @@
 #include <assert.h>
 #include <stdint.h>
 
+struct PA_UNDO_PAIR {
+    unsigned var_id;
+    int previous_value;
+};
+union PA_UNDO_PAIR_UNION {
+    struct PA_UNDO_PAIR pup;
+    void* data;
+};
+
 PartialAssignment* partial_assignment_init(QCNF* qcnf) {
     PartialAssignment* pa = malloc(sizeof(PartialAssignment));
     pa->qcnf = qcnf;
     pa->clauses_to_check = worklist_init(qcnf_compare_clauses_by_size);
     pa->assigned_variables = 0;
-    pa->conflicted = 0;
     pa->conflicted_clause = NULL;
-//    pa->recently_propagated_lits = int_vector_init();
+    pa->conflicted_var = 0;
     pa->stack = stack_init(partial_assignment_undo);
-    pa->vals = vector_init();
-#ifdef DEBUG_PARTIAL_ASSIGNMENT
-    pa->vals_debug = vector_init();
-#endif
+    pa->vals = val_vector_init();
     pa->causes = vector_init();
     
-    pa->inner_address_length = sizeof(void*) == 8 ? 5 : sizeof(void*) == 4 ? 4 : 4;
-    pa->inner_address_mask = (1 << pa->inner_address_length) - 1;
+    pa->decision_lvl = 0;
+    pa->decision_lvls = int_vector_init();
     
     pa->conflicts = 0;
     pa->propagations = 0;
@@ -40,14 +45,13 @@ PartialAssignment* partial_assignment_init(QCNF* qcnf) {
             worklist_push(pa->clauses_to_check, c);
         }
     }
-    
     return pa;
 }
 
 void partial_assignment_free(PartialAssignment* pa) {
     worklist_free(pa->clauses_to_check);
     stack_free(pa->stack);
-    vector_free(pa->vals);
+    val_vector_free(pa->vals);
 #ifdef DEBUG_PARTIAL_ASSIGNMENT
     vector_free(pa->vals_debug);
 #endif
@@ -57,57 +61,53 @@ void partial_assignment_free(PartialAssignment* pa) {
 
 void partial_assignment_pop(PartialAssignment* pa) {
     worklist_reset(pa->clauses_to_check);
+    pa->decision_lvl -= 1;
     stack_pop(pa->stack, pa);
-    assert(! partial_assignment_is_conflicted(pa));
 }
 void partial_assignment_push(PartialAssignment* pa) {
+    pa->decision_lvl += 1;
     stack_push(pa->stack);
 }
 
 unsigned partial_assignment_is_conflicted(PartialAssignment* pa) {
-    assert((pa->conflicted_clause == NULL) == (pa->conflicted == 0));
-    return pa->conflicted;
+    return pa->conflicted_clause != NULL;
 }
 
-VAL partial_assignment_get_val(PartialAssignment* pa, unsigned var_id) {
-    assert(var_id>=0);
-    assert(sizeof(uint64_t) >= sizeof(void*));
-    unsigned word_address = var_id >> pa->inner_address_length;
-    while (word_address >= vector_count(pa->vals)) {
-        vector_add(pa->vals, NULL);
+VAL partial_assignment_get_val(PartialAssignment* pa, unsigned idx) {
+    if (idx >= val_vector_count(pa->vals)) {
+        return top;
     }
-    uint64_t data = (uint64_t) vector_get(pa->vals, word_address);
-    uint64_t inner_address =  var_id & pa->inner_address_mask;
-    uint64_t twobitpattern =  (uint64_t)3 << (2 * inner_address);
-    VAL val = (VAL)((data & twobitpattern) >> (2 * inner_address));
-#ifdef DEBUG_PARTIAL_ASSIGNMENT
-    while (var_id >= vector_count(pa->vals_debug)) {
-        vector_add(pa->vals_debug, NULL);
-    }
-    VAL vd = (VAL) vector_get(pa->vals_debug, var_id);
-    assert(vd == val);
-#endif
-    return val;
+    return (VAL) val_vector_get(pa->vals, idx);
 }
 
+void partial_assignment_enlarge_decision_lvls(PartialAssignment* pa, unsigned idx) {
+    while (idx >= int_vector_count(pa->decision_lvls)) {
+        int_vector_add(pa->decision_lvls, 0);
+    }
+}
+void partial_assignment_set_dlvl(PartialAssignment* pa, unsigned var_id) {
+    partial_assignment_enlarge_decision_lvls(pa, var_id);
+    
+    unsigned dlvl = partial_assignment_get_decision_lvl(pa, var_id);
+    if (dlvl != 0) {
+        union PA_UNDO_PAIR_UNION pupu;
+        pupu.pup.var_id = var_id;
+        pupu.pup.previous_value = (int) dlvl;
+        stack_push_op(pa->stack, PA_OP_DLVL, pupu.data);
+    }
+    
+    int_vector_set(pa->decision_lvls, var_id, (int)pa->decision_lvl);
+}
+
+void partial_assignment_enlarge_val_vector(val_vector* vv, unsigned idx) {
+    while (idx >= val_vector_count(vv)) {
+        val_vector_add(vv, top);
+    }
+}
 void partial_assignment_set_val(PartialAssignment* pa, unsigned var_id, VAL new) {
     assert(var_id >= 0);
-    while (vector_count(pa->vals) <= (var_id >> pa->inner_address_length)) {
-        vector_add(pa->vals, NULL); // value 0 is important here because we access it and interpret it as unknown.  
-    }
-    void* data = vector_get(pa->vals, var_id >> pa->inner_address_length);
-    uint64_t inner_address =  var_id & pa->inner_address_mask;
-    uint64_t twobitpattern =  (uint64_t)3 << (2 * inner_address);
-    uint64_t new_data = (uint64_t)data & ~twobitpattern;
-    new_data |= ((uint64_t) new) << (2 * inner_address);
-    vector_set(pa->vals, var_id >> pa->inner_address_length, (void*)new_data);
-    
-#ifdef DEBUG_PARTIAL_ASSIGNMENT
-    while (vector_count(pa->vals_debug) <= var_id) {
-        vector_add(pa->vals_debug, 0); // value 0 is important here because we access it and interpret it as unknown.
-    }
-    vector_set(pa->vals_debug, var_id, (void*) new);
-#endif
+    partial_assignment_enlarge_val_vector(pa->vals, var_id);
+    val_vector_set(pa->vals, var_id, new);
 }
 
 Lit partial_assignment_is_clause_satisfied(PartialAssignment* pa, Clause* c) {
@@ -128,13 +128,42 @@ void update_clause_worklist(PartialAssignment* pa, QCNF* qcnf, int unassigned_li
     }
 }
 
+void partial_assignment_go_into_conflict_state(PartialAssignment* pa, Clause* conflicted_clause, unsigned conflicted_var) {
+    assert(conflicted_clause != NULL);
+    assert(pa->conflicted_clause == NULL);
+    assert(pa->conflicted_var == 0);
+    pa->conflicts++;
+    pa->conflicted_clause = conflicted_clause;
+    pa->conflicted_var = conflicted_var;
+    stack_push_op(pa->stack, PA_OP_CONFLICT, (void*) pa->conflicted_clause);
+    V3("Conflict in partial assignment domain for clause %u.\n", pa->conflicted_clause->clause_id);
+}
+
 void partial_assignment_assign_value(PartialAssignment* pa, Lit lit) {
-    V4("Partial assignment assign value %d.\n",lit);
+        V4("Partial assignment assign value %d.\n",lit);
+    
+    unsigned var_id = lit_to_var(lit);
+    
+    VAL val = partial_assignment_get_val(pa, var_id);
+    assert(val == top);
+    union PA_UNDO_PAIR_UNION pupu;
+    pupu.pup.var_id = var_id;
+    pupu.pup.previous_value = partial_assignment_get_val(pa, val);
+    stack_push_op(pa->stack, PA_OP_ASSIGN, (void*) pupu.data);
+    
+    VAL new_val = lit > 0 ? tt : ff;
+    partial_assignment_set_val(pa, var_id, new_val);
+    
+    assert(partial_assignment_get_decision_lvl(pa, var_id) == 0);
+    partial_assignment_set_dlvl(pa, var_id);
+    
     pa->assigned_variables++;
     update_clause_worklist(pa, pa->qcnf, lit);
-    VAL new_val = lit > 0 ? tt : ff;
-    partial_assignment_set_val(pa, lit_to_var(lit), new_val);
-    stack_push_op(pa->stack, PA_OP_ASSIGN, (void*) (uint64_t) lit_to_var(lit));
+    
+//    if (val == oposite) {
+//        abortif(true, "This is the wrong place to handle conflicts");
+//        partial_assignment_go_into_conflict_state(pa, partial_assignment_get_relevant_clause(pa, var_id), var_id);
+//    }
 }
 
 void partial_assignment_propagate_clause(PartialAssignment* pa, Clause* c) {
@@ -157,24 +186,13 @@ void partial_assignment_propagate_clause(PartialAssignment* pa, Clause* c) {
         }
     }
     
-//    VAL new_val = top;
     if (unassigned_lit == 0) { // conflict
-        
-        pa->conflicted_clause = c;
-        
-        assert(pa->conflicted == 0);
-        pa->conflicts++;
-        pa->conflicted = lit_to_var(c->occs[c->size - 1]); // conflict is the last variable in the clause :/
-        stack_push_op(pa->stack, PA_OP_CONFLICT, (void*) (int64_t) pa->conflicted);
-        
-        V3("Conflict in partial assignment domain for clause %u and var %u\n", pa->conflicted_clause->clause_id, pa->conflicted);
-        
+        partial_assignment_go_into_conflict_state(pa,c,0); // leaving conflicted var 0, as no unique var can be determined
     } else { // assign value
         assert(! contains_universals);
 //        V4("Propagating variable %d.\n",unassigned_lit);
         pa->propagations++;
         partial_assignment_assign_value(pa, unassigned_lit);
-//        int_vector_add(pa->recently_propagated_lits, unassigned_lit);
         
         while (vector_count(pa->causes) <= lit_to_var(unassigned_lit)) {
             vector_add(pa->causes, NULL);
@@ -186,21 +204,28 @@ void partial_assignment_propagate_clause(PartialAssignment* pa, Clause* c) {
 void partial_assignment_propagate(PartialAssignment* pa) {
     V4("Propagating partial assignments\n");
     while (worklist_count(pa->clauses_to_check) > 0) {
+        if (partial_assignment_is_conflicted(pa)) {
+            break;
+        }
         Clause* c = worklist_pop(pa->clauses_to_check);
         partial_assignment_propagate_clause(pa, c);
-        
-        if (partial_assignment_is_conflicted(pa)) {
-            worklist_free(pa->clauses_to_check);
-            pa->clauses_to_check = worklist_init(qcnf_compare_clauses_by_size);
-            return;
-        }
+    }
+    if (partial_assignment_is_conflicted(pa)) {
+        worklist_free(pa->clauses_to_check);
+        pa->clauses_to_check = worklist_init(qcnf_compare_clauses_by_size);
+        return;
     }
 }
 
 // INTERACTION WITH CONFLICT ANALYSIS
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-parameter"
 bool partial_assignment_is_legal_dependence(void* s, unsigned var_id, unsigned depending_on) {
     return true;
 }
+#pragma clang diagnostic pop
+
 int partial_assignment_get_value_for_conflict_analysis(void* domain, Lit lit) {
     assert(lit != 0);
     VAL val = partial_assignment_get_val((PartialAssignment*) domain, lit_to_var(lit));
@@ -216,17 +241,26 @@ int partial_assignment_get_value_for_conflict_analysis(void* domain, Lit lit) {
     return lit > 0 ? x : -x;
 }
 
-bool partial_assignment_is_relevant_clause(void* domain, Clause* c, unsigned var_id) {
+bool partial_assignment_is_relevant_clause(void* domain, Clause* c, Lit lit) {
     PartialAssignment* pa = (PartialAssignment*) domain;
-    bool res = false;
-    if (var_id == pa->conflicted) {
-        res = c == pa->conflicted_clause;
+    return vector_count(pa->causes) > lit_to_var(lit) && c == vector_get(pa->causes, lit_to_var(lit));
+}
+
+Clause* partial_assignment_get_relevant_clause(void* domain, unsigned var_id) {
+    PartialAssignment* pa = (PartialAssignment*) domain;
+    if (vector_count(pa->causes) > var_id) {
+        return vector_get(pa->causes, var_id);
+    } else {
+        return NULL;
     }
-    return res || (vector_count(pa->causes) > var_id && c == vector_get(pa->causes, var_id));
 }
 
 unsigned partial_assignment_get_decision_lvl(void* domain, unsigned var_id) {
-    NOT_IMPLEMENTED();
+    PartialAssignment* pa = (PartialAssignment*) domain;
+    if (var_id >= int_vector_count(pa->decision_lvls)) {
+        return 0;
+    }
+    return (unsigned) int_vector_get(pa->decision_lvls, var_id);
 }
 
 // Register new clauses
@@ -246,6 +280,7 @@ void partial_assignment_print_statistics(PartialAssignment* pa) {
 }
 
 void pa_print_debug_info(PartialAssignment* pa) {
+    assert(pa);
 #ifdef DEBUG_PARTIAL_ASSIGNMENT
     V1("PA state: \n"
        "  is conflicted: %u\n  vals: ", pa->conflicted);
@@ -267,16 +302,6 @@ void pa_print_debug_info(PartialAssignment* pa) {
         }
             
     }
-//    V1("Recently propagated: ");
-//    for (unsigned i = 0; i < int_vector_count(pa->recently_propagated_lits); i++) {
-//        V1("%d", int_vector_get(pa->recently_propagated_lits, i));
-//        if (i + 1 != int_vector_count(pa->recently_propagated_lits)) {
-//            V1(", ");
-//        }
-//        if (i % 8 == 7 || i + 1 == int_vector_count(pa->recently_propagated_lits)) {
-//            V1("\n  ");
-//        }
-//    }
     V1("\n  Worklist count: %u\n", worklist_count(pa->clauses_to_check));
 #endif
 }
@@ -285,12 +310,17 @@ void pa_print_debug_info(PartialAssignment* pa) {
 
 void partial_assignment_undo(void* parent, char type, void* obj) {
     PartialAssignment* pa = (PartialAssignment*) parent;
+    union PA_UNDO_PAIR_UNION pupu;
+    unsigned var_id = 0;
     switch ((PA_OPERATION) type) {
         case PA_OP_ASSIGN:
             assert(obj != NULL);
-            unsigned var_id = (unsigned) obj;
+            pupu.data = obj;
+            var_id = pupu.pup.var_id;
+            
             assert(partial_assignment_get_val(pa, var_id) == tt || partial_assignment_get_val(pa, var_id) == ff);
-            partial_assignment_set_val(pa, var_id, top);
+            partial_assignment_set_val(pa, var_id, (VAL) pupu.pup.previous_value);
+            int_vector_set(pa->decision_lvls, var_id, 0);
             if (vector_count(pa->causes) > var_id) { // could be decision var! so this is not always true
                 vector_set(pa->causes, var_id, NULL);
             }
@@ -298,14 +328,16 @@ void partial_assignment_undo(void* parent, char type, void* obj) {
             break;
             
         case PA_OP_CONFLICT:
-            assert(pa->conflicted == (unsigned) obj);
-//            assert((unsigned) obj <= 3); // i.e. is a VAL
-//            VAL previous = (VAL) obj;
-//            assert(partial_assignment_get_val(pa, pa->conflicted) == bottom);
-//            partial_assignment_set_val(pa, pa->conflicted, previous);
-            pa->conflicted = 0;
-            assert(pa->conflicted_clause != NULL);
+            assert(pa->conflicted_clause == (Clause*) obj);
             pa->conflicted_clause = NULL;
+            pa->conflicted_var = 0;
+            break;
+        
+        case PA_OP_DLVL:
+            assert(obj != NULL);
+            pupu.data = obj;
+            var_id = pupu.pup.var_id;
+            int_vector_set(pa->decision_lvls, var_id, pupu.pup.previous_value);
             break;
             
         default:
@@ -314,6 +346,17 @@ void partial_assignment_undo(void* parent, char type, void* obj) {
     }
 }
 
-void partial_assignment_print(PartialAssignment* pa) {
-    NOT_IMPLEMENTED();
+bool partial_assignment_is_antecedent_satisfied(PartialAssignment* pa, Clause* c, Lit consequence) {
+    assert(qcnf_contains_literal(c, consequence));
+    for (unsigned i = 0; i < c->size; i++) {
+        Lit l = c->occs[i];
+        if (l != consequence && partial_assignment_get_value_for_conflict_analysis(pa, l) != -1) {
+            return false;
+        }
+    }
+    return true;
 }
+
+//void partial_assignment_print(PartialAssignment* pa) {
+//    NOT_IMPLEMENTED();
+//}

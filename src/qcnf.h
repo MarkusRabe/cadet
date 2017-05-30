@@ -28,7 +28,7 @@ struct Scope;
 typedef struct Scope Scope;
 
 struct C2_VAR_DATA {
-    unsigned phase : 1;
+//    unsigned phase : 1;
     float activity;
 };
 typedef struct C2_VAR_DATA C2_VAR_DATA;
@@ -123,6 +123,9 @@ int qcnf_contains_variable(Clause*,Var*); // 0 if not contained, otherwise retur
 //int qcnf_maximal_qlvl(QCNF*,Clause*);
 //int qcnf_minimal_qlvl(QCNF*,Clause*);
 bool qcnf_is_duplicate(QCNF*,Clause*);
+bool qcnf_is_resolvent_tautological(Clause*, Clause*, unsigned var_id);
+bool qcnf_antecedent_subsubsumed(QCNF*, Clause* c1, Clause* c2, unsigned var_id); // does c1 subsume c2 excluding occurrences of var_id?
+
 
 // Variables
 Var* qcnf_new_var(QCNF*, bool is_universal, unsigned scope_id, unsigned var_id);
@@ -145,7 +148,7 @@ unsigned qcnf_get_empty_scope(QCNF*);
 
 // Comparators
 int qcnf_compare_clauses_by_size (const void * a, const void * b);
-int qcnf_compare_occurrence_by_qtype_then_scope_size_then_var_id(const void * a, const void * b);
+int qcnf_compare_occurrence_by_qtype_then_scope_size_then_var_id(QCNF*, const void * a, const void * b);
 int qcnf_compare_literal_pointers_by_var_id(const void * a, const void * b);
 int qcnf_compare_literals_by_var_id(const void * a, const void * b);
 int qcnf_compare_variables_by_occ_num(const void * a, const void * b);

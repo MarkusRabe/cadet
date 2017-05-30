@@ -1,13 +1,13 @@
 //
-//  auxilliary_cegar.h
+//  c2_cegar.h
 //  cadet
 //
 //  Created by Markus Rabe on 28/12/2016.
 //  Copyright © 2016 UC Berkeley. All rights reserved.
 //
 
-#ifndef auxilliary_cegar_h
-#define auxilliary_cegar_h
+#ifndef c2_cegar_h
+#define c2_cegar_h
 
 #include "cadet2.h"
 
@@ -20,18 +20,23 @@ struct Cegar {
     int_vector* is_used_in_lemma;
     int_vector* additional_assignment;
     
-    vector* cubes;
+    vector* solved_cubes;
+    
+    // Magic values
+    unsigned cegar_effectiveness_threshold;
     
     // Statistics
     unsigned successful_minimizations;
     unsigned additional_assignments_num;
     unsigned successful_minimizations_by_additional_assignments;
+    unsigned cubes_num;
+    float recent_average_cube_size;
 };
 
 /* Initializes a cegar object, including the SAT solver using 
  * the current determinicity information in c2->skolem. 
  */
-Cegar* cegar_init(C2*);
+Cegar* cegar_init(QCNF*);
 void cegar_free(Cegar* c);
 
 /*
@@ -39,11 +44,16 @@ void cegar_free(Cegar* c);
  * and checks for the existence of an assignment for the nondeterministic 
  * (at the time of creation of the cegar object) existentials satisfying 
  * all constraints.
+ * 
+ * May change the state of C2 when termination criterion is found.
  */
 cadet_res cegar_build_abstraction_for_assignment(C2*);
 int cegar_get_val(void* domain, Lit lit);
-cadet_res cegar_solve_2QBF(C2* c2);
-
+cadet_res cegar_solve_2QBF(C2* c2, int rounds_num);
+void cegar_do_cegar_if_effective(C2* c2);
+bool cegar_try_to_handle_conflict(Skolem* s);
 void cegar_print_statistics(Cegar*);
+void cegar_update_interface(Skolem*);
+bool cegar_is_initialized(Cegar*);
 
-#endif /* auxilliary_cegar_h */
+#endif /* c2_cegar_h */

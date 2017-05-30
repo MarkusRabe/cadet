@@ -28,7 +28,8 @@ struct Skolem;
 typedef struct Skolem Skolem;
 struct skolem_var;
 typedef struct skolem_var skolem_var;
-
+struct Cegar;
+typedef struct Cegar Cegar;
 
 bool skolem_is_total(skolem_var*); // pos_lit == neg_lit && pos_lit != 0
 bool skolem_is_top(skolem_var*); // pos_lit == 0 && neg_lit == 0
@@ -47,10 +48,12 @@ typedef enum {
 
 struct Skolem_Statistics {
     // Statistics
+    size_t propagations;
+    size_t pure_vars;
+    size_t pure_constants;
     size_t local_determinicity_checks;
     size_t local_conflict_checks;
     size_t global_conflict_checks;
-    size_t pure_vars;
     
     size_t explicit_propagations;
     size_t explicit_propagation_conflicts;
@@ -58,6 +61,8 @@ struct Skolem_Statistics {
     size_t successfully_avoided_conflict_checks;
     size_t delayed_conflict_checks;
     size_t unnecessary_propagations;
+    
+    size_t decisions;
     
     Stats* global_conflict_checks_sat;
     Stats* global_conflict_checks_unsat;
@@ -69,41 +74,66 @@ struct Skolem_Magic_Values {
     float conflict_potential_change_factor;
     float conflict_potential_threshold;
     float conflict_potential_offset;
+    unsigned blocked_clause_occurrence_cutoff;
 };
 
 struct Skolem {
+    // Links to objects outside of Skolem domain
     Options* options;
     QCNF* qcnf;
-    unsigned u_initially_deterministic;
-    unsigned e_initially_deterministic;
+    
+    
+    // Dependent objects
     SATSolver* skolem;
-    SKOLEM_MODE mode;
-    SKOLEM_STATE state;
+    Cegar* cegar;
+    
+    
+    // Core Skolem state and data structures
     unsigned decision_lvl;
-    
-    int satlit_true;
-    int dependency_choice_sat_lit;
-    
+    SKOLEM_STATE state;
+    unsigned conflict_var_id; // only assigned in case of conflict
+    Clause* conflicted_clause; // only assigned in case of conflict
+    // All information about the variables that is relevant to the Skolem domain
     skolem_var_vector* infos; // contains skolem_var; indexed by var_id
-    unsigned conflict_var_id;
-    Clause* conflicted_clause;
+    // All information Skolem domain needs about clauses: the unique consequences for all clauses
+    int_vector* unique_consequence; // contains lit indexed by clause_id
     
-    union Dependencies empty_dependencies; // needed because we would otherwise create plenty of empty dependency objects which we would fail to disallocate; used when non-existent skolem_vars should return a dependency set
-    
-    // Data structures for skolem function propagation
-    pqueue* determinicity_queue; // contains Var*
-    int_vector* unique_consequence; // vector of lit indexed by clause_id
-    
-    // Data structures for explicit propagation
-    worklist* clauses_to_check; // stores Clause pointers
-    
-    // Data structures for conflict checks
+    // Extra data structure required for delayed conflict checks (if option is activated)
+    // Stores all the variables that are potentially
     int_vector* potentially_conflicted_variables; // contains var_id
     
-    // Keeping track of progress
-    size_t deterministic_variables;
-    int_vector* recently_determinized; // for transferring info to c2
+    // Extra data structure required for functional synthesis
+    int_vector* decision_indicator_sat_lits; // contains var_id of temporary vars
     
+    /* Propagation worklists:
+     * Constants are propagated through the clauses_to_check worklist.
+     * For determinicity propagation, variables are first added to determinicity_queue,
+     * if they are not deterministic, they are added to pure_var_queue to later check 
+     * if they are pure.
+     */
+    worklist* clauses_to_check; // stores Clause*
+    pqueue* determinicity_queue; // contains unsigned var_id
+    pqueue* pure_var_queue; // contains unsigned var_id
+    
+    
+    // Configuration
+    SKOLEM_MODE mode; // can be used to switch of all or certain types of conflicts
+    unsigned u_initially_deterministic; // what should be considered deterministic?
+    unsigned e_initially_deterministic; // what should be considered deterministic?
+    
+    
+    // Static objects
+    // Helper variables in the SAT solver
+    int satlit_true; // this satlit represents constant true; so far always assigned 1
+    int dependency_choice_sat_lit; // something related to an earlier
+    // THE empty_dependency object
+    // Used when non-existent skolem_vars should return a dependency set; avoids alloc/free management
+    union Dependencies empty_dependencies;
+    
+    // Keeping track of progress; not essential currently
+    size_t deterministic_variables;
+    
+    // Backtracking
     Stack* stack;
     
     struct Skolem_Statistics statistics;
@@ -117,11 +147,11 @@ void skolem_free(Skolem*);
 // INTERACTION WITH CONFLICT ANALYSIS
 bool skolem_is_legal_dependence_for_conflict_analysis(void* s, unsigned var_id, unsigned depending_on);
 int skolem_get_value_for_conflict_analysis(void* s, Lit lit);
-bool skolem_is_relevant_clause(void* domain, Clause* c, unsigned var_id);
+bool skolem_is_relevant_clause(void* domain, Clause* c, Lit lit);
 
 // INTERACTION WITH CADET2
 void skolem_new_clause(Skolem*,Clause*);
-void skolem_assign_constant_value(Skolem*,Lit,union Dependencies);
+void skolem_assign_constant_value(Skolem*,Lit,union Dependencies, Clause* reason); // reason may be NULL
 void skolem_assume_constant_value(Skolem*,Lit);
 int skolem_get_constant_value(Skolem*, Lit);
 bool skolem_is_initially_deterministic(Skolem* s, unsigned var_id);
@@ -129,7 +159,13 @@ bool skolem_lit_satisfied(Skolem* s, Lit lit);
 bool skolem_clause_satisfied(Skolem* s, Clause* c);
 
 bool skolem_can_propagate(Skolem*);
-void skolem_propagate(Skolem* s);
+void skolem_propagate(Skolem*);
+void skolem_decision(Skolem*, Lit lit);
+
+void skolem_push(Skolem*);
+void skolem_pop(Skolem*);
+
+void skolem_increase_decision_lvl(Skolem*);
 
 unsigned skolem_global_conflict_check(Skolem*, bool can_delay);
 bool skolem_is_conflicted(Skolem*);
@@ -158,6 +194,7 @@ typedef enum {
     SKOLEM_OP_UPDATE_INFO_PURE_NEG, // obj contains the variable and a single bit, see union skolem_undo_union
     SKOLEM_OP_UPDATE_INFO_DEPENDENCIES, // depending on mode, obj contains the variable and previous dependency level, or a pointer to a Dependency_Update_struct
     SKOLEM_OP_UPDATE_INFO_DECISION_LVL,
+    SKOLEM_OP_UPDATE_INFO_REASON_FOR_CONSTANT,
     SKOLEM_OP_UNIQUE_CONSEQUENCE,
     SKOLEM_OP_PROPAGATION_CONFLICT,
     SKOLEM_OP_SKOLEM_CONFLICT,
@@ -165,11 +202,8 @@ typedef enum {
     SKOLEM_OP_DECISION
 } SKOLEM_OP;
 
-void skolem_push(Skolem*);
-void skolem_pop(Skolem*);
 void skolem_undo(void*,char,void*);
-void skolem_increase_decision_lvl(Skolem*);
-
+void skolem_update_clause_worklist(Skolem* s, int unassigned_lit);
 void skolem_propagate_determinicity_over_clause(Skolem*,QCNF*,Clause*);
 void skolem_propagate_explicit_assignments(Skolem* s);
 

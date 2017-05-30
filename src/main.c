@@ -23,21 +23,25 @@ void print_usage(const char* name) {
                                     "\t--no_colors \t\tSuppress colors in output.\n"
                                     "\t-c [file]\t\tWrite certificate to specified file. File ending defines Aiger formag aag/aig.\n"
                                     "\t--qbfcert\t\tWrite certificate in qbfcert-readable format. Only compatible with aag file ending.\n"
+                                    "\t--qdimacs_out\t\tOutput compliant with QDIMACS standard\n"
                                     "\n"
                                 "  Options for the QBF engine\n"
                                     "\t-p \t\t\tEasy debugging configuration (default off)\n"
+                                    "\t--cegar\t\t\tUse CEGAR strategy in addition to incremental determinization (default off).\n"
+                                    "\t--cegar_only\t\tUse CEGAR strategy exclusively.\n"
                                     "\t--case_splits \t\tCase distinctions (default off) \n"
+                                    "\t--functional-synthesis\tFunctional synthesis. I.e. compute skolem functions for UNSAT instances.\n"
+                                    "\t--sat_by_qbf\t\tUse QBF engine also for propositional problems. Uses SAT solver by default.\n"
                                     "\t--miniscoping \t\tEnables miniscoping \n"
                                     "\t--miniscoping_info \tPrint additional info on miniscoping (default off)\n"
                                     "\t--minimize_conflicts \tConflict minimization (default off) \n"
+                                    "\t--delay_conflicts\tDelay conflict checks and instead check conflicted variables in bulk.\n"
+                                "  Visualization options\n"
                                     "\t--trace_learnt_clauses\tPrint (colored) learnt clauses; independent of verbosity.\n"
                                     "\t--trace_for_visualization\tPrint trace of solver states at every conflict point.\n"
+                                    "\t--trace_for_profiling\tPrint trace of learnt clauses with timestamps and SAT solver time consumption.\n"
                                     "\t--print_variable_names\tReplace variable numbers by names where available\n"
-                                    "\t--cegar\t\t\tUse CEGAR strategy in addition to incremental determinization (default off).\n"
-                                    "\t--delay_conflicts\tDelay conflict checks and instead check conflicted variables in bulk.\n"
-                                    "\t--sat_by_qbf\t\tUse QBF engine also for propositional problems. Uses SAT solver by default.\n"
-                                    "\t--reencode_existentials\tLift existentials to their defining quantifier level.\n"
-                                    "\t--reencode3QBF\t\tParse a 3QBF instance and try to convert it to a 2QBF AIG.\n"
+                                "  Aiger options\n"
                                     "\t--aiger_negated\t\tNegate encoding of aiger files. Can be combined with --print.\n"
                                     "\t--aiger_controllable_inputs [string] Set prefix of controllable inputs of AIGER files (default 'pi_')\n"
                                     "\n"
@@ -101,9 +105,9 @@ int main(int argc, const char* argv[]) {
                         LOG_WARNING("Case splits not compatible with certificates right now. Deactivating case splits.");
                         options->case_splits = false;
                     }
-                    if (options->cadet2cegar) {
+                    if (options->cegar) {
                         LOG_WARNING("CEGAR is not compatible with certificates right now. Deactivating CEGAR.");
-                        options->cadet2cegar = false;
+                        options->cegar = false;
                     }
                     
                     i++;
@@ -169,19 +173,18 @@ int main(int argc, const char* argv[]) {
                         options->preprocess = false;
                     } else if (strcmp(argv[i], "--qbfcert") == 0) {
                         options->certificate_type = QBFCERT;
+                    } else if (strcmp(argv[i], "--qdimacs_out") == 0) {
+                        log_qdimacs_compliant = true;
+                        log_colors = false;
                     } else if (strcmp(argv[i], "--print") == 0) {
                         options->preprocess = false;
                         options->print_qdimacs = true;
-                        log_comment_prefix = true;
+                        log_qdimacs_compliant = true;
                         log_colors = false;
                     } else if (strcmp(argv[i], "--no_colors") == 0) {
                         log_colors = false;
                     } else if (strcmp(argv[i], "--aiger_negated") == 0) {
                         options->aiger_negated_encoding = true;
-                    } else if (strcmp(argv[i], "--reencode3QBF") == 0) {
-                        options->reencode3QBF = true;
-                    } else if (strcmp(argv[i], "--reencode_existentials") == 0) {
-                        options->reencode_existentials = ! options->reencode_existentials;
                     } else if (strcmp(argv[i], "--aiger_controllable_inputs") == 0) {
                         if (i + 1 >= argc) {
                             LOG_ERROR("Missing string for argument --aiger_controllable_inputs\n");
@@ -192,8 +195,16 @@ int main(int argc, const char* argv[]) {
                         i++;
                     } else if (strcmp(argv[i], "--case_splits") == 0) {
                         options->case_splits = ! options->case_splits;
+                    } else if (strcmp(argv[i], "--functional-synthesis") == 0) {
+                        options->functional_synthesis = true;
+                        if (options->cegar) {
+                            V0("Functional synthesis currently incompatible with CEGAR. Deactivating CEGAR.\n");
+                            options->cegar = false;
+                        }
                     } else if (strcmp(argv[i], "--minimize_conflicts") == 0) {
                         options->minimize_conflicts = ! options->minimize_conflicts;
+                    } else if (strcmp(argv[i], "--enhanced_pure_literals") == 0) {
+                        options->enhanced_pure_literals = true;
                     } else if (strcmp(argv[i], "--miniscoping") == 0) {
                         options->miniscoping = ! options->miniscoping;
                     } else if (strcmp(argv[i], "--miniscoping_info") == 0) {
@@ -204,10 +215,14 @@ int main(int argc, const char* argv[]) {
                         options->trace_for_visualization = true;
                         options->trace_learnt_clauses = true;
                         log_colors = false;
+                    } else if (strcmp(argv[i], "--trace_for_profiling") == 0) {
+                        options->trace_for_profiling = true;
                     } else if (strcmp(argv[i], "--print_variable_names") == 0) {
                         options->variable_names = vector_init();
                     } else if (strcmp(argv[i], "--cegar") == 0) {
-                        options->cadet2cegar = ! options->cadet2cegar;
+                        options->cegar = ! options->cegar;
+                    } else if (strcmp(argv[i], "--cegar_only") == 0) {
+                        options->cegar_only = ! options->cegar_only;
                     } else if (strcmp(argv[i], "--sat_by_qbf") == 0) {
                         options->use_qbf_engine_also_for_propositional_problems = ! options->use_qbf_engine_also_for_propositional_problems;
                     } else if (strcmp(argv[i], "--delay_conflicts") == 0) {
@@ -236,8 +251,8 @@ int main(int argc, const char* argv[]) {
     if (options->certificate_aiger_mode == aiger_binary_mode && options->certificate_type == QBFCERT) {
         LOG_WARNING("QBFCERT cannot read aiger files in binary mode. Use .aag file extension for certificate file.\n");
     }
-    if (log_comment_prefix && debug_verbosity != VERBOSITY_NONE) {
-        LOG_WARNING("Verbosity is on and comment prefix is set. May result in cluttered log.");
+    if (log_qdimacs_compliant && debug_verbosity > VERBOSITY_LOW) {
+        LOG_WARNING("Verbosity is medium or higher and comment prefix is set. May result in cluttered log.");
     }
     
     if (file_name == NULL) {

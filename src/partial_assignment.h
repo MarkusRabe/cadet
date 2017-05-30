@@ -9,10 +9,12 @@
 #ifndef partial_assignment_h
 #define partial_assignment_h
 
-#include <stdio.h>
 #include "qcnf.h"
 #include "heap.h"
 #include "undo_stack.h"
+#include "val_vector.h"
+
+//#include <stdio.h>
 
 struct PartialAssignment;
 typedef struct PartialAssignment PartialAssignment;
@@ -28,25 +30,19 @@ typedef enum {
 struct PartialAssignment {
     QCNF* qcnf;
     worklist* clauses_to_check; // stores Clause pointers
-    vector* vals; // an array of VALs indexed by var_id. Length must be consistent with max_var_id of qcnf.
-#ifdef DEBUG_PARTIAL_ASSIGNMENT
-    vector* vals_debug;
-#endif
+    val_vector* vals; // an array of VALs indexed by var_id. Length must be consistent with max_var_id of qcnf.
     vector* causes; // mapping var_id to Clause*. Indicates which clause propagated the variable
     
-    unsigned inner_address_length; // The inner address is the log of the number of VALs stored in each word of the vector.
-    unsigned inner_address_mask;
+    unsigned decision_lvl;
+    int_vector* decision_lvls;
     
-    size_t assigned_variables;
-    
-    unsigned conflicted; // assigned when an existential is bottom or when a universal is not top.
     Clause* conflicted_clause;
-    
-//    int_vector* recently_propagated_lits; // for transfer to the skolem domain, contains Lits
+    unsigned conflicted_var;
     
     Stack* stack;
     
     // Statistics
+    size_t assigned_variables;
     size_t conflicts;
     size_t propagations;
 };
@@ -63,7 +59,10 @@ VAL partial_assignment_get_val(PartialAssignment* pa, unsigned var_id);
 void partial_assignment_assign_value(PartialAssignment*,Lit);
 void partial_assignment_propagate_clause(PartialAssignment*,Clause*); // returns the propagated Lit, or 0 if nothing was propagated
 
+void partial_assignment_go_into_conflict_state(PartialAssignment*, Clause* conflicted_clause, unsigned conflicted_var);
+
 Lit partial_assignment_is_clause_satisfied(PartialAssignment*,Clause*);
+bool partial_assignment_is_antecedent_satisfied(PartialAssignment*, Clause*, Lit consequence); // assuming the specified Lit is the consequence, is the antecedent satsified (i.e. all other lits are false)?  
 
 //int compare(VAL,VAL); // -1 is smaller, 0 is equal or incomparable, 1 is greater
 
@@ -75,8 +74,10 @@ void partial_assignment_new_clause(PartialAssignment* pa, Clause* c);
 // INTERACTION WITH CONFLICT ANALYSIS
 bool partial_assignment_is_legal_dependence(void* s, unsigned var_id, unsigned depending_on);
 int partial_assignment_get_value_for_conflict_analysis(void* domain, Lit lit);
-bool partial_assignment_is_relevant_clause(void* domain, Clause* c, unsigned var_id);
+bool partial_assignment_is_relevant_clause(void* domain, Clause* c, Lit lit);
+Clause* partial_assignment_get_relevant_clause(void* domain, unsigned var_id);
 unsigned partial_assignment_get_decision_lvl(void* domain, unsigned var_id);
+
 
 // PRINTING
 void pa_print_debug_info(PartialAssignment*);
@@ -86,6 +87,7 @@ void partial_assignment_print_statistics(PartialAssignment*);
 typedef enum {
     PA_OP_ASSIGN,
     PA_OP_CONFLICT,
+    PA_OP_DLVL
 } PA_OPERATION;
 
 void partial_assignment_undo(void* pa,char,void*);

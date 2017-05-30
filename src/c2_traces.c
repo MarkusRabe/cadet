@@ -8,7 +8,9 @@
 
 #include "log.h"
 #include "c2_traces.h"
-#include "auxilliary_cegar.h"
+#include "c2_cegar.h"
+
+#include <sys/time.h>
 
 void c2_print_variable_states(C2* c2) {
     if (!c2->options->trace_for_visualization) {
@@ -106,6 +108,8 @@ void c2_print_universals_assignment(C2* c2) {
             int val;
             if (c2->state == C2_SKOLEM_CONFLICT) {
                 val = skolem_get_value_for_conflict_analysis(c2->skolem, (Lit) v->var_id);
+            } else if (c2->state == C2_EXAMPLES_CONFLICT) {
+                val = examples_get_value_for_conflict_analysis(c2->examples, (Lit) v->var_id);
             } else {
                 NOT_IMPLEMENTED();
             }
@@ -158,7 +162,7 @@ void c2_print_statistics(C2* c2) {
     
     qcnf_print_statistics(c2->qcnf);
     skolem_print_statistics(c2->skolem);
-    cegar_print_statistics(c2->cegar);
+    cegar_print_statistics(c2->skolem->cegar);
     if (c2->examples) {
         examples_print_statistics(c2->examples);
     }
@@ -166,6 +170,7 @@ void c2_print_statistics(C2* c2) {
     V0("  Added clauses: %zu\n", c2->statistics.added_clauses);
     V0("  Decisions: %zu\n", c2->statistics.decisions);
     V0("  Conflicts: %zu\n", c2->statistics.conflicts);
+    V0("  Levels backtracked: %zu\n", c2->statistics.lvls_backtracked);
     V0("  Restarts:  %zu\n", c2->restarts);
     V0("  Successful conflict minimizations:  %zu\n", c2->statistics.successful_conflict_clause_minimizations);
     V0("  Cases explored:  %zu\n", c2->statistics.cases_explored);
@@ -173,7 +178,7 @@ void c2_print_statistics(C2* c2) {
 
 bool c2_printed_color_legend = false;
 
-void c2_print_learnt_clause_color_legend(C2* c2) {
+void c2_print_learnt_clause_color_legend() {
     if (log_colors && !c2_printed_color_legend) {
         c2_printed_color_legend = true;
         V0("\n"); // prints a new line, but can be prefixed by 'c ' if in qdimacs printout mode.
@@ -190,11 +195,39 @@ void c2_print_learnt_clause_color_legend(C2* c2) {
 }
 
 void c2_log_clause(C2* c2, Clause* c) {
-    
-    c2_print_learnt_clause_color_legend(c2);
-    
-    for (unsigned i = 0; i < c->size; i++) {
-        options_print_literal_name(c2->options, c2_literal_color(c2, c, c->occs[i]), c->occs[i]);
+    if (debug_verbosity >= VERBOSITY_MEDIUM || c2->options->trace_learnt_clauses) {
+        c2_print_learnt_clause_color_legend();
+        
+        for (unsigned i = 0; i < c->size; i++) {
+            options_print_literal_name(c2->options, c2_literal_color(c2, c, c->occs[i]), c->occs[i]);
+        }
+        LOG_COLOR(KNRM, "\n");
     }
-    LOG_COLOR(KNRM, "\n");
+}
+
+void c2_trace_for_profiling_initialize(Options* o, SATSolver* s) {
+    if (!o->trace_for_profiling) {
+        return;
+    }
+    satsolver_measure_all_calls(s);
+}
+
+double last_time_stamp = 0.0;
+double last_satsolver_seconds = 0.0;
+
+void c2_trace_for_profiling(C2* c2) {
+    if (!c2->options->trace_for_profiling) {
+        return;
+    }
+    double total_time_passed = get_seconds() - c2->statistics.start_time;
+    V0("Timestamp: %f\n", total_time_passed);
+    double time_passed_since_last = total_time_passed - last_time_stamp;
+    
+    double satsolver = satsolver_seconds(c2->skolem->skolem);
+    double satsolver_took_since_last = satsolver - last_satsolver_seconds;
+    
+    V0("SATSolver current portion: %f\n", satsolver_took_since_last / time_passed_since_last);
+    
+    last_time_stamp = total_time_passed;
+    last_satsolver_seconds = satsolver;
 }

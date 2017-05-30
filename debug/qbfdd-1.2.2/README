@@ -1,0 +1,136 @@
+===============================================================================
+  QBFDD
+===============================================================================
+
+This is version 1.2 of QBFDD, a delta debugger for QBF (Quantified Boolean
+Formulas) files in QDIMACS format (see http:/www.qbflib.org/qdimacs.html for
+more details) and serves as an input minimizer for QBF Solvers failing on some 
+given input. For more information on QBF see http://www.qbflib.org.
+QBFDD is released under the GPL version 3. You should have received a copy of 
+the license in the file COPYING. If not, see htp://www.gnu.org./licenses.
+
+QBFDD is written in Python 3 and developed on a Linux OS (note, that other than
+Linux-like OS are not explicitely supported). QBFDD should work just fine on 
+systems running Python 3.0 or later.
+
+QBFDD expects two mandatory arguments and further supports various optional
+parameters for customizing its behaviour and the resulting output file. 
+
+QBFDD can be invoked by 
+$ ./qbfdd.py [options] INFILE "CMD [options]"
+
+where INFILE            is the input file to be minimized and
+      "CMD [options]"   the executable to minimize given input on, options
+                        to this executable included
+
+Note, that the input file does not have to be strictly QDIMACS standard
+compliant, but has to obey the following basic rules:
+  - basic structure:
+      + unspecified number of comments of the form: c <string>
+      + valid header: p cnf <pnum> <pnum> EOL where pnum > 0 and EOL = '0'
+      + quantifier sets, quantifiers must be either 'e' or 'a' 
+      + clauses
+  - all input (comments, header, quantifier sets and clauses) must follow
+    the grammatical structure defined in QDIMACS standard version 1.1
+    (see http://www.qbflib.org/qdimacs.html#input)
+  - given quantifier sets must be alternating
+  - empty quantsets are not allowed
+  - given number of clauses and number of clauses given must match
+
+
+Optional parameters to QBFDD are:
+  
+  --version                   
+            Show QBFDD's version number and exit.
+  
+
+  -h, --help                  
+            Show a brief help msg and exit
+  
+
+  -f value, --failed=value    
+  -p value, --passed=value
+            By these two options it is possible to define expected return 
+            values of the given executable for failed and passed test runs.
+  
+            Note: A test run may FAIL or PASS on given input. 
+                  We are looking for test runs that FAIL (as this is the 
+                  original behaviour of the solver on the originally given 
+                  input). 
+                  -> If a test run FAILs, the respective minimization step was 
+                     SUCCESSFUL.
+                  -> If a test run PASSes, it wasn't.
+
+        
+  -o filename, --out=filename
+            Specify an output filename to be used, else the following is used 
+            by default: <INPUT FILE NAME>_reduced.<EXTENSION>
+            Note, that multiple dots as part of the input file name as well as 
+            file names not defining any file extension are allowed. 
+
+  -O filename, --tmp=filename
+            Specify a filename for the temporary work file, else the following 
+            is used by default: tmp-<PID>.qdimacs
+
+  -m mode, --mode=mode
+            Specify the minimization strategy to be used - by default, 
+            A. Zeller's 'ddmin' is used (see A. Zeller, R. Hildebrandt: 
+            Simplifying failure-inducing input, ISSTA 2000).
+            Other modes currently supported:
+              - sddmin (simple ddmin, see the ddmin algorithm in A. Zeller: 
+                        Why programs fail, ISBN 3-89864-279-8, dpunkt Verlag, 
+                        2006)
+              - iddmin (inverse ddmin)
+              - isddmin (inverse sddmin)
+              - obo (one by one, with restarts)
+              - qobo (quick obo, without restarts)
+        
+  -g level, --gran=level
+            Specify the minimization granularity to be used, where possible 
+            granularity levels are:
+              - c : remove CLAUSES only
+                    Minimizing clauses themselves (removing literals) is 
+                    skipped.
+              - l : remove LITERALS only
+                    Clauses themselves are minimized, but not removed (the 
+                    above step is skipped).
+              - b : BOTH
+                    First, try to remove as many clauses as possible, then try 
+                    to remove as many literals as possible (minimize the 
+                    clauses themselves).
+
+  -s, --shift
+            Enable quantifier manipulations (disabled by default), in order 
+            to maybe accomplish even further minimizations.
+
+
+  -S, --skip-output
+            Do not consider output of the given executable via stdout and 
+            stderr for determing results of test runs (results are then based
+            on the respective return codes only, disabled by default).
+
+
+  -t value, --timeout=value
+            Specifiy a time out for test runs, disabled by default.
+
+
+  -q, --no-qdimacs
+            Do not care about QDIMACS standard compliance (both for 
+            minimization and output file format, disabled by default).
+  
+
+  -c, --no-color
+            Disable colored output for verbose messages.
+
+
+  -v, --verbose
+            Be verbose, verbosity is organised in levels (currently two):
+            -v            be verbose
+            -v -v or -vv  be very verbose
+
+
+
+If you have any comments, questions, improvements or bug reports, drop me an
+email at: aina.niemetz at gmail.com
+
+Aina

@@ -207,6 +207,7 @@ bool skolem_occs_contain_illegal_dependence(Skolem* s, Lit lit) {
 ////////// INVARIANTS /////////////////
 
 void skolem_validate_dependence_lvls(Skolem* s) {
+    assert(s);
 #ifdef CADET_RUNTIME_INVARIANT_CHECKS
         V1("Validating dependence levels\n");
         for (unsigned i = 0; i < var_vector_count(s->qcnf->vars); i++) {

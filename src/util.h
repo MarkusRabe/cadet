@@ -4,7 +4,7 @@
 #include <stdbool.h>
 
 #define SEED 0
-#define VERSION "v2.0"
+#define VERSION "v2.3"
 
 typedef enum {
     CADET_RESULT_SAT     = 10,

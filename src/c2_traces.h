@@ -12,11 +12,16 @@
 #include "cadet2.h"
 #include <stdio.h>
 
-void c2_print_variable_states(C2* c2);
+void c2_print_variable_states(C2*);
 char* c2_literal_color(C2*, Clause*, Lit);
-void c2_print_statistics(C2* c2);
-void c2_print_learnt_clause_color_legend(C2* c2);
-void c2_log_clause(C2* c2, Clause* c);
+void c2_print_statistics(C2*);
+void c2_print_learnt_clause_color_legend();
+
+void c2_log_clause(C2*, Clause*);
+
+void c2_trace_for_profiling_initialize(Options*, SATSolver*);
+void c2_trace_for_profiling(C2*);
+
 
 void c2_print_universals_assignment(C2* c2); // WARNING: Calling this function may change the state of the sat solver!
 void c2_print_debug_info(C2* c2);

@@ -1,3 +1,7 @@
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wconversion"
+#pragma clang diagnostic ignored "-Wconditional-uninitialized"
+#pragma clang diagnostic ignored "-Wunused-parameter"
 /***************************************************************************
 Copyright (c) 2011, Siert Wieringa, Aalto University, Finland.
 Copyright (c) 2006-2011, Armin Biere, Johannes Kepler University.
@@ -2715,3 +2719,5 @@ aiger_is_and (aiger * public, unsigned lit)
 
   return res;
 }
+
+#pragma clang diagnostic pop

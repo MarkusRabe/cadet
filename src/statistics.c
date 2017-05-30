@@ -72,12 +72,10 @@ void statistic_add_value(Stats* s, double v) {
 }
 
 void statistics_print(Stats* s) {
-    V0("    Average: %f\n    Total: %f\n    Min/Max: %f/%f\n    Count: %zu\n",
-           s->accumulated_value/s->calls_num,
-           s->accumulated_value,
-           s->min,
-           s->max,
-           s->calls_num);
+    V0("    Average: %f\n", s->accumulated_value/s->calls_num);
+    V0("    Total: %f\n", s->accumulated_value);
+    V0("    Min/Max: %f/%f\n", s->min, s->max);
+    V0("    Count: %zu\n", s->calls_num);
     V0("    Histogram:");
 
     for (unsigned i = 0; i < int_vector_count(s->exponential_histogram); i += 1) {

@@ -12,20 +12,27 @@ default: $(TARGET)
 OBJECTS = $(patsubst %.c, %.o, $(wildcard $(SRCDIR)/*.c))
 HEADERS = $(wildcard $(SRCDIR)/*.h)
 
-%.o: %.c $(HEADERS)
+LGL_OBJECTS = $(patsubst %.c, %.o, $(wildcard $(SRCDIR)/lingeling/*.c))
+LGL_HEADERS = $(wildcard $(SRCDIR)/lingeling/*.h)
+
+MINISAT_OBJECTS = $(patsubst %.cc, %.o, $(wildcard $(SRCDIR)/minisat/*.cc))
+MINISAT_OBJECTS += $(SRCDIR)/satsolver_minisat.o
+
+%.o: %.c $(HEADERS) $(LGL_HEADERS)
 	$(CC) $(CFLAGS) -c $< -o $@
 
-.PRECIOUS: $(TARGET) $(OBJECTS)
+.PRECIOUS: $(TARGET) $(OBJECTS) $(LGL_OBJECTS) $(MINISAT_OBJECTS)
 
-$(TARGET): $(OBJECTS)
-	$(CC) $(CFLAGS) $(OBJECTS) $(LIBS) -o $@
+$(TARGET): $(OBJECTS) $(LGL_OBJECTS) $(MINISAT_OBJECTS)
+	$(CC) $(CFLAGS) $(OBJECTS) $(LGL_OBJECTS) $(MINISAT_OBJECTS) $(LIBS) -o $@
 
 test: default
 	python scripts/tester.py --test
 
 profile: default
-	$(CC) $(CFLAGS) -pg $(OBJECTS) $(LIBS) -o $(TARGET) 
+	$(CC) $(CFLAGS) -pg $(OBJECTS) $(MINISAT_OBJECTS) $(LIBS) -o $(TARGET) 
 
 clean:
-	cd $(SRCDIR) && rm -f *.o *.h.gch *.plist 
+	cd $(SRCDIR) && rm -f *.o *.h.gch *.plist minisat/*.o lingeling/*.o
 	-rm -f $(TARGET)
+

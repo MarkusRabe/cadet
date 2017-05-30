@@ -9,6 +9,7 @@
 #include "c2_casesplits.h"
 #include "log.h"
 #include "c2_traces.h"
+#include "c2_cegar.h"
 
 #include <math.h>
 
@@ -21,7 +22,6 @@ void c2_backtrack_case_split(C2* c2) {
     }
     V1("\n");
     
-    
     c2_backtrack_to_decision_lvl(c2, c2->restart_base_decision_lvl);
     V3("Now popping the case split.\n");
     stack_pop(c2->stack, c2);
@@ -33,10 +33,14 @@ void c2_backtrack_case_split(C2* c2) {
     assert(c2->skolem->decision_lvl == 0); // TODO: If we do case splits after dlvl 0, we should also add a real clause
     assert(c2->restart_base_decision_lvl == 0);
     
+    int_vector* solved_cube = int_vector_init();
+    vector_add(c2->skolem->cegar->solved_cubes, solved_cube);
     for (unsigned i = 0; i < int_vector_count(c2->case_split_stack); i++) {
         Lit l = int_vector_get(c2->case_split_stack, i);
         assert(skolem_is_deterministic(c2->skolem,lit_to_var(l)));
+        assert(skolem_get_constant_value(c2->skolem, l) == 0);
         satsolver_add(c2->skolem->skolem, skolem_get_satsolver_lit(c2->skolem, - l));
+        int_vector_add(solved_cube, -l);
     }
     satsolver_clause_finished(c2->skolem->skolem);
     
@@ -54,15 +58,29 @@ void c2_backtrack_case_split(C2* c2) {
     }
     
     int_vector_reset(c2->case_split_stack);
+    
+    // Test if we exhausted all cases
+    assert(int_vector_count(c2->case_split_stack) == 0);
+    if (satsolver_sat(c2->skolem->skolem) == SATSOLVER_UNSATISFIABLE) {
+        V1("Universal assignments depleted: SAT\n");
+        c2->result = CADET_RESULT_SAT;
+    }
+    
 }
 
+void c2_case_split_backtracking_heuristics(C2* c2) {
+    c2->next_restart = c2->magic.initial_restart;
+}
 
-void c2_case_split(C2* c2) {
+bool c2_case_split(C2* c2) {
+    
+    bool progress = false; // indicates whether this function call changed anything.
     
     Lit most_notorious_literal = c2_pick_most_notorious_literal(c2);
     float notoriousity = c2_notoriousity(c2, most_notorious_literal);
     float threshold = c2_notoriousity_threshold(c2);
     if (most_notorious_literal != 0) {
+        c2->conflicts_between_case_splits_countdown = c2->conflicts_between_case_splits;
         if (notoriousity > threshold) {
             if (debug_verbosity >= VERBOSITY_LOW) {
                 V1("Found notorious literal");
@@ -87,15 +105,22 @@ void c2_case_split(C2* c2) {
                 assert(c2->skolem->decision_lvl == c2->restart_base_decision_lvl);
                 if (res == SATSOLVER_UNSATISFIABLE) {
                     V1("Also the SAT check of the other polarity failed. Exhausted the search space on the universal side.\n");
-                    abortif(int_vector_count(c2->case_split_stack) != 0, "This case admits no assignments to the universals that are consistent with current definitions. This contradicts earlier SAT checks, I believe.");
                     assert(c2->result == CADET_RESULT_UNKNOWN);
-                    c2->result = CADET_RESULT_SAT;
-                    most_notorious_literal = 0;
+                    if (int_vector_count(c2->case_split_stack) == 0) {
+                        c2->result = CADET_RESULT_SAT;
+                    } else {
+                        abortif(! c2->options->cegar, "This case can only occur when something else fiddles with the assumptions.");
+                        V1("Case split successfully completed through CEGAR-Case Split interaction.\n");
+                        c2_backtrack_case_split(c2);
+                        c2_case_split_backtracking_heuristics(c2);
+                    }
+                    progress = true;
+                    most_notorious_literal = 0; // suppresses that case split happens
                 }
             }
             
             if (most_notorious_literal != 0) {
-                
+                progress = true;
                 if (int_vector_count(c2->case_split_stack) == 0) {
                     c2->statistics.cases_explored += 1;
                     stack_push(c2->stack);
@@ -116,6 +141,7 @@ void c2_case_split(C2* c2) {
                     V1("Case split lead to immediate conflict.\n");
                     assert(c2->result == CADET_RESULT_UNKNOWN);
                     c2->result = CADET_RESULT_UNSAT;
+                    c2->state = C2_SKOLEM_CONFLICT;
                 }
             }
         } else {
@@ -124,6 +150,7 @@ void c2_case_split(C2* c2) {
     } else {
         V1("Case split not successful; no notorious variables detected.\n");
     }
+    return progress;
 }
 
 
@@ -134,7 +161,7 @@ float c2_notoriousity(C2* c2, Lit lit) {
     vector* occs = lit>0 ? &v->pos_occs : &v->neg_occs;
     for (unsigned i = 0; i < vector_count(occs); i++) {
         Clause* c = vector_get(occs, i);
-        if (! c->original && c->consistent_with_originals) {
+        if (! c->original && c->consistent_with_originals) { // is a learnt clause
             n += 1.0;
         }
     }

@@ -19,8 +19,6 @@
 
 struct C2;
 typedef struct C2 C2;
-struct Cegar;
-typedef struct Cegar Cegar;
 
 typedef enum {
     C2_READY,
@@ -43,6 +41,9 @@ struct C2_Statistics {
     size_t decisions;
     size_t successful_conflict_clause_minimizations;
     size_t cases_explored;
+    size_t lvls_backtracked;
+    
+    double start_time;
 };
 
 struct C2_Magic_Values {
@@ -79,7 +80,6 @@ struct C2 {
     
     // Reasoning domains
     Skolem* skolem;
-    Cegar* cegar;
     Examples* examples;
     
     // Data structures for heuristics
@@ -119,9 +119,7 @@ void c2_print_debug_info(C2*);
 
 // PRIVATE FUNCTIONS
 typedef enum {
-    C2_OP_ASSIGN_DECISION_VAL,
-    C2_OP_DECISION,
-//    C2_OP_CASE_SPLIT
+    C2_OP_ASSIGN_DECISION_VAL
 } C2_OPERATION;
 void c2_undo(void* parent, char type, void* obj);
 

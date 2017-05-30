@@ -24,13 +24,14 @@ typedef struct {
     // Use a configuration of CADET 2 that is easier to debug than the performance-oriented configuration
     bool easy_debugging_mode_c2;
     
-    // Computational enginges
-    bool cadet2cegar;
+    // Computational enginge
+    bool cegar;
+    bool cegar_only;
     bool delay_conflict_checks;
     bool use_qbf_engine_also_for_propositional_problems;
-    bool reencode3QBF;
     unsigned examples_max_num;
     unsigned initial_examples;
+    bool functional_synthesis;
     
     // Aiger interpretations
     const char* aiger_controllable_inputs;
@@ -54,7 +55,8 @@ typedef struct {
     bool minimize_conflicts;
     bool preprocess;
     bool delete_clauses_on_restarts;
-    bool reencode_existentials; 
+    bool propagate_pure_literals;
+    bool enhanced_pure_literals;
     
     // Output options
     bool print_qdimacs;
@@ -66,6 +68,7 @@ typedef struct {
     // Traces
     bool trace_learnt_clauses;
     bool trace_for_visualization;
+    bool trace_for_profiling;
     
 } Options;
 

@@ -16,7 +16,7 @@ int_vector* analyze_assignment_conflict(C2* c2,
                                         Clause* conflicted_clause,
                                         void* domain,
                                         int  (*domain_get_value)(void* domain, Lit lit),
-                                        bool (*domain_is_relevant_clause)(void* domain, Clause* c, unsigned var_id),
+                                        bool (*domain_is_relevant_clause)(void* domain, Clause* c, Lit lit),
                                         bool (*domain_is_legal_dependence)(void* domain, unsigned var_id, unsigned depending_on),
                                         unsigned (*domain_get_decision_lvl)(void* domain, unsigned var_id));
 

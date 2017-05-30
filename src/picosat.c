@@ -1,3 +1,6 @@
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wconversion"
+#pragma clang diagnostic ignored "-Wconditional-uninitialized"
 /****************************************************************************
 Copyright (c) 2006 - 2015, Armin Biere, Johannes Kepler University.
 
@@ -8507,3 +8510,5 @@ picosat_deref_partial (PS * ps, int int_lit)
 
   return pderef (ps, int_lit);
 }
+
+#pragma clang diagnostic pop

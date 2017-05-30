@@ -62,15 +62,6 @@ static inline int lit_from_int(SATSolver* solver, int lit) {
     return neg ? -nvar : nvar;
 }
 
-static inline int int_from_lit(SATSolver* solver, int lit) {
-    bool neg = lit < 0;
-    int var = neg ? -lit : lit;
-    
-    int reverse = (int)(intptr_t)map_get(solver->reverse_var_mapping, var);
-    
-    return neg ? -reverse : reverse;
-}
-
 SATSolver* satsolver_init() {
     SATSolver* solver = malloc(sizeof(SATSolver));
     solver->ps = picosat_init();
@@ -413,10 +404,9 @@ void satsolver_pop(SATSolver* solver) {
         int_vector_reset(solver->assumptions);
     }
     
-    assert(int_vector_count(solver->max_var_stack) > 0);
-    unsigned last_index = int_vector_count(solver->max_var_stack) - 1;
-    solver->max_var = int_vector_get(solver->max_var_stack, last_index);
-    int_vector_remove_index(solver->max_var_stack, last_index);
+    abortif(int_vector_count(solver->max_var_stack) == 0, "Trying to pop from a satsolver without contexts.");
+    solver->max_var = int_vector_pop(solver->max_var_stack);
+    
     picosat_pop(solver->ps);
     
 #ifdef SATSOLVER_TRACE
@@ -448,6 +438,10 @@ void satsolver_print_statistics(SATSolver* solver) {
     V0("Skolem SAT solver:\n");
     V0("  SATSolver maxvar: %u\n", satsolver_get_max_var(solver));
     V0("  PicoSAT maxvar: %u\n", picosat_inc_max_var(solver->ps));
+}
+
+void satsolver_measure_all_calls(SATSolver* solver) {
+    picosat_measure_all_calls(solver->ps);
 }
 
 #endif

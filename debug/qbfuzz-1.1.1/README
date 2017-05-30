@@ -1,0 +1,112 @@
+********************************************************************************
+*                                 QBFUZZ                                       *
+********************************************************************************
+
+This is the first release of QBFuzz which is a fuzzer for generating random QBF
+formulas in QDMIACS format (see http://www.qbflib.org/qdimacs.html for more
+details). For more information about QBF see http://www.qbflib.org.
+QBFuzz is released under GPL version 3. A copy of the license can be found in 
+the file COPYING. If no file COPYING has been delivered with this release it
+can also be found at http://www.gnu.org/licenses/gpl-3.0.txt.
+
+QBFuzz is written in Python 3.1 and is developed under a Linux system.
+However, it should also work on other operating systems with Python 3.0 or 
+higher installed.
+
+The fuzzer provides several parameters for customizing formula generation. 
+Below is an overview of all QBFuzz parameters and its random values. In 
+principle, all parameters are optional but QBFuzz uses some parameter values
+in order to generate forumlas. Therefore, random values are generated for the
+number of variables, clauses, quantifier sets, minimum and maximum literals per
+clause if they have not been specified.
+
+If you have any comments, questions, improvements or bug reports, just send
+them to my mail address: mathias.preiner@gmail.com
+
+Mathias
+
+
+PARAMETER DESCRIPTION:
+======================
+
+* '-v' ... Maximum number of variables
+
+  Random range:
+    * 2 - 200 (default)
+    * 1 - 200 (with --unit-clauses enabled)
+
+
+* '-c' ... Maximum number of clauses
+
+  Random range:
+    * 1 - 1000 (default)
+    * lower bound - max(lower bound, 1000)
+      - whereas lower bound is either:  
+        1) 1 (with -r not enabled)
+        2) max(existential variables, universal variables) (with -r enabled)
+
+
+* '-s' ... Maximum number of quantifier sets
+  
+  Random range:
+    * 1 - 15 (default, with -r 0.0 and -r 1.0 specified)
+    * 2 - 15 (with -r specified)
+
+
+* '--min' ... Minium number of literals per clause
+
+  If --min=1 is specified then --unit-clauses is also enabled
+  
+  Random range:
+    * max(2, num_vars / num_clauses) (default)
+    * max(1, num_vars / num_clauses) (with --unit-clauses enabled and -r 1.0 or 
+                                      -r 0.0 or -r not enabled)
+
+
+* '--max' ... Maximum number of literals per clause
+
+  if --max=1 is specified then --unit-clauses is also enabled
+
+  Random range:
+    * min_lits - max(min_lits, min(number of variables, 15)) (default)
+
+
+* '-r' ... Ratio of overall number of existential variables
+  
+  This parameter is optional and not enabled by default
+
+  Possible value range: 0.0 - 1.0
+
+* '-f' ... Ratio of overall number of free variables
+  
+  This parameter is optional and not enabled by default
+
+  Possible value range: 0.0 - 1.0
+
+
+* '-o' ... Name of output file
+
+  Specifies the name of the ouptut file. if '--gzip' is enabled the file name 
+  is automatically extended with the file extension '.gz'.
+
+  If '-o' is not specified the formula will be written to stdout instead.
+
+
+* '--seed' ... Seed for random number generator
+  
+* '--no-reduce' ... Do not apply forall reduction
+                    (disabled by default)
+
+* '--unit-clauses' ... Allow unit clauses to be generated
+                       (disabled by default)
+
+* '--verbose' ... Print verbose information of generation status
+                  (disabled by default)
+
+* '--sort' ... Sorts all literals in clause ascending to their scope level
+               (disabled by default)
+
+* '--gzip' ... Enables gzip compression for the output file. only available 
+               with '-o' parameter. '.gz' file extension is automatically 
+               appended to the specified file name.
+               (disabled by default)

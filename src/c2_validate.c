@@ -19,6 +19,9 @@ void c2_validate_var(C2* c2, unsigned var_id) {
     int decision_val = c2_get_decision_val(c2, var_id);
     abortif(decision_val != 0 && (sv.pure_pos || sv.pure_neg), "");
     abortif(decision_val != 0 && !sv.deterministic, "");
+    
+    abortif(sv.reason_for_constant == INT_MAX && sv.dlvl_for_constant != 0, "");
+    abortif(sv.reason_for_constant != INT_MAX && ! skolem_is_deterministic(c2->skolem, var_id), "");
 }
 
 void c2_validate_unique_consequences(C2* c2) {
@@ -30,3 +33,5 @@ void c2_validate_unique_consequences(C2* c2) {
         }
     }
 }
+
+

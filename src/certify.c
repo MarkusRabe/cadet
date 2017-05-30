@@ -12,6 +12,22 @@
 #include "aiger_utils.h"
 #include "log.h"
 
+#include <string.h>
+
+
+void c2_print_qdimacs_certificate(C2* c2, void* domain, int (*get_value)(void* domain, Lit lit)) {
+    printf("V");
+    for (unsigned i = 1; i < var_vector_count(c2->qcnf->vars); i++) {
+        Var* v = var_vector_get(c2->qcnf->vars, i);
+        if (v && v->var_id != 0 && v->is_universal) {
+            if (get_value(domain, (Lit) v->var_id) != 0) {
+                printf(" %d", get_value(domain, (Lit) v->var_id) * (Lit) v->var_id);
+            }
+        }
+    }
+    printf("\n");
+}
+
 bool c2_cert_check_UNSAT(QCNF* qcnf, void* domain, int (*get_value)(void* domain, Lit lit)) {
     
     SATSolver* checker = satsolver_init();
@@ -30,7 +46,7 @@ bool c2_cert_check_UNSAT(QCNF* qcnf, void* domain, int (*get_value)(void* domain
     for (unsigned i = 0; i < var_vector_count(qcnf->vars); i++) {
         Var* v = var_vector_get(qcnf->vars, i);
         abortif(!v, "What!?");
-        if (v->is_universal && v->original) {
+        if (v->var_id != 0 && v->is_universal && v->original) {
             int val = get_value(domain, (Lit) v->var_id);
             abortif(val < -1 || val > 1, "Inconsistent value");
             if (val == 0) {

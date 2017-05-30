@@ -15,10 +15,13 @@ Options* default_options() {
     o->easy_debugging_mode_c2 = false;
 
     // Computational enginges
-    o->cadet2cegar = false;
+    o->cegar = true;
+    o->cegar_only = false;
     o->delay_conflict_checks = false;
     o->use_qbf_engine_also_for_propositional_problems = false;
-    o->reencode3QBF = false;
+    o->functional_synthesis = false;
+    
+    // Examples domain
     o->examples_max_num = 0; // 0 corresponds to not doing examples at all
     o->initial_examples = 0;
     
@@ -44,7 +47,8 @@ Options* default_options() {
     o->minimize_conflicts = false;
     o->preprocess = false;
     o->delete_clauses_on_restarts = false;
-    o->reencode_existentials = false;
+    o->propagate_pure_literals = true;
+    o->enhanced_pure_literals = false;
     
     // Printing
     o->print_detailed_miniscoping_stats = false;
@@ -55,6 +59,7 @@ Options* default_options() {
     
     o->trace_learnt_clauses = false;
     o->trace_for_visualization = false;
+    o->trace_for_profiling = false;
     
     return o;
 }

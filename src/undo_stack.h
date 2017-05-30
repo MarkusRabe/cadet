@@ -11,6 +11,8 @@
 
 #include <stdio.h>
 
+#define STACK_OP_MILESTONE -1
+
 // undo stack
 struct Stack;
 typedef struct Stack Stack;

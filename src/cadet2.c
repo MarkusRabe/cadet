@@ -561,7 +561,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                     }
                     satsolver_clause_finished(c2->skolem->skolem);
                     vector_add(c2->skolem->cegar->solved_cubes, conflict);
-                    V1("Functional synthesis detected a cube that is over dlvl0 only, which we simply exclude from future conflict calls.\n");
+                    V1("Functional synthesis detected a cube of length %u that is over dlvl0 only. We exclude it from future conflict checks.\n", int_vector_count(conflict));
                     continue;
                 }
                 

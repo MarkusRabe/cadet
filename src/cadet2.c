@@ -555,11 +555,15 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                     c2_backtrack_to_decision_lvl(c2, c2->restart_base_decision_lvl);
                     c2->state = C2_READY;
                     
+                    V2("Functional synthesis exludes cube:");
                     for (unsigned i = 0; i < int_vector_count(conflict); i++) {
                         int lit = int_vector_get(conflict, i);
-                        satsolver_add(c2->skolem->skolem, skolem_get_satsolver_lit(c2->skolem, lit));
+                        satsolver_add(c2->skolem->skolem, skolem_get_satsolver_lit(c2->skolem, - lit));
+                        V2("%d", - lit);
                     }
-                    satsolver_clause_finished(c2->skolem->skolem);
+                    V2("\n");
+//                    satsolver_clause_finished(c2->skolem->skolem);
+                    satsolver_clause_finished_for_context(c2->skolem->skolem, 0);
                     vector_add(c2->skolem->cegar->solved_cubes, conflict);
                     V1("Functional synthesis detected a cube of length %u that is over dlvl0 only. We exclude it from future conflict checks.\n", int_vector_count(conflict));
                     continue;

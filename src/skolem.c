@@ -315,7 +315,7 @@ void skolem_add_clauses_using_existing_satlits(Skolem* s, unsigned var_id, vecto
         
         if (lit_to_var(unique_consequence) == var_id
             && ! skolem_has_illegal_dependence(s,c)
-            /*&& ! skolem_clause_satisfied(s, c)*/) {
+            && ! skolem_clause_satisfied(s, c)) {
             for (unsigned i = 0; i < c->size; i++) {
                 int sat_lit = skolem_get_satlit(s, c->occs[i]);
                 f_add(s->f, sat_lit);

@@ -1,4 +1,10 @@
-# Build system and binaries
+# QDIMACS in root dir #
+#######################
+*.qdimacs
+*.qdimacs.gz
+
+# Build system and binaries #
+#############################
 Makefile
 cadet
 

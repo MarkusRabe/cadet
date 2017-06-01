@@ -287,7 +287,7 @@ void skolem_check_for_unique_consequence(Skolem* s, Clause* c) {
  * The flag skip_v_occurrences allows to suppress adding the occurrences of var_id and -var_id,
  * which is used for determinicity checks.
  */
-bool skolem_add_occurrences_for_determinicity_check(Skolem* s, Function* f,
+bool skolem_add_occurrences_for_determinicity_check(Skolem* s, SATSolver* sat,
                                            unsigned var_id, vector* occs) {
     bool case_exists = false;
     for (unsigned i = 0; i < vector_count(occs); i++) {
@@ -298,10 +298,10 @@ bool skolem_add_occurrences_for_determinicity_check(Skolem* s, Function* f,
                 && ! skolem_has_illegal_dependence(s,c)) {
             for (unsigned i = 0; i < c->size; i++) {
                 if (lit_to_var(c->occs[i]) != var_id && ! skolem_lit_satisfied(s, - c->occs[i])) {
-                    f_add(f, c->occs[i]);
+                    satsolver_add(sat, c->occs[i]);
                 }
             }
-            f_clause_finished(f);
+            satsolver_clause_finished(sat);
             case_exists = true;
         }
     }
@@ -332,12 +332,12 @@ bool skolem_check_for_local_determinicity(Skolem* s, Var* v) {
     V3("Checking local determinicity of var %d: ", v->var_id);
     s->statistics.local_determinicity_checks++;
     
-    Function* f = f_init(s->qcnf);
-    f_set_max_var(f, (int) var_vector_count(s->qcnf->vars));
-    skolem_add_occurrences_for_determinicity_check(s, f, v->var_id, &v->pos_occs);
-    skolem_add_occurrences_for_determinicity_check(s, f, v->var_id, &v->neg_occs);
-    int result = f_sat(f);
-    f_free(f);
+    SATSolver* sat = satsolver_init();
+    satsolver_set_max_var(sat, (int) var_vector_count(s->qcnf->vars));
+    skolem_add_occurrences_for_determinicity_check(s, sat, v->var_id, &v->pos_occs);
+    skolem_add_occurrences_for_determinicity_check(s, sat, v->var_id, &v->neg_occs);
+    int result = satsolver_sat(sat);
+    satsolver_free(sat);
     
     if (result == SATSOLVER_SATISFIABLE) {
         V3("not deterministic\n");

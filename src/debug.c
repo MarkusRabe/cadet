@@ -33,7 +33,7 @@ void debug_fuzz_for_incompleteness(C2* c2, unsigned num_trials) {
     
     for (unsigned n = 0; n < num_trials; n++) {
         
-        satsolver_push(c2->skolem->skolem);
+        f_push(c2->skolem->f);
         
         // take a random assignment
         for (unsigned i = 0; i < int_vector_count(assignment); i++) {
@@ -41,13 +41,13 @@ void debug_fuzz_for_incompleteness(C2* c2, unsigned num_trials) {
             int val = rand()%2 ? 1 : -1;
 //            int val = v->var_id == 5 ? -1 : 1;
             int_vector_set(assignment, i, val);
-            Lit l = skolem_get_satsolver_lit(c2->skolem, val * (int)v->var_id);
-            satsolver_add(c2->skolem->skolem, l);
-            satsolver_clause_finished(c2->skolem->skolem);
+            Lit l = skolem_get_satlit(c2->skolem, val * (int)v->var_id);
+            f_add(c2->skolem->f, l);
+            f_clause_finished(c2->skolem->f);
 //            V4("  asserting var %u, satlit %d\n", v->var_id, l);
         }
         
-        sat_res res = satsolver_sat(c2->skolem->skolem);
+        sat_res res = f_sat(c2->skolem->f);
         
         if (res != SATSOLVER_SATISFIABLE) {
             printf("Fuzzing detected lack of totality for this assignment:\n");
@@ -60,7 +60,7 @@ void debug_fuzz_for_incompleteness(C2* c2, unsigned num_trials) {
             abort();
         }
         
-        satsolver_pop(c2->skolem->skolem);
+        f_pop(c2->skolem->f);
     }
     
     vector_free(universals);

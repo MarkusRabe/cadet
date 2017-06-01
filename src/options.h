@@ -68,7 +68,6 @@ typedef struct {
     // Traces
     bool trace_learnt_clauses;
     bool trace_for_visualization;
-    bool trace_for_profiling;
     
 } Options;
 

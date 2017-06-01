@@ -12,7 +12,7 @@
 #include "qcnf.h"
 #include "heap.h"
 #include "undo_stack.h"
-#include "satsolver.h"
+#include "function.h"
 #include "partial_assignment.h"
 #include "util.h"
 #include "pqueue.h"
@@ -82,11 +82,8 @@ struct Skolem {
     Options* options;
     QCNF* qcnf;
     
-    
     // Dependent objects
-    SATSolver* skolem;
-    Cegar* cegar;
-    
+    Function* f;
     
     // Core Skolem state and data structures
     unsigned decision_lvl;
@@ -115,6 +112,7 @@ struct Skolem {
     pqueue* determinicity_queue; // contains unsigned var_id
     pqueue* pure_var_queue; // contains unsigned var_id
     
+    int satlit_true; // this satlit represents constant true; currently assigned constant 1
     
     // Configuration
     SKOLEM_MODE mode; // can be used to switch of all or certain types of conflicts
@@ -123,8 +121,6 @@ struct Skolem {
     
     
     // Static objects
-    // Helper variables in the SAT solver
-    int satlit_true; // this satlit represents constant true; so far always assigned 1
     int dependency_choice_sat_lit; // something related to an earlier
     // THE empty_dependency object
     // Used when non-existent skolem_vars should return a dependency set; avoids alloc/free management
@@ -223,6 +219,6 @@ bool skolem_has_unique_consequence(Skolem*, Clause*);
 bool skolem_is_locally_conflicted(Skolem*, unsigned var_id);
 
 // used by debug.c
-int skolem_get_satsolver_lit(Skolem* s, Lit lit);
+int skolem_get_satlit(Skolem* s, Lit lit);
 
 #endif /* skolem_h */

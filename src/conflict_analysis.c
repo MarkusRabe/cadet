@@ -65,7 +65,7 @@ void conflict_analysis_schedule_causing_vars_in_work_queue(conflict_analysis* ca
 //    assert(lit != 0);
 //    Skolem* s = (Skolem*) domain;
 //    assert(skolem_is_deterministic(s, lit_to_var(lit)));
-//    int satlit = skolem_get_satsolver_lit(s, lit);
+//    int satlit = skolem_get_satlit(s, lit);
 //    return satsolver_deref(s->skolem, satlit);
 //}
 

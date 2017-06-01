@@ -92,7 +92,8 @@ struct QCNF {
     int_vector* new_clause;
     Clause* empty_clause; // is NULL if no empty clause exists
     
-    int_vector* universals_constraints;
+    // The AIG may come with some assumptions (bad literals must be true)
+    int_vector* universals_constraints_from_aiger_encoding;
     
     Stack* stack;
     

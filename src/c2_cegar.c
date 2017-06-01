@@ -8,11 +8,11 @@
 
 #include "c2_cegar.h"
 #include "log.h"
+#include "function.h"
 
-
-Cegar* cegar_init(QCNF* qcnf) {
+Cegar* cegar_init(Skolem* s) {
     Cegar* cegar = malloc(sizeof(Cegar));
-    cegar->qcnf = qcnf;
+    cegar->skolem = s;
     cegar->additional_assignment = int_vector_init();
     cegar->solved_cubes = vector_init();
     cegar->exists_solver = NULL; // no initialized yet; see cegar_update_interface
@@ -31,7 +31,7 @@ Cegar* cegar_init(QCNF* qcnf) {
     
     cegar->is_used_in_lemma = int_vector_init();
     // initialize vector of bits saying we need this variable in the blocking clause
-    for (unsigned i = 0; i < var_vector_count(qcnf->vars); i++) {
+    for (unsigned i = 0; i < var_vector_count(s->qcnf->vars); i++) {
         int_vector_add(cegar->is_used_in_lemma, 1);
     }
     
@@ -42,22 +42,20 @@ bool cegar_is_initialized(Cegar* cegar) {
     return cegar->interface_vars;
 }
 
-void cegar_update_interface(Skolem* s) {
+void cegar_update_interface(Cegar* cegar) {
     
-    Cegar* cegar = s->cegar;
-    
-    const unsigned max_var_id = var_vector_count(cegar->qcnf->vars);
+    const unsigned max_var_id = var_vector_count(cegar->skolem->qcnf->vars);
     cegar->exists_solver = satsolver_init();
     satsolver_set_max_var(cegar->exists_solver, (int) max_var_id);
     
     // set up satsolver for existentials
-    for (unsigned i = 0; i < vector_count(s->qcnf->clauses); i++) {
-        Clause* c = vector_get(s->qcnf->clauses, i);
+    for (unsigned i = 0; i < vector_count(cegar->skolem->qcnf->clauses); i++) {
+        Clause* c = vector_get(cegar->skolem->qcnf->clauses, i);
         if (!c) {
             continue;
         }
-        unsigned uc_var = lit_to_var(skolem_get_unique_consequence(s, c));
-        if (uc_var != 0 && skolem_is_deterministic(s, uc_var)) {
+        unsigned uc_var = lit_to_var(skolem_get_unique_consequence(cegar->skolem, c));
+        if (uc_var != 0 && skolem_is_deterministic(cegar->skolem, uc_var)) {
             continue;
         }
         for (unsigned j = 0; j < c->size; j++) {
@@ -70,17 +68,17 @@ void cegar_update_interface(Skolem* s) {
     // determine interface variables; variables that are deterministic and occur in clauses together with nondeterministic variables.
     int_vector* old_interface = cegar->interface_vars;
     cegar->interface_vars = int_vector_init();
-    for (unsigned i = 0; i < vector_count(s->qcnf->clauses); i++) {
-        Clause* c = vector_get(s->qcnf->clauses, i);
+    for (unsigned i = 0; i < vector_count(cegar->skolem->qcnf->clauses); i++) {
+        Clause* c = vector_get(cegar->skolem->qcnf->clauses, i);
         if (!c) {
             continue;
         }
-        unsigned uc_var = lit_to_var(skolem_get_unique_consequence(s, c));
-        if (uc_var != 0 && skolem_is_deterministic(s, uc_var)) {
+        unsigned uc_var = lit_to_var(skolem_get_unique_consequence(cegar->skolem, c));
+        if (uc_var != 0 && skolem_is_deterministic(cegar->skolem, uc_var)) {
             continue;
         }
         for (unsigned j = 0; j < c->size; j++) {
-            if (skolem_is_deterministic(s, lit_to_var(c->occs[j]))) {
+            if (skolem_is_deterministic(cegar->skolem, lit_to_var(c->occs[j]))) {
                 int_vector_add(cegar->interface_vars, (int) lit_to_var(c->occs[j]));
             }
         }
@@ -104,12 +102,32 @@ void cegar_update_interface(Skolem* s) {
     free(old_interface);
 }
 
+
+void cegar_new_cube(Cegar* c, int_vector* cube) {
+    
+    vector_add(c->solved_cubes, cube);
+    
+    for (unsigned i = 0 ; i < int_vector_count(cube); i++) {
+        int lit = int_vector_get(cube, i);
+        int satlit = skolem_get_satlit(c->skolem, lit);
+        f_add(c->skolem->f, satlit);
+    }
+    f_clause_finished_for_context(c->skolem->f, 0);
+    
+    c->cubes_num += 1;
+    c->recent_average_cube_size = (float) int_vector_count(cube) * (float) 0.1 + c->recent_average_cube_size * (float) 0.9;
+    
+}
+
+
+////// CEGAR and minimization
+
 bool cegar_var_needs_to_be_set(Cegar* cegar, unsigned var_id) {
     abortif(int_vector_get(cegar->is_used_in_lemma, var_id) == 0, "Variable not used in CEGAR lemma?");
     int satval = satsolver_deref(cegar->exists_solver, (int) var_id);
     abortif(satval == 0, "CEGAR lemma variable not set in SAT solver");
     
-    Var* v = var_vector_get(cegar->qcnf->vars, var_id);
+    Var* v = var_vector_get(cegar->skolem->qcnf->vars, var_id);
     vector* occs = satval > 0 ? &v->pos_occs : &v->neg_occs;
     int_vector* additional_assignments_var = int_vector_init();
     for (unsigned i = 0; i < vector_count(occs); i++) {
@@ -167,11 +185,11 @@ void cegar_free(Cegar* c) {
 
 cadet_res cegar_solve_2QBF(C2* c2, int rounds_num) {
     
-    assert(cegar_is_initialized(c2->skolem->cegar));
+    assert(cegar_is_initialized(c2->cegar));
     
     // solver loop
     while (c2->result == CADET_RESULT_UNKNOWN && rounds_num--) {
-        if (satsolver_sat(c2->skolem->skolem) == SATSOLVER_RESULT_SAT) {
+        if (f_sat(c2->skolem->f) == SATSOLVER_SATISFIABLE) {
             cegar_build_abstraction_for_assignment(c2);
         } else {
             c2->result = CADET_RESULT_SAT;
@@ -181,10 +199,10 @@ cadet_res cegar_solve_2QBF(C2* c2, int rounds_num) {
 }
 
 void cegar_do_cegar_if_effective(C2* c2) {
-    assert(cegar_is_initialized(c2->skolem->cegar));
+    assert(cegar_is_initialized(c2->cegar));
     unsigned i = 0;
     while (c2->result == CADET_RESULT_UNKNOWN &&
-           c2->skolem->cegar->recent_average_cube_size < c2->skolem->cegar->cegar_effectiveness_threshold) {
+           c2->cegar->recent_average_cube_size < c2->cegar->cegar_effectiveness_threshold) {
         i++;
         cegar_solve_2QBF(c2,1);
     }
@@ -207,9 +225,9 @@ int cegar_get_val(void* domain, Lit lit) {
 }
 
 cadet_res cegar_build_abstraction_for_assignment(C2* c2) {
-    assert(cegar_is_initialized(c2->skolem->cegar));
+    assert(cegar_is_initialized(c2->cegar));
     assert(c2->result == CADET_RESULT_UNKNOWN);
-    Cegar* cegar = c2->skolem->cegar;
+    Cegar* cegar = c2->cegar;
     
     V3("Assuming: ");
     for (unsigned i = 0 ; i < int_vector_count(cegar->interface_vars); i++) {
@@ -232,7 +250,7 @@ cadet_res cegar_build_abstraction_for_assignment(C2* c2) {
     }
 #endif
     
-    if (satsolver_sat(cegar->exists_solver) == SATSOLVER_RESULT_SAT) {
+    if (satsolver_sat(cegar->exists_solver) == SATSOLVER_SATISFIABLE) {
         
         V1("CEGAR adding clause: ");
         int_vector_reset(cegar->additional_assignment);
@@ -246,16 +264,12 @@ cadet_res cegar_build_abstraction_for_assignment(C2* c2) {
                 Lit lit = - val * (Lit) var_id;
                 V3("%d ", lit);
                 int_vector_add(cube, lit);
-                int satlit = skolem_get_satsolver_lit(c2->skolem, lit);
-                satsolver_add(c2->skolem->skolem, satlit);
             } else {
                 int_vector_set(cegar->is_used_in_lemma, var_id, 0);
             }
         }
-        satsolver_clause_finished_for_context(c2->skolem->skolem, 0);
-        
+        cegar_new_cube(cegar, cube);
         V1(" ... length %u\n", int_vector_count(cube));
-        vector_add(cegar->solved_cubes, cube);
         
         cegar->cubes_num += 1;
         cegar->recent_average_cube_size = (float) int_vector_count(cube) * (float) 0.1 + cegar->recent_average_cube_size * (float) 0.9;
@@ -267,24 +281,23 @@ cadet_res cegar_build_abstraction_for_assignment(C2* c2) {
 }
 
 
-bool cegar_try_to_handle_conflict(Skolem* s) {
-    assert(cegar_is_initialized(s->cegar));
-    Cegar* cegar = s->cegar;
+bool cegar_try_to_handle_conflict(Cegar* cegar) {
+    assert(cegar_is_initialized(cegar));
     
     V3("Assuming: ");
     for (unsigned i = 0 ; i < int_vector_count(cegar->interface_vars); i++) {
         unsigned var_id = (unsigned) int_vector_get(cegar->interface_vars, i);
         int_vector_set(cegar->is_used_in_lemma, var_id, 1); // reset values
         
-        int val = cegar_get_val(s, (int) var_id);
+        int val = cegar_get_val(cegar->skolem, (int) var_id);
         satsolver_assume(cegar->exists_solver, val * (Lit) var_id);
         V3(" %d", val * (Lit) var_id);
     }
     V3("\n");
     
 #ifdef DEBUG
-    for (unsigned i = 0; i < var_vector_count(s->qcnf->vars); i++) {
-        Var* v = var_vector_get(s->qcnf->vars, i);
+    for (unsigned i = 0; i < var_vector_count(cegar->skolem->qcnf->vars); i++) {
+        Var* v = var_vector_get(cegar->skolem->qcnf->vars, i);
         if (!v->original) {
             continue;
         }
@@ -292,18 +305,17 @@ bool cegar_try_to_handle_conflict(Skolem* s) {
     }
 #endif
     
-    if (satsolver_sat(cegar->exists_solver) == SATSOLVER_RESULT_SAT) {
+    if (satsolver_sat(cegar->exists_solver) == SATSOLVER_SATISFIABLE) {
         
         V1("CEGAR adding clause (inplace): ");
         int_vector_reset(cegar->additional_assignment);
         int_vector* cube = int_vector_init();
-        
 
         for (unsigned i = 0 ; i < int_vector_count(cegar->interface_vars); i++) {
             unsigned var_id = (unsigned) int_vector_get(cegar->interface_vars, i);
-            int val = satsolver_deref(cegar->exists_solver, (int) var_id);
             
             if (cegar_var_needs_to_be_set(cegar, var_id)) {
+                int val = satsolver_deref(cegar->exists_solver, (int) var_id);
                 Lit lit = - val * (Lit) var_id;
                 V3("%d ", lit);
                 int_vector_add(cube, lit);
@@ -311,20 +323,9 @@ bool cegar_try_to_handle_conflict(Skolem* s) {
                 int_vector_set(cegar->is_used_in_lemma, var_id, 0);
             }
         }
-        
         V1(" ... length %u\n", int_vector_count(cube));
         
-        vector_add(cegar->solved_cubes, cube);
-        
-        for (unsigned i = 0 ; i < int_vector_count(cube); i++) {
-            int lit = int_vector_get(cube, i);
-            int satlit = skolem_get_satsolver_lit(s, lit);
-            satsolver_add(s->skolem, satlit);
-        }
-        satsolver_clause_finished_for_context(s->skolem, 0);
-        
-        cegar->cubes_num += 1;
-        cegar->recent_average_cube_size = (float) int_vector_count(cube) * (float) 0.1 + cegar->recent_average_cube_size * (float) 0.9;
+        cegar_new_cube(cegar, cube);
         
         if ((float) int_vector_count(cube) < cegar->cegar_effectiveness_threshold) {
             return true;

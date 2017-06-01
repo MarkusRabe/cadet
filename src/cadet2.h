@@ -80,6 +80,7 @@ struct C2 {
     
     // Reasoning domains
     Skolem* skolem;
+    Cegar* cegar;
     Examples* examples;
     
     // Data structures for heuristics

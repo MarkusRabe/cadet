@@ -179,7 +179,7 @@ PartialAssignment* examples_create_new_pa(Examples* e) {
 
 PartialAssignment* examples_add_assignment_from_skolem(Examples* e, Skolem* s) {
     V2("Propagating Skolem assignment\n");
-    assert(satsolver_state(s->skolem) == SATSOLVER_RESULT_SAT);
+    assert(f_result(s->f) == SATSOLVER_SATISFIABLE);
     assert( ! examples_is_conflicted(e));
     statistics_start_timer(e->create_skolem);
     

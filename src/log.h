@@ -40,6 +40,7 @@ int debug_verbosity;
 bool log_qdimacs_compliant;
 bool log_colors;
 bool log_silent;
+bool log_trace_for_profiling;
 //asdfbool print_full_variable_names; // whenever available
 
 

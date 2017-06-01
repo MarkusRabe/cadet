@@ -34,15 +34,15 @@ void c2_backtrack_case_split(C2* c2) {
     assert(c2->restart_base_decision_lvl == 0);
     
     int_vector* solved_cube = int_vector_init();
-    vector_add(c2->skolem->cegar->solved_cubes, solved_cube);
+    vector_add(c2->cegar->solved_cubes, solved_cube);
     for (unsigned i = 0; i < int_vector_count(c2->case_split_stack); i++) {
         Lit l = int_vector_get(c2->case_split_stack, i);
         assert(skolem_is_deterministic(c2->skolem,lit_to_var(l)));
         assert(skolem_get_constant_value(c2->skolem, l) == 0);
-        satsolver_add(c2->skolem->skolem, skolem_get_satsolver_lit(c2->skolem, - l));
+        f_add(c2->skolem->f, skolem_get_satlit(c2->skolem, - l));
         int_vector_add(solved_cube, -l);
     }
-    satsolver_clause_finished(c2->skolem->skolem);
+    f_clause_finished(c2->skolem->f);
     
     // check learnt clauses for unique consequences ... the last backtracking may have removed the unique consequences
     for (unsigned i = vector_count(c2->qcnf->clauses); i > 0; i--) {
@@ -61,7 +61,7 @@ void c2_backtrack_case_split(C2* c2) {
     
     // Test if we exhausted all cases
     assert(int_vector_count(c2->case_split_stack) == 0);
-    if (satsolver_sat(c2->skolem->skolem) == SATSOLVER_UNSATISFIABLE) {
+    if (f_sat(c2->skolem->f) == SATSOLVER_UNSATISFIABLE) {
         V1("Universal assignments depleted: SAT\n");
         c2->result = CADET_RESULT_SAT;
     }
@@ -89,19 +89,19 @@ bool c2_case_split(C2* c2) {
             }
             
             for (unsigned j = 0; j < int_vector_count(c2->case_split_stack); j++) {
-                assert(skolem_get_satsolver_lit(c2->skolem, int_vector_get(c2->case_split_stack, j)));
+                assert(skolem_get_satlit(c2->skolem, int_vector_get(c2->case_split_stack, j)));
             }
             
-            satsolver_assume(c2->skolem->skolem, skolem_get_satsolver_lit(c2->skolem, most_notorious_literal));
+            f_assume(c2->skolem->f, skolem_get_satlit(c2->skolem, most_notorious_literal));
             
-            sat_res res = satsolver_sat(c2->skolem->skolem);
+            sat_res res = f_sat(c2->skolem->f);
             if (res != SATSOLVER_SATISFIABLE) {
                 V1("This case admits no assignments to the universals that are consistent with dlvl 0, switching polarity and assuming %d instead.\n", - most_notorious_literal);
                 
                 most_notorious_literal = - most_notorious_literal;
                 
-                satsolver_assume(c2->skolem->skolem, skolem_get_satsolver_lit(c2->skolem, most_notorious_literal));
-                sat_res res = satsolver_sat(c2->skolem->skolem);
+                f_assume(c2->skolem->f, skolem_get_satlit(c2->skolem, most_notorious_literal));
+                sat_res res = f_sat(c2->skolem->f);
                 assert(c2->skolem->decision_lvl == c2->restart_base_decision_lvl);
                 if (res == SATSOLVER_UNSATISFIABLE) {
                     V1("Also the SAT check of the other polarity failed. Exhausted the search space on the universal side.\n");

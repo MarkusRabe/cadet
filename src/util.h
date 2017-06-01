@@ -1,7 +1,11 @@
 #ifndef UTIL_H
 #define UTIL_H
 
-#include <stdbool.h>
+#define SATSOLVER_SATISFIABLE 10
+#define SATSOLVER_UNSATISFIABLE 20
+#define SATSOLVER_UNKNOWN 0
+
+typedef int sat_res;
 
 #define SEED 0
 #define VERSION "v2.3"
@@ -11,6 +15,8 @@ typedef enum {
     CADET_RESULT_UNSAT   = 20,
     CADET_RESULT_UNKNOWN = 30
 } cadet_res;
+
+#include <stdbool.h>
 
 // initializes the array 'permutation' wit h a random permutation of the indices of the item_array, which is assumed to beterminated by a 0 entry. Returns the size of item_array (i.e. the incdex of the 0 entry). 
 int random_permutation(int* item_array, int* permutation);

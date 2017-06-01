@@ -117,7 +117,7 @@ void satsolver_assume(SATSolver* solver, int lit) {
 }
 
 sat_res satsolver_sat(SATSolver* solver) {
-    sat_res res = solver->instance->solve(solver->assumptions) ? SATSOLVER_RESULT_SAT : SATSOLVER_RESULT_UNSAT;
+    sat_res res = solver->instance->solve(solver->assumptions) ? SATSOLVER_SATISFIABLE : SATSOLVER_UNSATISFIABLE;
     return res;
 }
 

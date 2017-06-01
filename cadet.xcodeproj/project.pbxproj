@@ -52,6 +52,7 @@
 		28FA8D301E10ACBC00A43B7B /* c2_validate.c in Sources */ = {isa = PBXBuildFile; fileRef = 28FA8D2E1E10ACBC00A43B7B /* c2_validate.c */; };
 		28FA8D361E14F4E900A43B7B /* c2_cegar.c in Sources */ = {isa = PBXBuildFile; fileRef = 28FA8D341E14F4E900A43B7B /* c2_cegar.c */; };
 		28FEE64B1EDA304000A9D8CA /* skolem_conflict_analysis.c in Sources */ = {isa = PBXBuildFile; fileRef = 28FEE64A1EDA304000A9D8CA /* skolem_conflict_analysis.c */; };
+		28FEE64E1EDE99A900A9D8CA /* function.c in Sources */ = {isa = PBXBuildFile; fileRef = 28FEE64C1EDE99A900A9D8CA /* function.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -153,6 +154,8 @@
 		28FA8D341E14F4E900A43B7B /* c2_cegar.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = c2_cegar.c; path = src/c2_cegar.c; sourceTree = "<group>"; };
 		28FA8D351E14F4E900A43B7B /* c2_cegar.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = c2_cegar.h; path = src/c2_cegar.h; sourceTree = "<group>"; };
 		28FEE64A1EDA304000A9D8CA /* skolem_conflict_analysis.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = skolem_conflict_analysis.c; path = src/skolem_conflict_analysis.c; sourceTree = "<group>"; };
+		28FEE64C1EDE99A900A9D8CA /* function.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = function.c; path = src/function.c; sourceTree = "<group>"; };
+		28FEE64D1EDE99A900A9D8CA /* function.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = function.h; path = src/function.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -244,6 +247,8 @@
 				287C3B0C1E37EF7B00F7096A /* examples.h */,
 				28675A281DDAA9D000951212 /* partial_assignment.c */,
 				28675A291DDAA9D000951212 /* partial_assignment.h */,
+				28FEE64C1EDE99A900A9D8CA /* function.c */,
+				28FEE64D1EDE99A900A9D8CA /* function.h */,
 			);
 			name = cadet2;
 			sourceTree = "<group>";
@@ -404,6 +409,7 @@
 				28675A4C1DDAA9D000951212 /* conflict_analysis.c in Sources */,
 				287C3B161E3C01FE00F7096A /* skolem_var.c in Sources */,
 				28675A491DDAA9D000951212 /* cadet2.c in Sources */,
+				28FEE64E1EDE99A900A9D8CA /* function.c in Sources */,
 				28675A4D1DDAA9D000951212 /* debug.c in Sources */,
 				284EED5A1ED39BAF00581801 /* satsolver_lingeling_assumptions.c in Sources */,
 				28675A601DDAA9D000951212 /* statistics.c in Sources */,

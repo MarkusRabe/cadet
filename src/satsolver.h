@@ -1,10 +1,6 @@
 #ifndef SATSOLVER_H
 #define SATSOLVER_H
 
-#define SATSOLVER_SATISFIABLE 10
-#define SATSOLVER_UNSATISFIABLE 20
-#define SATSOLVER_UNKNOWN 0
-
 #define SOLVER_PICOSAT_PUSH_POP 1
 #define SOLVER_PICOSAT_ASSUMPTIONS 2
 #define SOLVER_MINISAT 3
@@ -15,25 +11,21 @@
 
 //#define USE_SOLVER SOLVER_MINISAT
 //#define USE_SOLVER SOLVER_CRYPTOMINISAT
-//#define USE_SOLVER SOLVER_PICOSAT_ASSUMPTIONS
-#define USE_SOLVER SOLVER_PICOSAT_PUSH_POP
+#define USE_SOLVER SOLVER_PICOSAT_ASSUMPTIONS
+//#define USE_SOLVER SOLVER_PICOSAT_PUSH_POP
 //#define USE_SOLVER SOLVER_LINGELING_ASSUMPTIONS
 
 #ifndef USE_SOLVER // sanity check
     #error "No SAT solver selected. See file satsolver.h"
 #endif
 
-#include <stdbool.h>
 #include "vector.h"
+#include "util.h"
+
+#include <stdbool.h>
 
 struct SATSolver;
 typedef struct SATSolver SATSolver;
-
-typedef enum {
-    SATSOLVER_RESULT_UNKNOWN = SATSOLVER_UNKNOWN,
-    SATSOLVER_RESULT_SAT     = SATSOLVER_SATISFIABLE,
-    SATSOLVER_RESULT_UNSAT   = SATSOLVER_UNSATISFIABLE
-} sat_res;
 
 SATSolver* satsolver_init();
 void satsolver_free(SATSolver*);

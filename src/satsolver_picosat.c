@@ -132,9 +132,9 @@ sat_res satsolver_state(SATSolver* solver) {
     
     switch (picosat_res(solver->ps)) {
         case PICOSAT_SATISFIABLE:
-            return SATSOLVER_RESULT_SAT;
+            return SATSOLVER_SATISFIABLE;
         case PICOSAT_UNSATISFIABLE:
-            return SATSOLVER_RESULT_UNSAT;
+            return SATSOLVER_UNSATISFIABLE;
         case PICOSAT_UNKNOWN:
             return SATSOLVER_RESULT_UNKNOWN;
         default:

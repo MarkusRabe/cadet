@@ -162,7 +162,7 @@ void c2_print_statistics(C2* c2) {
     
     qcnf_print_statistics(c2->qcnf);
     skolem_print_statistics(c2->skolem);
-    cegar_print_statistics(c2->skolem->cegar);
+    cegar_print_statistics(c2->cegar);
     if (c2->examples) {
         examples_print_statistics(c2->examples);
     }
@@ -205,25 +205,18 @@ void c2_log_clause(C2* c2, Clause* c) {
     }
 }
 
-void c2_trace_for_profiling_initialize(Options* o, SATSolver* s) {
-    if (!o->trace_for_profiling) {
-        return;
-    }
-    satsolver_measure_all_calls(s);
-}
-
 double last_time_stamp = 0.0;
 double last_satsolver_seconds = 0.0;
 
 void c2_trace_for_profiling(C2* c2) {
-    if (!c2->options->trace_for_profiling) {
+    if (!log_trace_for_profiling) {
         return;
     }
     double total_time_passed = get_seconds() - c2->statistics.start_time;
     V0("Timestamp: %f\n", total_time_passed);
     double time_passed_since_last = total_time_passed - last_time_stamp;
     
-    double satsolver = satsolver_seconds(c2->skolem->skolem);
+    double satsolver = f_seconds_spent(c2->skolem->f);
     double satsolver_took_since_last = satsolver - last_satsolver_seconds;
     
     V0("SATSolver current portion: %f\n", satsolver_took_since_last / time_passed_since_last);

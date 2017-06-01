@@ -21,14 +21,14 @@ int skolem_get_value_for_conflict_analysis(void* domain, Lit lit) {
     assert(lit != 0);
     Skolem* s = (Skolem*) domain;
     assert(s->conflict_var_id == lit_to_var(lit) || skolem_is_deterministic(s, lit_to_var(lit)));
-    int satlit = skolem_get_satsolver_lit(s, lit);
-    int opposite_satlit = skolem_get_satsolver_lit(s, - lit);
+    int satlit = skolem_get_satlit(s, lit);
+    int opposite_satlit = skolem_get_satlit(s, - lit);
     assert(satlit != s->satlit_true || opposite_satlit != s->satlit_true);
     if (s->state == SKOLEM_STATE_CONSTANTS_CONLICT) {
         return skolem_get_constant_value(s, lit);
     } else {
-        assert(satsolver_state(s->skolem) == SATSOLVER_RESULT_SAT);
-        int res = satsolver_deref(s->skolem, satlit);
+        assert(f_result(s->f) == SATSOLVER_SATISFIABLE);
+        int res = f_value(s->f, satlit);
         assert(res >= -1 && res <= 1);
         return res;
     }

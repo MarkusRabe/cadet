@@ -54,6 +54,7 @@ C2* c2_init_qcnf(QCNF* qcnf, Options* options) {
     
     // DOMAINS
     c2->skolem = skolem_init(c2->qcnf, options, vector_count(qcnf->scopes) + 1, 0);
+    c2->cegar = cegar_init(c2->skolem);
     c2->examples = examples_init(qcnf, options->examples_max_num);
     
     // Case splits
@@ -104,6 +105,7 @@ C2* c2_init(Options* options) {
 
 void c2_free(C2* c2) {
     skolem_free(c2->skolem);
+    cegar_free(c2->cegar);
     val_vector_free(c2->decision_vals);
     stack_free(c2->stack);
     int_vector_free(c2->case_split_stack);
@@ -196,13 +198,13 @@ void c2_initial_propagation(C2* c2) {
     skolem_propagate(c2->skolem); // initial propagation for dlvl 0
     skolem_global_conflict_check(c2->skolem, false); // force conflict checks
     
-    if (!skolem_is_conflicted(c2->skolem)) {
+    if (!skolem_is_conflicted(c2->skolem)) { // ONLY RELEVANT FOR AIG ENCODINGS
         // Restrict the universals to always satisfy the constraints (derived from AIGER circuits)
-        for (unsigned i = 0; i < int_vector_count(c2->qcnf->universals_constraints); i++) {
-            unsigned var_id = (unsigned) int_vector_get(c2->qcnf->universals_constraints, i);
+        for (unsigned i = 0; i < int_vector_count(c2->qcnf->universals_constraints_from_aiger_encoding); i++) {
+            unsigned var_id = (unsigned) int_vector_get(c2->qcnf->universals_constraints_from_aiger_encoding, i);
             abortif( ! skolem_is_deterministic(c2->skolem, var_id), "Constraint variable is not determinsitic. This should be a constraint purely over the universals.");
-            satsolver_add(c2->skolem->skolem, skolem_get_satsolver_lit(c2->skolem, (Lit) var_id));
-            satsolver_clause_finished(c2->skolem->skolem);
+            f_add(c2->skolem->f, skolem_get_satlit(c2->skolem, (Lit) var_id));
+            f_clause_finished(c2->skolem->f);
             skolem_assume_constant_value(c2->skolem, (Lit) var_id);
         }
         
@@ -219,30 +221,32 @@ void c2_replenish_skolem_satsolver(C2* c2) {
     unsigned old_skolem_dlvl = c2->skolem->decision_lvl;
     unsigned old_skolem_stack_height = c2->skolem->stack->push_count;
     
+    assert(vector_count(c2->cegar->solved_cubes) == 0 || c2->options->cegar || c2->options->case_splits || c2->options->functional_synthesis);
     Skolem* old_skolem = c2->skolem;
+    Cegar* old_cegar = c2->cegar;
     
     c2->skolem = skolem_init(c2->qcnf,c2->options,vector_count(c2->qcnf->scopes),0);
+    c2->cegar = cegar_init(c2->skolem);
     c2_init_clauses_and_variables(c2);
     c2_initial_propagation(c2);
     abortif(skolem_is_conflicted(c2->skolem), "Skolem domain was conflicted after replenishing.");
     
-    cegar_update_interface(c2->skolem);
-    
-    assert(vector_count(old_skolem->cegar->solved_cubes) == 0 || c2->options->cegar || c2->options->case_splits);
+    cegar_update_interface(c2->cegar);
     
     // Now, we re-introduce the cubes that we have solved already.
-    for (unsigned i = 0; i < vector_count(c2->skolem->cegar->solved_cubes); i++) {
-        int_vector* cube = (int_vector*) vector_get(c2->skolem->cegar->solved_cubes, i);
+    for (unsigned i = 0; i < vector_count(old_cegar->solved_cubes); i++) {
+        int_vector* cube = (int_vector*) vector_get(old_cegar->solved_cubes, i);
         for (unsigned j = 0; j < int_vector_count(cube); j++) {
             Lit lit = int_vector_get(cube, j);
             assert(skolem_is_deterministic(c2->skolem, lit_to_var(lit)));
-            int satlit = skolem_get_satsolver_lit(c2->skolem, lit);
-            satsolver_add(c2->skolem->skolem, satlit);
+            int satlit = skolem_get_satlit(c2->skolem, lit);
+            f_add(c2->skolem->f, satlit);
         }
-        satsolver_clause_finished_for_context(c2->skolem->skolem, 0);
+        f_clause_finished_for_context(c2->skolem->f, 0);
     }
     
     skolem_free(old_skolem);
+    cegar_free(old_cegar);
     
     // make sure the skolem stack is on the right level
     while (c2->skolem->decision_lvl < c2->restart_base_decision_lvl) {
@@ -471,6 +475,24 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
         }
         if (conflict != NULL) {
             
+            // Try opportunistic CEGAR
+//            unsigned max_iter = 100;
+//            while (true) {
+//                result = f_sat(s->f);
+//                if (result == SATSOLVER_SATISFIABLE && s->options->cegar && cegar_is_initialized(s->cegar) && s->cegar->recent_average_cube_size < s->cegar->cegar_effectiveness_threshold && max_iter-- > 0) {
+//                    // Added "s->cegar" to the condition to make sure that this is only called after the initial propagation.
+//                    
+//                    if (cegar_try_to_handle_conflict(s)) {
+//                        // solved handled this conflict with a sufficently small cube by CEGAR
+//                        continue;
+//                    } else {
+//                        result = f_sat(s->f);
+//                    }
+//                }
+//                break; // standard case is that we exit the loop
+//            }
+//            abortif(result == SATSOLVER_UNKNOWN, "SATSOLVER returned unknown.");
+            
             c2_print_variable_states(c2);
             
             remaining_conflicts -= 1;
@@ -555,16 +577,16 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                     c2_backtrack_to_decision_lvl(c2, c2->restart_base_decision_lvl);
                     c2->state = C2_READY;
                     
+                    // Negate the conflict!
                     V2("Functional synthesis exludes cube:");
                     for (unsigned i = 0; i < int_vector_count(conflict); i++) {
                         int lit = int_vector_get(conflict, i);
-                        satsolver_add(c2->skolem->skolem, skolem_get_satsolver_lit(c2->skolem, - lit));
+                        int_vector_set(conflict, i, - lit);
                         V2("%d", - lit);
                     }
                     V2("\n");
-//                    satsolver_clause_finished(c2->skolem->skolem);
-                    satsolver_clause_finished_for_context(c2->skolem->skolem, 0);
-                    vector_add(c2->skolem->cegar->solved_cubes, conflict);
+                    cegar_new_cube(c2->cegar, conflict);
+
                     V1("Functional synthesis detected a cube of length %u that is over dlvl0 only. We exclude it from future conflict checks.\n", int_vector_count(conflict));
                     continue;
                 }
@@ -681,8 +703,8 @@ cadet_res c2_check_propositional(QCNF* qcnf) {
     }
     sat_res res = satsolver_sat(checker);
     satsolver_free(checker);
-    assert(res == SATSOLVER_RESULT_SAT || res == SATSOLVER_RESULT_UNSAT);
-    return res == SATSOLVER_RESULT_SAT ? CADET_RESULT_SAT : CADET_RESULT_UNSAT;
+    assert(res == SATSOLVER_SATISFIABLE || res == SATSOLVER_UNSATISFIABLE);
+    return res == SATSOLVER_SATISFIABLE ? CADET_RESULT_SAT : CADET_RESULT_UNSAT;
 }
 
 
@@ -721,7 +743,7 @@ cadet_res c2_sat(C2* c2) {
             c2_analysis_determine_number_of_partitions(c2);
         }
         
-        cegar_update_interface(c2->skolem);
+        cegar_update_interface(c2->cegar);
         
         if (c2->options->cegar_only) {
             return cegar_solve_2QBF(c2, -1);
@@ -904,7 +926,7 @@ void c2_new_variable(C2* c2, unsigned var_id) {
         
         skolem_update_deterministic(c2->skolem, var_id, 1);
         
-        int innerlit = satsolver_inc_max_var(c2->skolem->skolem);
+        int innerlit = f_fresh_var(c2->skolem->f);
         skolem_update_pos_lit(c2->skolem, var_id, innerlit);
         skolem_update_neg_lit(c2->skolem, var_id, - innerlit);
         

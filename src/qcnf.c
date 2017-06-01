@@ -218,7 +218,7 @@ QCNF* qcnf_init() {
     qcnf->new_clause = int_vector_init();
     qcnf->empty_clause = NULL;
     
-    qcnf->universals_constraints = int_vector_init();
+    qcnf->universals_constraints_from_aiger_encoding = int_vector_init();
     
     qcnf->stack = stack_init(qcnf_undo_op);
     

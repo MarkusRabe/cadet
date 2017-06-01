@@ -12,3 +12,4 @@ int debug_verbosity = VERBOSITY_NONE;
 bool log_qdimacs_compliant = false;
 bool log_colors = true;
 bool log_silent = false;
+bool log_trace_for_profiling = false;

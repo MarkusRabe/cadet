@@ -5,12 +5,14 @@ extern "C" {
 
 #if (USE_SOLVER == SOLVER_MINISAT)
 
-#include <assert.h>
-#include <stdbool.h>
+#include "util.h"
 #include "log.h"
 #include "minisat/Solver.h"
 #include "minisat/Vec.h"
+
 #include <map>
+#include <assert.h>
+#include <stdbool.h>
 
 using namespace Minisat;
 using namespace std;
@@ -110,7 +112,7 @@ void satsolver_assume(SATSolver* solver, int lit) {
 }
 
 sat_res satsolver_sat(SATSolver* solver) {
-    sat_res res = solver->instance->solve(solver->assumptions) ? SATSOLVER_RESULT_SAT : SATSOLVER_RESULT_UNSAT;
+    sat_res res = solver->instance->solve(solver->assumptions) ? SATSOLVER_SATISFIABLE : SATSOLVER_UNSATISFIABLE;
     return res;
 }
 

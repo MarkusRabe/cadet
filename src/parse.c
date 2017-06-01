@@ -401,7 +401,7 @@ QCNF* create_qcnf_from_aiger(aiger* aig, Options* o) {
     
     // constraints
     unsigned constraints_qcnf_var = (unsigned) aiger_lit2lit( 2 * (aig->maxvar + 2) );
-    int_vector_add(qcnf->universals_constraints, (int) constraints_qcnf_var);
+    int_vector_add(qcnf->universals_constraints_from_aiger_encoding, (int) constraints_qcnf_var);
     options_set_variable_name(o, constraints_qcnf_var, "CONSTRAINTS");
     
     qcnf_new_var(qcnf, aiger_quantification_polarity(o->aiger_negated_encoding ? 0 : 1, false), aiger_quantification_levels(o->aiger_negated_encoding ? 0 : 1), constraints_qcnf_var);

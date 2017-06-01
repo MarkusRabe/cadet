@@ -216,7 +216,7 @@ int main(int argc, const char* argv[]) {
                         options->trace_learnt_clauses = true;
                         log_colors = false;
                     } else if (strcmp(argv[i], "--trace_for_profiling") == 0) {
-                        options->trace_for_profiling = true;
+                        log_trace_for_profiling = true;
                     } else if (strcmp(argv[i], "--print_variable_names") == 0) {
                         options->variable_names = vector_init();
                     } else if (strcmp(argv[i], "--cegar") == 0) {

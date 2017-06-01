@@ -11,6 +11,7 @@
 #include "aiger.h"
 #include "aiger_utils.h"
 #include "log.h"
+#include "satsolver.h"
 
 #include <string.h>
 

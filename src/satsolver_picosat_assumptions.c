@@ -12,12 +12,14 @@
 
 #if (USE_SOLVER == SOLVER_PICOSAT_ASSUMPTIONS)
 
-#include <assert.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include "util.h"
 #include "log.h"
 #include "picosat.h"
 #include "map.h"
+
+#include <assert.h>
+#include <stdbool.h>
+#include <stdint.h>
 
 // Sanity check, make sure the return values are correct
 #if (PICOSAT_SATISFIABLE != SATSOLVER_SATISFIABLE) || (PICOSAT_UNSATISFIABLE != SATSOLVER_UNSATISFIABLE) || (PICOSAT_UNKNOWN != SATSOLVER_UNKNOWN)
@@ -141,11 +143,11 @@ sat_res satsolver_state(SATSolver* solver) {
     
     switch (picosat_res(solver->ps)) {
         case PICOSAT_SATISFIABLE:
-            return SATSOLVER_RESULT_SAT;
+            return SATSOLVER_SATISFIABLE;
         case PICOSAT_UNSATISFIABLE:
-            return SATSOLVER_RESULT_UNSAT;
+            return SATSOLVER_UNSATISFIABLE;
         case PICOSAT_UNKNOWN:
-            return SATSOLVER_RESULT_UNKNOWN;
+            return SATSOLVER_UNKNOWN;
         default:
             abort();
     }
@@ -484,6 +486,9 @@ void satsolver_print_statistics(SATSolver* solver) {
 
 
 void satsolver_measure_all_calls(SATSolver* solver) {
+    if (!log_trace_for_profiling) {
+        return;
+    }
     picosat_measure_all_calls(solver->ps);
 #ifdef SATSOLVER_TRACE
     if (solver->trace_solver_commands) {

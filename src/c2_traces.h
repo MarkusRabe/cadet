@@ -10,6 +10,8 @@
 #define c2_traces_h
 
 #include "cadet2.h"
+#include "util.h"
+
 #include <stdio.h>
 
 void c2_print_variable_states(C2*);
@@ -19,7 +21,6 @@ void c2_print_learnt_clause_color_legend();
 
 void c2_log_clause(C2*, Clause*);
 
-void c2_trace_for_profiling_initialize(Options*, SATSolver*);
 void c2_trace_for_profiling(C2*);
 
 

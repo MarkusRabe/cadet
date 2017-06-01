@@ -95,7 +95,9 @@ void f_assume(Function* f, int lit) {
     satsolver_assume(f->sat, lit);
 }
 sat_res f_sat(Function* f) {
-    return satsolver_sat(f->sat);
+    sat_res res = satsolver_sat(f->sat);
+    assert(res == SATSOLVER_SATISFIABLE || res == SATSOLVER_UNSATISFIABLE);
+    return res;
 }
 int f_result(Function* f) {
     return satsolver_state(f->sat);

@@ -58,10 +58,6 @@ struct Skolem_Statistics {
     size_t explicit_propagations;
     size_t explicit_propagation_conflicts;
     
-    size_t successfully_avoided_conflict_checks;
-    size_t delayed_conflict_checks;
-    size_t unnecessary_propagations;
-    
     size_t decisions;
     
     Stats* global_conflict_checks_sat;
@@ -94,10 +90,6 @@ struct Skolem {
     skolem_var_vector* infos; // contains skolem_var; indexed by var_id
     // All information Skolem domain needs about clauses: the unique consequences for all clauses
     int_vector* unique_consequence; // contains lit indexed by clause_id
-    
-    // Extra data structure required for delayed conflict checks (if option is activated)
-    // Stores all the variables that are potentially
-    int_vector* potentially_conflicted_variables; // contains var_id
     
     // Extra data structure required for functional synthesis
     int_vector* decision_indicator_sat_lits; // contains var_id of temporary vars
@@ -160,10 +152,11 @@ void skolem_decision(Skolem*, Lit lit);
 
 void skolem_push(Skolem*);
 void skolem_pop(Skolem*);
+void skolem_recover_from_conflict(Skolem*);
 
 void skolem_increase_decision_lvl(Skolem*);
 
-unsigned skolem_global_conflict_check(Skolem*, bool can_delay);
+unsigned skolem_global_conflict_check(Skolem*, unsigned var_id);
 bool skolem_is_conflicted(Skolem*);
 
 typedef enum FIX_UNIQUE_ANTECEDENTS_MODE {
@@ -173,7 +166,7 @@ typedef enum FIX_UNIQUE_ANTECEDENTS_MODE {
 } FIX_UNIQUE_ANTECEDENTS_MODE;
 bool skolem_fix_lit_for_unique_antecedents(Skolem* s, Lit lit, bool define_both_sides, FIX_UNIQUE_ANTECEDENTS_MODE);
 
-void skolem_add_potentially_conflicted(Skolem*, unsigned var_id);
+
 
 // PRINTING
 void skolem_print_debug_info(Skolem*);
@@ -192,9 +185,6 @@ typedef enum {
     SKOLEM_OP_UPDATE_INFO_DECISION_LVL,
     SKOLEM_OP_UPDATE_INFO_REASON_FOR_CONSTANT,
     SKOLEM_OP_UNIQUE_CONSEQUENCE,
-    SKOLEM_OP_PROPAGATION_CONFLICT,
-    SKOLEM_OP_SKOLEM_CONFLICT,
-    SKOLEM_OP_POTENTIALLY_CONFLICTED_VAR,
     SKOLEM_OP_DECISION
 } SKOLEM_OP;
 

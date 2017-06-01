@@ -60,7 +60,6 @@ Skolem* skolem_init(QCNF* qcnf, Options* o,
     
     s->determinicity_queue = pqueue_init(); // worklist_init(qcnf_compare_variables_by_occ_num);
     s->pure_var_queue = pqueue_init();
-    s->potentially_conflicted_variables = int_vector_init();
     s->unique_consequence = int_vector_init();
     s->deterministic_variables = 0;
     s->stack = stack_init(skolem_undo);
@@ -81,10 +80,6 @@ Skolem* skolem_init(QCNF* qcnf, Options* o,
     s->statistics.pure_vars = 0;
     s->statistics.pure_constants = 0;
     
-    s->statistics.successfully_avoided_conflict_checks = 0;
-    s->statistics.delayed_conflict_checks = 0;
-    s->statistics.unnecessary_propagations = 0;
-    
     s->statistics.global_conflict_checks_sat = statistics_init(10000);
     s->statistics.global_conflict_checks_unsat = statistics_init(10000);
     
@@ -104,7 +99,6 @@ void skolem_free(Skolem* s) {
     pqueue_free(s->determinicity_queue);
     pqueue_free(s->pure_var_queue);
     worklist_free(s->clauses_to_check);
-    int_vector_free(s->potentially_conflicted_variables);
     int_vector_free(s->unique_consequence);
     if (s->options->functional_synthesis) {
         int_vector_free(s->decision_indicator_sat_lits);
@@ -122,6 +116,7 @@ void skolem_push(Skolem* s) {
     abortif(worklist_count(s->clauses_to_check) != 0, "s->clauses_to_check nonempty upon push. Serious because the remaining elements might be forgotten to be tracked upon a pop.");
 }
 void skolem_pop(Skolem* s) {
+    assert(!skolem_is_conflicted(s));
     if (worklist_count(s->clauses_to_check) > 0) {
         worklist_reset(s->clauses_to_check);
     }
@@ -134,6 +129,27 @@ void skolem_pop(Skolem* s) {
     
     stack_pop(s->stack, s);
     f_pop(s->f);
+}
+void skolem_recover_from_conflict(Skolem* s) {
+    abortif(!skolem_is_conflicted(s), "Skolem domain expected to be in conflicted state.");
+    switch (s->state) {
+        case SKOLEM_STATE_SKOLEM_CONFLICT:
+            assert(s->conflict_var_id != 0);
+            assert(s->conflicted_clause == NULL);
+            f_pop(s->f); // to compensate the push before the SAT call
+            s->state = SKOLEM_STATE_READY;
+            s->conflict_var_id = 0;
+            break;
+        case SKOLEM_STATE_CONSTANTS_CONLICT:
+            assert(s->conflict_var_id != 0);
+            assert(s->conflicted_clause != NULL);
+            s->state = SKOLEM_STATE_READY;
+            s->conflict_var_id = 0;
+            s->conflicted_clause = NULL;
+            break;
+        default:
+            break;
+    }
 }
 
 void skolem_new_clause(Skolem* s, Clause* c) {
@@ -173,17 +189,9 @@ bool skolem_is_conflicted(Skolem* s) {
     assert(s->conflict_var_id == 0 || s->state != SKOLEM_STATE_READY);
     return s->conflict_var_id != 0;
 }
-bool skolem_is_potentially_conflicted(Skolem* s){
-    return int_vector_count(s->potentially_conflicted_variables) != 0;
-}
 bool skolem_can_propagate(Skolem* s) {
     return (worklist_count(s->clauses_to_check) || pqueue_count(s->determinicity_queue) || pqueue_count(s->pure_var_queue))
            && ! skolem_is_conflicted(s);
-}
-
-void skolem_add_potentially_conflicted(Skolem* s, unsigned var_id) {
-    int_vector_add(s->potentially_conflicted_variables, (int) var_id);
-    stack_push_op(s->stack, SKOLEM_OP_POTENTIALLY_CONFLICTED_VAR, (void*) (size_t) var_id);
 }
 
 // Returns false, if the lit is undefined. Otherwise returns satsolver lit corresponding to the lit-definition.
@@ -540,11 +548,12 @@ void skolem_propagate_determinicity(Skolem* s, unsigned var_id) {
         
         skolem_update_decision_lvl(s, var_id, s->decision_lvl);
         
-        if ( ! skolem_is_locally_conflicted(s, var_id)) {
+        bool locally_conflicted = skolem_is_locally_conflicted(s, var_id);
+        if ( ! locally_conflicted) {
             int satlit = f_fresh_var(s->f);
             skolem_update_pos_lit(s, var_id,   satlit); // must be done before the two next calls to make 'satlit' available in the skolem_var
             skolem_update_neg_lit(s, var_id, - satlit);
-            skolem_update_deterministic(s, var_id, 1);
+            skolem_update_deterministic(s, var_id, 1); // should happen before
             
             skolem_add_clauses_using_existing_satlits(s, var_id, &v->pos_occs);
             skolem_add_clauses_using_existing_satlits(s, var_id, &v->neg_occs);
@@ -555,17 +564,23 @@ void skolem_propagate_determinicity(Skolem* s, unsigned var_id) {
             skolem_fix_lit_for_unique_antecedents(s, (Lit) - (int) var_id, false, FUAM_ONLY_LEGALS);
             
             skolem_update_deterministic(s, var_id, 1);
-            
-            skolem_add_potentially_conflicted(s, var_id);
-            skolem_global_conflict_check(s,true);
+        }
+        
+        /* Update depencendies and propagation queues before global conflict check,
+         * because even when the conflict check is successful, opportunistic
+         * CEGAR might handle the conflict, and we then continue propagating.
+         */
+        skolem_update_dependencies(s, var_id, skolem_compute_dependencies(s,var_id));
+        skolem_check_occs_for_unique_consequences(s,   (Lit) var_id);
+        skolem_check_occs_for_unique_consequences(s, - (Lit) var_id);
+        
+        if (locally_conflicted) {
+            skolem_global_conflict_check(s, var_id);
             if (skolem_is_conflicted(s)) {
                 return;
             }
         }
-        skolem_update_dependencies(s, var_id, skolem_compute_dependencies(s,var_id));
         
-        skolem_check_occs_for_unique_consequences(s,   (Lit) var_id);
-        skolem_check_occs_for_unique_consequences(s, - (Lit) var_id);
     } else {
         pqueue_push(s->pure_var_queue,
                     (int)(vector_count(&v->pos_occs) + vector_count(&v->neg_occs)),
@@ -597,7 +612,8 @@ void skolem_propagate_pure_variable(Skolem* s, unsigned var_id) {
         s->statistics.propagations += 1;
         s->statistics.pure_vars += 1;
         skolem_update_decision_lvl(s, var_id, s->decision_lvl);
-        if ( ! skolem_is_locally_conflicted(s, var_id)) {
+        bool locally_conflicted = skolem_is_locally_conflicted(s, var_id);
+        if ( ! locally_conflicted) {
             skolem_fix_lit_for_unique_antecedents(s, pure_polarity * (Lit) var_id, true, FUAM_ONLY_LEGALS);
             skolem_var si = skolem_get_info(s, var_id);
             
@@ -607,15 +623,12 @@ void skolem_propagate_pure_variable(Skolem* s, unsigned var_id) {
                 skolem_update_neg_lit(s, var_id, - si.pos_lit);
                 skolem_update_deterministic(s, var_id, 1);
                 skolem_update_pure_pos(s, var_id, 1);
-                skolem_update_dependencies(s, var_id, skolem_compute_dependencies(s,var_id));
             } else {
                 assert(vector_count(&v->neg_occs) == 0 || si.neg_lit != 0);
                 skolem_update_pos_lit(s, var_id, - si.neg_lit);
                 skolem_update_deterministic(s, var_id, 1);
                 skolem_update_pure_neg(s, var_id, 1);
-                skolem_update_dependencies(s, var_id, skolem_compute_dependencies(s,var_id));
             }
-            assert(skolem_is_deterministic(s, var_id));
         } else {
             // pure and locally conflicted
             skolem_fix_lit_for_unique_antecedents(s,   pure_polarity * (Lit) var_id, true, FUAM_ONLY_LEGALS);
@@ -632,7 +645,7 @@ void skolem_propagate_pure_variable(Skolem* s, unsigned var_id) {
                 f_add(s->f, - new_opposite_sat_lit);
                 f_clause_finished(s->f);
                 
-                if (s->options->delay_conflict_checks || s->options->functional_synthesis) {
+                if (s->options->functional_synthesis) {
                     f_add(s->f,   skolem_get_satlit(s,   (Lit) var_id));
                     f_add(s->f,   new_opposite_sat_lit);
                     f_clause_finished(s->f);
@@ -645,7 +658,6 @@ void skolem_propagate_pure_variable(Skolem* s, unsigned var_id) {
                 skolem_update_neg_lit(s, var_id, new_opposite_sat_lit);
                 skolem_update_deterministic(s, var_id, 1);
                 skolem_update_pure_pos(s, var_id, 1);
-                skolem_update_dependencies(s, var_id, skolem_compute_dependencies(s,var_id));
             } else {
                 assert(vector_count(&v->neg_occs) == 0 || si.neg_lit != 0);
                 
@@ -655,7 +667,7 @@ void skolem_propagate_pure_variable(Skolem* s, unsigned var_id) {
                 f_add(s->f, - new_opposite_sat_lit);
                 f_clause_finished(s->f);
                 
-                if (s->options->delay_conflict_checks || s->options->functional_synthesis) {
+                if (s->options->functional_synthesis) {
                     f_add(s->f,   skolem_get_satlit(s, - (Lit) var_id));
                     f_add(s->f,   new_opposite_sat_lit);
                     f_clause_finished(s->f);
@@ -668,15 +680,16 @@ void skolem_propagate_pure_variable(Skolem* s, unsigned var_id) {
                 skolem_update_pos_lit(s, var_id, new_opposite_sat_lit);
                 skolem_update_deterministic(s, var_id, 1);
                 skolem_update_pure_neg(s, var_id, 1);
-                skolem_update_dependencies(s, var_id, skolem_compute_dependencies(s,var_id));
-            }
-            
-            skolem_add_potentially_conflicted(s, var_id);
-            skolem_global_conflict_check(s,true);
-            if (skolem_is_conflicted(s)) {
-                return;
             }
         }
+        
+        assert(skolem_is_deterministic(s, var_id));
+        
+        /* Update depencendies and propagation queues before global conflict check,
+         * because even when the conflict check is successful, opportunistic
+         * CEGAR might handle the conflict, and we then continue propagating.
+         */
+        skolem_update_dependencies(s, var_id, skolem_compute_dependencies(s,var_id));
         
         // If this pure variable turned out to be constant, update the worklist for constant propagation
         int val = skolem_get_constant_value(s, (Lit) var_id);
@@ -697,6 +710,14 @@ void skolem_propagate_pure_variable(Skolem* s, unsigned var_id) {
                 }
             }
         }
+        
+        if (locally_conflicted) {
+            skolem_global_conflict_check(s, var_id);
+            if (skolem_is_conflicted(s)) {
+                return;
+            }
+        }
+        
     } else {
         V4("Var %d not pure\n", var_id);
     }
@@ -717,7 +738,7 @@ void skolem_propagate_partial_over_clause_for_lit(Skolem* s, Clause* c, Lit lit,
     assert(!skolem_is_deterministic(s, lit_to_var(lit)) || ide == IDE_GUARDED);
     assert( skolem_get_unique_consequence(s, c) == 0 || skolem_get_unique_consequence(s, c) == lit );
     
-    if (s->options->delay_conflict_checks || s->options->functional_synthesis) {
+    if (s->options->functional_synthesis) {
         define_both_sides = true;
     }
     
@@ -800,42 +821,17 @@ void skolem_propagate_partial_over_clause_for_lit(Skolem* s, Clause* c, Lit lit,
     skolem_update_dependencies(s, lit_to_var(lit), dependencies_copy);
 }
 
-unsigned skolem_global_conflict_check(Skolem* s, bool can_delay) {
+unsigned skolem_global_conflict_check(Skolem* s, unsigned var_id) {
     
     if (skolem_is_conflicted(s)) {
         return s->conflict_var_id;
     }
     
-    if (int_vector_count(s->potentially_conflicted_variables) == 0 || s->mode == SKOLEM_MODE_RECORD_POTENTIAL_CONFLICTS) {
+    if (s->mode == SKOLEM_MODE_RECORD_POTENTIAL_CONFLICTS) {
         return 0;
     }
     
-    if (can_delay && s->options->delay_conflict_checks) {
-        float conflict_potential = 0.0;
-        for (unsigned i = 0; i < int_vector_count(s->potentially_conflicted_variables); i++) {
-            unsigned var_id = (unsigned) int_vector_get(s->potentially_conflicted_variables, i);
-            conflict_potential += skolem_get_conflict_potential(s,var_id);
-        }
-        
-        assert(conflict_potential >= 0.0);
-        if (conflict_potential <= s->magic.conflict_potential_threshold) {
-            V2("Delaying conflict check.\n");
-            s->statistics.delayed_conflict_checks += 1;
-            return 0;
-        }// else do check
-    }
-    
-    V3("Global conflit check over %u vars.\n", int_vector_count(s->potentially_conflicted_variables));
-//    if (debug_verbosity >= VERBOSITY_ALL) {
-//        assert(f_sat(s->f) == SATSOLVER_SATISFIABLE); // Sanity check: function definitions are not contradicting each other
-//    }
-    if (int_vector_count(s->potentially_conflicted_variables) > 1) {
-        V2("Checking multiple conflicts at once.\n");
-        V3("Potentially conflicted vars are:");
-        if (debug_verbosity >= VERBOSITY_HIGH) {
-            int_vector_print(s->potentially_conflicted_variables);
-        }
-    }
+    V3("Global conflit check for var %u.\n", var_id);
     
     double time_stamp_start = get_seconds();
     
@@ -848,53 +844,25 @@ unsigned skolem_global_conflict_check(Skolem* s, bool can_delay) {
         f_clause_finished(s->f);
     }
     
-    int_vector* conjunction_lits = int_vector_init();
     
-    for (unsigned i = 0; i < int_vector_count(s->potentially_conflicted_variables); i++) {
-        unsigned potentially_contflicted = (unsigned) int_vector_get(s->potentially_conflicted_variables, i);
-
-        //    // add illegal dependencies, including z-variable, which is called s->dependency_choice_sat_lit
-        //    skolem_add_clauses_with_illegal_dependencies(s, var_id);
-
 #ifdef DEBUG
-        skolem_var si = skolem_get_info(s, potentially_contflicted);
-        assert(si.pos_lit != - si.neg_lit);
-        assert(si.pos_lit != - s->satlit_true);
-        assert(si.neg_lit != - s->satlit_true);
+    skolem_var si = skolem_get_info(s, var_id);
+    assert(si.pos_lit != - si.neg_lit);
+    assert(si.pos_lit != - s->satlit_true);
+    assert(si.neg_lit != - s->satlit_true);
 #endif
-        
-        int conjunction_lit = f_fresh_var(s->f);
-        int_vector_add(conjunction_lits, conjunction_lit);
-        
-        f_add(s->f, - conjunction_lit);
-        f_add(s->f, skolem_get_satlit(s,   (Lit) potentially_contflicted));
-        f_clause_finished(s->f);
-        
-        f_add(s->f, - conjunction_lit);
-        f_add(s->f, skolem_get_satlit(s, - (Lit) potentially_contflicted));
-        f_clause_finished(s->f);
-        
-//        satsolver_set_default_phase_lit(s->f, skolem_get_satlit(s,   (Lit) potentially_contflicted), 1);
-//        satsolver_set_default_phase_lit(s->f, skolem_get_satlit(s, - (Lit) potentially_contflicted), 1);
-        
-        // we later check which of the conjunction lits is set to true, so we need also this side
-        f_add(s->f, conjunction_lit);
-        f_add(s->f, - skolem_get_satlit(s,   (Lit) potentially_contflicted));
-        f_add(s->f, - skolem_get_satlit(s, - (Lit) potentially_contflicted));
-        f_clause_finished(s->f);
-        
-        // One of the literals must be true, because the variable is deterministic. Needed for delay-conflict checks. Otherwise we may miss observing some of the conflicts.
-        assert(skolem_is_deterministic(s, potentially_contflicted));
-        
-        f_add(s->f, skolem_get_satlit(s,   (Lit) potentially_contflicted));
-        f_add(s->f, skolem_get_satlit(s, - (Lit) potentially_contflicted));
-        f_clause_finished(s->f);
-    }
     
-    for (unsigned i = 0; i < int_vector_count(conjunction_lits); i++) {
-        f_add(s->f, int_vector_get(conjunction_lits, i));
-    }
+    f_add(s->f, skolem_get_satlit(s,   (Lit) var_id));
     f_clause_finished(s->f);
+    
+    f_add(s->f, skolem_get_satlit(s, - (Lit) var_id));
+    f_clause_finished(s->f);
+    
+    //        satsolver_set_default_phase_lit(s->f, skolem_get_satlit(s,   (Lit) potentially_contflicted), 1);
+    //        satsolver_set_default_phase_lit(s->f, skolem_get_satlit(s, - (Lit) potentially_contflicted), 1);
+    
+    // One of the literals must be true, because the variable is deterministic. Needed for delay-conflict checks. Otherwise we may miss observing some of the conflicts.
+    assert(skolem_is_deterministic(s, var_id));
     
     s->statistics.global_conflict_checks++;
     sat_res result = f_sat(s->f);
@@ -906,29 +874,12 @@ unsigned skolem_global_conflict_check(Skolem* s, bool can_delay) {
         double time_stamp_end = get_seconds();
         statistic_add_value(s->statistics.global_conflict_checks_sat, time_stamp_end - time_stamp_start);
         
-        // In case the check was over multiple potentially conflicted variables, pick the first
-        for (unsigned i = 0; i < int_vector_count(conjunction_lits); i++) {
-            int val = f_value(s->f, int_vector_get(conjunction_lits, i));
-            unsigned var_id = (unsigned) (unsigned) int_vector_get(s->potentially_conflicted_variables, i);
-            if (val == 1) {
-                s->statistics.successfully_avoided_conflict_checks += i;
-                s->statistics.unnecessary_propagations += int_vector_count(s->potentially_conflicted_variables) - i - 1;
-                if (int_vector_count(s->potentially_conflicted_variables) > 1) {
-                    V4("...skipped %u of %u potentially conflicted vars\n",i,int_vector_count(s->potentially_conflicted_variables));
-                }
-                skolem_bump_conflict_potential(s, var_id);
-                
-                s->conflict_var_id = var_id;
-                break;
-            } else {
-                assert(f_value(s->f, skolem_get_satlit(s,   (Lit) var_id)) == 1 ||
-                       f_value(s->f, skolem_get_satlit(s, - (Lit) var_id)) == 1);
-            }
-        }
+        skolem_bump_conflict_potential(s, var_id);
+        
+        s->conflict_var_id = var_id;
         
         abortif(s->conflicted_clause != NULL, "Conflicted clause should not be set here.");
         s->state = SKOLEM_STATE_SKOLEM_CONFLICT;
-        stack_push_op(s->stack, SKOLEM_OP_SKOLEM_CONFLICT, NULL);
     } else {
         V4("Not conflicted.\n");
         
@@ -937,30 +888,20 @@ unsigned skolem_global_conflict_check(Skolem* s, bool can_delay) {
         
         f_pop(s->f);
         
-        assert(int_vector_count(s->potentially_conflicted_variables) > 0);
-        s->statistics.successfully_avoided_conflict_checks += int_vector_count(s->potentially_conflicted_variables) - 1;
-        for (unsigned i = 0; i < int_vector_count(s->potentially_conflicted_variables); i++) {
-            unsigned var_id = (unsigned) int_vector_get(s->potentially_conflicted_variables, i);
-            skolem_slash_conflict_potential(s, var_id);
-            
-            f_add(s->f, skolem_get_satlit(s,   (Lit) var_id));
-            f_add(s->f, skolem_get_satlit(s, - (Lit) var_id));
-            f_clause_finished(s->f);
-            
-            f_add(s->f, - skolem_get_satlit(s,   (Lit) var_id));
-            f_add(s->f, - skolem_get_satlit(s, - (Lit) var_id));
-            f_clause_finished(s->f);
-        }
-        int_vector_reset(s->potentially_conflicted_variables);
+        skolem_slash_conflict_potential(s, var_id);
+        
+        f_add(s->f, skolem_get_satlit(s,   (Lit) var_id));
+        f_add(s->f, skolem_get_satlit(s, - (Lit) var_id));
+        f_clause_finished(s->f);
+        
+        f_add(s->f, - skolem_get_satlit(s,   (Lit) var_id));
+        f_add(s->f, - skolem_get_satlit(s, - (Lit) var_id));
+        f_clause_finished(s->f);
     }
     
-//    for (unsigned i = 0; i < int_vector_count(s->potentially_conflicted_variables); i++) {
-//        unsigned potentially_contflicted = (unsigned) int_vector_get(s->potentially_conflicted_variables, i);
 //        f_set_default_phase_lit(s->f, skolem_get_satlit(s,   (Lit) potentially_contflicted), 2);
 //        f_set_default_phase_lit(s->f, skolem_get_satlit(s, - (Lit) potentially_contflicted), 2);
-//    }
     
-    int_vector_free(conjunction_lits);
     return s->conflict_var_id;
 }
 
@@ -1028,35 +969,6 @@ void skolem_undo(void* parent, char type, void* obj) {
             int_vector_set(s->unique_consequence, ucui.components.clause_id, ucui.components.lit);
             break;
             
-        case SKOLEM_OP_PROPAGATION_CONFLICT:
-            assert(obj == NULL);
-            assert(s->conflict_var_id != 0);
-            assert(s->conflicted_clause != NULL);
-            assert(s->state == SKOLEM_STATE_CONSTANTS_CONLICT);
-            s->state = SKOLEM_STATE_READY;
-            s->conflict_var_id = 0;
-            s->conflicted_clause = NULL;
-            break;
-            
-        case SKOLEM_OP_SKOLEM_CONFLICT:
-            assert(obj == NULL);
-            assert(s->conflict_var_id != 0);
-            assert( s->conflicted_clause == NULL);
-            assert(s->state == SKOLEM_STATE_SKOLEM_CONFLICT);
-            f_pop(s->f); // to compensate the push before the SAT call
-            s->state = SKOLEM_STATE_READY;
-            s->conflict_var_id = 0;
-            break;
-            
-        case SKOLEM_OP_POTENTIALLY_CONFLICTED_VAR:
-            assert(obj);
-            unsigned var_id = (unsigned) obj;
-            if (int_vector_count(s->potentially_conflicted_variables) > 0) {
-                int elem = int_vector_pop(s->potentially_conflicted_variables);
-                abortif(elem != (int) var_id, "Popping potentially conflicted variable failed.");
-            }
-            break;
-            
         case SKOLEM_OP_DECISION:
             s->decision_lvl -= 1;
             if (s->options->functional_synthesis) {
@@ -1087,11 +999,6 @@ void skolem_print_statistics(Skolem* s) {
     V0("    of which are constants: %zu\n", s->statistics.pure_constants);
     V0("  Propagations of constants: %zu\n", s->statistics.explicit_propagations);
     V0("  Currently deterministic vars: %zu\n",s->deterministic_variables);
-    if (s->options->delay_conflict_checks) {
-        V0("  Delayed conflict checks: %zu\n", s->statistics.delayed_conflict_checks);
-        V0("  Avoided conflict checks: %zu\n", s->statistics.successfully_avoided_conflict_checks);
-        V0("  Unnecessary propagations: %zu\n", s->statistics.unnecessary_propagations);
-    }
     f_print_statistics(s->f);
     V0("  Histograms for SAT global conflict checks:\n");
     statistics_print(s->statistics.global_conflict_checks_sat);
@@ -1204,21 +1111,20 @@ void skolem_assign_constant_value(Skolem* s, Lit lit, union Dependencies propaga
         skolem_update_decision_lvl(s, var_id, s->decision_lvl);
     }
 
-    bool potentially_conflicted = false;
+    bool locally_conflicted = false;
     if (s->mode == SKOLEM_MODE_STANDARD) {
         vector* occs = qcnf_get_occs_of_lit(s->qcnf, -lit);
         for (unsigned i = 0; i < vector_count(occs); i++) {
             Clause* c = vector_get(occs, i);
             if (skolem_get_unique_consequence(s, c) == -lit && ! skolem_clause_satisfied(s, c)) {
-                potentially_conflicted = true;
+                locally_conflicted = true;
                 break;
             }
         }
     }
     
-    if (potentially_conflicted) { // we could alternatively check whether there are clauses with unique consequences for the opposite side.
+    if (locally_conflicted) { // we could alternatively check whether there are clauses with unique consequences for the opposite side.
         V2("Variable %u is assigned a constant but is locally conflicted in the skolem domain.\n", var_id);
-        assert(s->options->delay_conflict_checks || int_vector_count(s->potentially_conflicted_variables) == 0);
         
         if ( ! skolem_is_deterministic(s, lit_to_var(lit))) {
             // We know the variable is deterministic now; it is in fact constant. But we have to add the opposite side of the clauses to be able to do the conflict check
@@ -1232,16 +1138,6 @@ void skolem_assign_constant_value(Skolem* s, Lit lit, union Dependencies propaga
         }
         
         skolem_update_deterministic(s, var_id, 1);
-        
-        // Global conflict check!
-        // This check may put s in conflict state; returns after this call.
-        // Callee has to check for conflict state.
-        skolem_add_potentially_conflicted(s, var_id);
-        skolem_global_conflict_check(s,false); // TODO: look at call sites of skolem_assign_constant_value and see whether we can delay conflict checks maybe.
-        
-        if (skolem_is_conflicted(s)) {
-            return; // no tests for unique consequences needed, so we can quit here
-        }
     } else {
         int polarity = lit > 0 ? 1 : -1;
         skolem_update_pos_lit(s, var_id,   polarity * s->satlit_true);
@@ -1254,6 +1150,13 @@ void skolem_assign_constant_value(Skolem* s, Lit lit, union Dependencies propaga
         skolem_update_deterministic(s, var_id, 1);
         skolem_check_occs_for_unique_consequences(s,   (Lit) var_id);
         skolem_check_occs_for_unique_consequences(s, - (Lit) var_id);
+    }
+    
+    /* Checking for conflicts after updating unique consequences for the case that opportunistic CEGAR catches this case.
+     *
+     */
+    if (locally_conflicted) {
+        skolem_global_conflict_check(s,var_id);
     }
 }
 
@@ -1292,7 +1195,6 @@ void skolem_propagate_constants_over_clause(Skolem* s, Clause* c) {
         s->conflicted_clause = c;
         s->conflict_var_id = lit_to_var(c->occs[c->size - 1]); // conflict is the last variable in the clause :/
         s->state = SKOLEM_STATE_CONSTANTS_CONLICT;
-        stack_push_op(s->stack, SKOLEM_OP_PROPAGATION_CONFLICT, NULL);
         
         V3("Conflict in explicit propagation in skolem domain for clause %u and var %u\n", s->conflicted_clause->clause_id, s->conflict_var_id);
         
@@ -1339,7 +1241,7 @@ void skolem_decision(Skolem* s, Lit decision_lit) {
      * checked at the same time, and a later variable is determined to be conflicted even though for
      * the same input the decision var would be conflicted as well.
      */
-    bool positive_side_needs_complete_definitions_too = s->options->delay_conflict_checks || s->options->functional_synthesis;
+    bool positive_side_needs_complete_definitions_too = s->options->functional_synthesis;
     
     skolem_fix_lit_for_unique_antecedents(s,  decision_lit, positive_side_needs_complete_definitions_too, FUAM_ONLY_LEGALS);
     bool opposite_case_exists = skolem_fix_lit_for_unique_antecedents(s, - decision_lit, true, FUAM_ONLY_LEGALS);
@@ -1403,10 +1305,12 @@ void skolem_decision(Skolem* s, Lit decision_lit) {
         f_clause_finished(s->f);
     }
     
+    skolem_check_occs_for_unique_consequences(s,   (Lit) decision_var_id);
+    skolem_check_occs_for_unique_consequences(s, - (Lit) decision_var_id);
+    
     // Decision variable needs to be deterministic before we can do conflict checks. Also this is why we have to check exactly here.
     if (skolem_is_locally_conflicted(s, decision_var_id)) {
-        skolem_add_potentially_conflicted(s, decision_var_id);
-        skolem_global_conflict_check(s, true);
+        skolem_global_conflict_check(s, decision_var_id);
         if (skolem_is_conflicted(s)) {
             V2("Decision variable %d is conflicted, going into conflict analysis instead.\n", decision_var_id);
             return;
@@ -1421,9 +1325,6 @@ void skolem_decision(Skolem* s, Lit decision_lit) {
         assert(opposite_satlit == - s->satlit_true);
         skolem_assign_constant_value(s, decision_lit, s->empty_dependencies, NULL);
     }
-    
-    skolem_check_occs_for_unique_consequences(s,   (Lit) decision_var_id);
-    skolem_check_occs_for_unique_consequences(s, - (Lit) decision_var_id);
 }
 
 
@@ -1432,7 +1333,7 @@ void skolem_propagate(Skolem* s) {
     while (worklist_count(s->clauses_to_check) || pqueue_count(s->determinicity_queue) || pqueue_count(s->pure_var_queue)) {
         if (skolem_is_conflicted(s)) {
             V4("Skolem domain is in conflict state; stopping propagation.\n");
-            return;
+            break;
         }
         
         if (worklist_count(s->clauses_to_check)) {
@@ -1446,4 +1347,5 @@ void skolem_propagate(Skolem* s) {
             skolem_propagate_pure_variable(s, var_id);
         }
     }
+    assert( ! skolem_can_propagate(s) || skolem_is_conflicted(s));
 }

@@ -228,17 +228,17 @@ cadet_res cegar_build_abstraction_for_assignment(C2* c2) {
     assert(cegar_is_initialized(c2->cegar));
     assert(c2->result == CADET_RESULT_UNKNOWN);
     Cegar* cegar = c2->cegar;
-    
-    V3("Assuming: ");
+    V3("CEGAR abstraction step.\n");
+    V4("Assuming: ");
     for (unsigned i = 0 ; i < int_vector_count(cegar->interface_vars); i++) {
         unsigned var_id = (unsigned) int_vector_get(cegar->interface_vars, i);
         int_vector_set(cegar->is_used_in_lemma, var_id, 1); // reset values
         
         int val = cegar_get_val(c2->skolem, (int) var_id);
         satsolver_assume(cegar->exists_solver, val * (Lit) var_id);
-        V3(" %d", val * (Lit) var_id);
+        V4(" %d", val * (Lit) var_id);
     }
-    V3("\n");
+    V4("\n");
     
 #ifdef DEBUG
     for (unsigned i = 0; i < var_vector_count(c2->qcnf->vars); i++) {
@@ -251,7 +251,6 @@ cadet_res cegar_build_abstraction_for_assignment(C2* c2) {
 #endif
     
     if (satsolver_sat(cegar->exists_solver) == SATSOLVER_SATISFIABLE) {
-        
         V1("CEGAR adding clause: ");
         int_vector_reset(cegar->additional_assignment);
         int_vector* cube = int_vector_init();
@@ -273,11 +272,15 @@ cadet_res cegar_build_abstraction_for_assignment(C2* c2) {
         
         cegar->cubes_num += 1;
         cegar->recent_average_cube_size = (float) int_vector_count(cube) * (float) 0.1 + cegar->recent_average_cube_size * (float) 0.9;
+        
+        if (int_vector_count(cube) == 0) {
+            return CADET_RESULT_SAT; // actually done
+        }
+        
     } else {
-        c2->state = C2_CEGAR_CONFLICT;
-        c2->result = CADET_RESULT_UNSAT;
+        return CADET_RESULT_UNSAT; // actually done
     }
-    return c2->result;
+    return CADET_RESULT_UNKNOWN;
 }
 
 

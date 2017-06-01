@@ -2,12 +2,14 @@
 
 #if (USE_SOLVER == SOLVER_PICOSAT_PUSH_POP)
 
-#include <assert.h>
-#include <stdbool.h>
-#include <stdint.h>
+#include "util.h"
 #include "log.h"
 #include "picosat.h"
 #include "map.h"
+
+#include <assert.h>
+#include <stdbool.h>
+#include <stdint.h>
 
 // Sanity check, make sure the return values are correct
 #if (PICOSAT_SATISFIABLE != SATSOLVER_SATISFIABLE) || (PICOSAT_UNSATISFIABLE != SATSOLVER_UNSATISFIABLE) || (PICOSAT_UNKNOWN != SATSOLVER_UNKNOWN)
@@ -136,7 +138,7 @@ sat_res satsolver_state(SATSolver* solver) {
         case PICOSAT_UNSATISFIABLE:
             return SATSOLVER_UNSATISFIABLE;
         case PICOSAT_UNKNOWN:
-            return SATSOLVER_RESULT_UNKNOWN;
+            return SATSOLVER_UNKNOWN;
         default:
             abort();
     }

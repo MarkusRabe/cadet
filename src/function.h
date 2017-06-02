@@ -12,7 +12,6 @@
 #include "int_vector.h"
 #include "qcnf.h"
 
-#include <stdio.h>
 #include <stdbool.h>
 
 struct Function;
@@ -47,7 +46,6 @@ void f_assume(Function*, int lit);
 int f_sat(Function*);
 int f_result(Function*); // returns the result of the last SAT call
 int f_value(Function*, int lit); // returns the value of the lit. Must be in SAT state
-
 
 //void f_add_clause(Function*, const int_vector*); // does not modify the int_vectorf
 //void f_add_unary_clause(Function*, int, int);

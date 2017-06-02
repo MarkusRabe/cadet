@@ -157,11 +157,6 @@ void skolem_increase_decision_lvl(Skolem*);
 unsigned skolem_global_conflict_check(Skolem*, unsigned var_id);
 bool skolem_is_conflicted(Skolem*);
 
-typedef enum FIX_UNIQUE_ANTECEDENTS_MODE {
-    FUAM_ONLY_LEGALS = 2,
-//    FUAM_IGNORE_ILLEGAL_DEP_LITERALS = 4,
-} FIX_UNIQUE_ANTECEDENTS_MODE;
-bool skolem_fix_lit_for_unique_antecedents(Skolem* s, Lit lit, bool define_both_sides, FIX_UNIQUE_ANTECEDENTS_MODE);
 
 
 

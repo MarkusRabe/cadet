@@ -106,6 +106,7 @@ int f_value(Function* f, int lit){
     return satsolver_deref(f->sat, lit);
 }
 
+
 //void f_add_clause(Function* f, const int_vector* lits) {
 //    NOT_IMPLEMENTED();
 //}

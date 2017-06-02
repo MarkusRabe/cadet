@@ -472,8 +472,8 @@ void skolem_propagate_determinicity(Skolem* s, unsigned var_id) {
         bool locally_conflicted = skolem_is_locally_conflicted(s, var_id);
         if ( ! locally_conflicted) {
             int satlit = f_fresh_var(s->f);
-            skolem_update_pos_lit(s, var_id,   satlit); // must be done before the two next calls to make 'satlit' available in the skolem_var
-            skolem_update_neg_lit(s, var_id, - satlit);
+            skolem_update_satlit(s, (Lit) var_id,   satlit); // must be done before the two next calls to make 'satlit' available in the skolem_var
+            skolem_update_satlit(s, - (Lit) var_id, - satlit);
             skolem_update_deterministic(s, var_id, 1); // should happen before
             
             f_add_clauses(s, var_id, &v->pos_occs);
@@ -541,12 +541,12 @@ void skolem_propagate_pure_variable(Skolem* s, unsigned var_id) {
             // also triggers checks for new unique consequences
             if (pure_polarity > 0) {
                 assert(vector_count(&v->pos_occs) == 0 || si.pos_lit != 0);
-                skolem_update_neg_lit(s, var_id, - si.pos_lit);
+                skolem_update_satlit(s, - (Lit) var_id, - si.pos_lit);
                 skolem_update_deterministic(s, var_id, 1);
                 skolem_update_pure_pos(s, var_id, 1);
             } else {
                 assert(vector_count(&v->neg_occs) == 0 || si.neg_lit != 0);
-                skolem_update_pos_lit(s, var_id, - si.neg_lit);
+                skolem_update_satlit(s, (Lit) var_id, - si.neg_lit);
                 skolem_update_deterministic(s, var_id, 1);
                 skolem_update_pure_neg(s, var_id, 1);
             }
@@ -576,7 +576,7 @@ void skolem_propagate_pure_variable(Skolem* s, unsigned var_id) {
                     f_clause_finished(s->f);
                 }
                 
-                skolem_update_neg_lit(s, var_id, new_opposite_sat_lit);
+                skolem_update_satlit(s, - (Lit) var_id, new_opposite_sat_lit);
                 skolem_update_deterministic(s, var_id, 1);
                 skolem_update_pure_pos(s, var_id, 1);
             } else {
@@ -598,7 +598,7 @@ void skolem_propagate_pure_variable(Skolem* s, unsigned var_id) {
                     f_clause_finished(s->f);
                 }
                 
-                skolem_update_pos_lit(s, var_id, new_opposite_sat_lit);
+                skolem_update_satlit(s, (Lit) var_id, new_opposite_sat_lit);
                 skolem_update_deterministic(s, var_id, 1);
                 skolem_update_pure_neg(s, var_id, 1);
             }
@@ -954,17 +954,12 @@ void skolem_assign_constant_value(Skolem* s, Lit lit, union Dependencies propaga
             f_encode_unique_antecedents_for_lits(s, (lit > 0 ? -1 : 1) * (Lit) var_id, false);
         }
         
-        if (lit > 0) {
-            skolem_update_pos_lit(s, var_id, s->satlit_true);
-        } else {
-            skolem_update_neg_lit(s, var_id, s->satlit_true);
-        }
+        skolem_update_satlit(s, lit, s->satlit_true);
         
         skolem_update_deterministic(s, var_id, 1);
     } else {
-        int polarity = lit > 0 ? 1 : -1;
-        skolem_update_pos_lit(s, var_id,   polarity * s->satlit_true);
-        skolem_update_neg_lit(s, var_id, - polarity * s->satlit_true);
+        skolem_update_satlit(s,   lit,   s->satlit_true);
+        skolem_update_satlit(s, - lit, - s->satlit_true);
     }
     
     skolem_update_dependencies(s, var_id, propagation_deps);
@@ -1094,11 +1089,7 @@ void skolem_decision(Skolem* s, Lit decision_lit) {
     f_add(s->f, new_val_satlit);
     f_clause_finished(s->f);
     
-    if (decision_lit > 0) {
-        skolem_update_pos_lit(s, decision_var_id, new_val_satlit);
-    } else {
-        skolem_update_neg_lit(s, decision_var_id, new_val_satlit);
-    }
+    skolem_update_satlit(s, decision_lit, new_val_satlit);
     
     skolem_update_deterministic(s, decision_var_id, 1);
     

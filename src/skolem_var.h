@@ -48,8 +48,7 @@ struct skolem_var {
 bool skolem_is_deterministic(Skolem*, unsigned var_id);
 void skolem_enlarge_skolem_var_vector(Skolem*, unsigned var_id);
 skolem_var skolem_get_info(Skolem*, unsigned var_id);
-void skolem_update_pos_lit(Skolem*, unsigned var_id, int pos_lit);
-void skolem_update_neg_lit(Skolem*, unsigned var_id, int pos_lit);
+void skolem_update_satlit(Skolem* s, Lit lit, int new_satlit);
 void skolem_update_pure_pos(Skolem*, unsigned var_id, unsigned pos_lit);
 void skolem_update_pure_neg(Skolem*, unsigned var_id, unsigned pos_lit);
 void skolem_update_deterministic(Skolem*, unsigned var_id, unsigned deterministic);

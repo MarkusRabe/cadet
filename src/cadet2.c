@@ -939,8 +939,8 @@ void c2_new_variable(C2* c2, unsigned var_id) {
         skolem_update_deterministic(c2->skolem, var_id, 1);
         
         int innerlit = f_fresh_var(c2->skolem->f);
-        skolem_update_pos_lit(c2->skolem, var_id, innerlit);
-        skolem_update_neg_lit(c2->skolem, var_id, - innerlit);
+        skolem_update_satlit(c2->skolem, (Lit) var_id, innerlit);
+        skolem_update_satlit(c2->skolem, - (Lit) var_id, - innerlit);
         
         union Dependencies dep;
         if (!qcnf_is_DQBF(c2->qcnf)) {

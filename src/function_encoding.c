@@ -59,7 +59,7 @@ void f_propagate_partial_over_clause_for_lit(Skolem* s, Clause* c, Lit lit, bool
     // -newlit || (prevlit || -x) && (prevlit || -y) && (prevlit || -z)
     // (-newlit || prevlit || -x) && (-newlit || prevlit || -y) && (-newlit || prevlit || -z)
     
-    int newlit = f_fresh_var(s->f);
+    int satlit = f_fresh_var(s->f);
     union Dependencies dependencies = skolem_get_dependencies(s, lit_to_var(lit));
     assert(!qcnf_is_DQBF(s->qcnf) || int_vector_is_strictly_sorted(dependencies.dependencies));
     union Dependencies dependencies_copy = skolem_copy_dependencies(s, dependencies);
@@ -68,7 +68,7 @@ void f_propagate_partial_over_clause_for_lit(Skolem* s, Clause* c, Lit lit, bool
         bool is_legal = skolem_may_depend_on(s, lit_to_var(lit), lit_to_var(c->occs[i]));
         if (is_legal) {
             assert(skolem_is_deterministic(s, lit_to_var(c->occs[i])));
-            f_add(s->f, -newlit);
+            f_add(s->f, -satlit);
             f_add(s->f, skolem_get_satlit(s, lit)); // prevlit
             f_add(s->f, skolem_get_satlit(s, - c->occs[i]));
             f_clause_finished(s->f);
@@ -101,7 +101,7 @@ void f_propagate_partial_over_clause_for_lit(Skolem* s, Clause* c, Lit lit, bool
         
         // first clause
         f_add(s->f, - skolem_get_satlit(s, lit)); // - prevlit
-        f_add(s->f, newlit);
+        f_add(s->f, satlit);
         f_clause_finished(s->f);
         
         // second clause
@@ -113,16 +113,11 @@ void f_propagate_partial_over_clause_for_lit(Skolem* s, Clause* c, Lit lit, bool
                 f_add(s->f, skolem_get_satlit(s, c->occs[i]));
             }
         }
-        f_add(s->f, newlit);
+        f_add(s->f, satlit);
         f_clause_finished(s->f);
     }
     
-    //    assert(!add_guarded_illegal_dependencies || prev->deterministic); // not true in case of conflicted decision vars
-    if (lit > 0) {
-        skolem_update_pos_lit(s, lit_to_var(lit), newlit);
-    } else {
-        skolem_update_neg_lit(s, lit_to_var(lit), newlit);
-    }
+    skolem_update_satlit(s, lit, satlit);
     skolem_update_dependencies(s, lit_to_var(lit), dependencies_copy);
 }
 
@@ -132,24 +127,33 @@ void f_propagate_partial_over_clause_for_lit(Skolem* s, Clause* c, Lit lit, bool
  * Returns whether at least one case has been encoded
  */
 bool f_encode_unique_antecedents_for_lits(Skolem* s, Lit lit, bool define_both_sides) {
-    assert(lit != 0);
-//#ifdef DEBUG
+    unsigned var_id = lit_to_var(lit);
+    assert(var_id != 0);
+#ifdef DEBUG
     skolem_var* sv = skolem_var_vector_get(s->infos, lit_to_var(lit));
     if (lit > 0) {
         abortif(sv->pos_lit != -1, "asdf neg");
     } else {
         abortif(sv->neg_lit != -1, "asdf neg");
     }
+#endif
+//    if (! define_both_sides) {
+//        skolem_update_satlit(s, lit, f_fresh_var(s->f)); // must be done before the two next calls to make 'satlit' available in the
+//    }
     
-//#endif
     vector* lit_occs = qcnf_get_occs_of_lit(s->qcnf, lit);
     bool case_exists = false;
     for (unsigned i = 0; i < vector_count(lit_occs); i++) {
         Clause* c = vector_get(lit_occs, i);
         if (skolem_get_unique_consequence(s, c) == lit && ! skolem_clause_satisfied(s, c) && ! skolem_has_illegal_dependence(s, c)) {
             case_exists = true;
-            f_propagate_partial_over_clause_for_lit(s, c, lit, define_both_sides);
+//            if (define_both_sides) {
+                f_propagate_partial_over_clause_for_lit(s, c, lit, define_both_sides);
+//            } else {
+//                f_add_clause(s, c);
+//            }
         }
     }
+    
     return case_exists;
 }

@@ -14,13 +14,9 @@
 
 #include "skolem.h"
 
-void f_add_clauses(Skolem* s, unsigned var_id, vector* occs);
+void f_add_clauses(Skolem*, unsigned var_id, vector* occs);
 
-
-typedef enum FIX_UNIQUE_ANTECEDENTS_MODE {
-    FUAM_ONLY_LEGALS = 2,
-    //    FUAM_IGNORE_ILLEGAL_DEP_LITERALS = 4,
-} FIX_UNIQUE_ANTECEDENTS_MODE;
-bool f_encode_unique_antecedents_for_lits(Skolem* s, Lit lit, bool define_both_sides, FIX_UNIQUE_ANTECEDENTS_MODE fuam);
+//void f_propagate_partial_over_clause_for_lit(Skolem*, Clause*, Lit, bool define_both_sides);
+bool f_encode_unique_antecedents_for_lits(Skolem*, Lit, bool define_both_sides);
 
 #endif /* function_encoding_h */

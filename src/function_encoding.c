@@ -7,6 +7,7 @@
 //
 
 #include "function_encoding.h"
+#include "log.h"
 
 #include <assert.h>
 
@@ -42,8 +43,7 @@ void f_add_clauses(Skolem* s, unsigned var_id, vector* occs) {
  * used to encode potentially conflicted variables). Otherwise conflicted vars can decide to be not
  * conflicted.
  */
-void skolem_propagate_partial_over_clause_for_lit(Skolem* s, Clause* c, Lit lit, bool define_both_sides, ILLEGAL_DEPENDENCIES_ENCODING ide) {
-    assert (ide == IDE_IGNORE); // to be extended
+void f_propagate_partial_over_clause_for_lit(Skolem* s, Clause* c, Lit lit, bool define_both_sides) {
     assert(qcnf_contains_literal(c, lit) != 0);
     assert(!skolem_is_deterministic(s, lit_to_var(lit)));
     assert( skolem_get_unique_consequence(s, c) == 0 || skolem_get_unique_consequence(s, c) == lit );
@@ -94,8 +94,6 @@ void skolem_propagate_partial_over_clause_for_lit(Skolem* s, Clause* c, Lit lit,
     }
     
     if (define_both_sides) {
-        assert(ide == IDE_IGNORE); // have not implemented this yet
-        
         // For the other direction we need the following two clauses:
         // (prevlit || -x && -y && -z) -> newlit
         // -prevlit && (x || y || z) || newlit
@@ -133,54 +131,25 @@ void skolem_propagate_partial_over_clause_for_lit(Skolem* s, Clause* c, Lit lit,
  *
  * Returns whether at least one case has been encoded
  */
-bool f_encode_unique_antecedents_for_lits(Skolem* s, Lit lit, bool define_both_sides, FIX_UNIQUE_ANTECEDENTS_MODE fuam) {
-    assert(fuam == FUAM_ONLY_LEGALS /* || fuam == FUAM_IGNORE_ILLEGAL_DEP_LITERALS */);
+bool f_encode_unique_antecedents_for_lits(Skolem* s, Lit lit, bool define_both_sides) {
     assert(lit != 0);
+//#ifdef DEBUG
+    skolem_var* sv = skolem_var_vector_get(s->infos, lit_to_var(lit));
+    if (lit > 0) {
+        abortif(sv->pos_lit != -1, "asdf neg");
+    } else {
+        abortif(sv->neg_lit != -1, "asdf neg");
+    }
     
+//#endif
     vector* lit_occs = qcnf_get_occs_of_lit(s->qcnf, lit);
     bool case_exists = false;
     for (unsigned i = 0; i < vector_count(lit_occs); i++) {
         Clause* c = vector_get(lit_occs, i);
-        assert( - lit != skolem_get_unique_consequence(s, c));
-        if (lit != skolem_get_unique_consequence(s, c) || skolem_clause_satisfied(s, c)) {
-            continue;
-        }
-        bool has_illegals = skolem_has_illegal_dependence(s, c);
-        switch (fuam) {
-            case FUAM_ONLY_LEGALS:
-                case_exists = true;
-                if (! has_illegals) {
-                    skolem_propagate_partial_over_clause_for_lit(s, c, lit, define_both_sides, IDE_IGNORE);
-                }
-                break;
-                
-                //            case FUAM_IGNORE_ILLEGAL_DEP_LITERALS:
-                //                assert(true);
-                //                bool add_clause = true;
-                //                if (has_illegals) {
-                //                    // test whether this antecedent is satisfiable, including the illegals
-                //                    // assume antecedent
-                //                    for (unsigned i = 0; i < c->size; i++) {
-                //                        if (c->occs[i] != lit) {
-                //                            int l = skolem_get_satlit(s, - c->occs[i]);
-                //                            f_assume(s->f, l);
-                //                        }
-                //                    }
-                //                    if (f_sat(s->f) != SATSOLVER_SATISFIABLE) {
-                //                        add_clause = false;
-                //                    }
-                //                }
-                //                if (add_clause) {
-                //                    case_exists = true;
-                //                    skolem_propagate_partial_over_clause_for_lit(s, c, lit, define_both_sides, IDE_IGNORE);
-                //                }
-                //                break;
-                
-            default:
-                break;
+        if (skolem_get_unique_consequence(s, c) == lit && ! skolem_clause_satisfied(s, c) && ! skolem_has_illegal_dependence(s, c)) {
+            case_exists = true;
+            f_propagate_partial_over_clause_for_lit(s, c, lit, define_both_sides);
         }
     }
     return case_exists;
 }
-
-

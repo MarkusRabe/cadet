@@ -46,8 +46,6 @@ Skolem* skolem_init(QCNF* qcnf, Options* o,
     f_add(s->f, s->satlit_true);
     f_clause_finished(s->f);
     
-    s->dependency_choice_sat_lit = f_fresh_var(s->f);
-    
     s->infos = skolem_var_vector_init_with_size(var_vector_count(qcnf->vars) + var_vector_count(qcnf->vars) / 2); // should usually prevent any resizing of the skolem_var_vector
     s->conflict_var_id = 0;
     s->conflicted_clause = NULL;
@@ -390,7 +388,7 @@ bool skolem_is_lit_pure(Skolem* s, Lit lit) {
  * Returns whether at least one case has been encoded
  */
 bool skolem_fix_lit_for_unique_antecedents(Skolem* s, Lit lit, bool define_both_sides, FIX_UNIQUE_ANTECEDENTS_MODE fuam) {
-    assert(fuam == FUAM_ONLY_LEGALS || fuam == FUAM_ONLY_ILLEGALS_GUARDED /* || fuam == FUAM_IGNORE_ILLEGAL_DEP_LITERALS */);
+    assert(fuam == FUAM_ONLY_LEGALS /* || fuam == FUAM_IGNORE_ILLEGAL_DEP_LITERALS */);
     assert(lit != 0);
     
     vector* lit_occs = qcnf_get_occs_of_lit(s->qcnf, lit);
@@ -407,13 +405,6 @@ bool skolem_fix_lit_for_unique_antecedents(Skolem* s, Lit lit, bool define_both_
                 case_exists = true;
                 if (! has_illegals) {
                     skolem_propagate_partial_over_clause_for_lit(s, c, lit, define_both_sides, IDE_IGNORE);
-                }
-                break;
-            
-            case FUAM_ONLY_ILLEGALS_GUARDED:
-                case_exists = true;
-                if (has_illegals) {
-                    skolem_propagate_partial_over_clause_for_lit(s, c, lit, define_both_sides, IDE_GUARDED);
                 }
                 break;
             
@@ -733,9 +724,9 @@ void skolem_propagate_pure_variable(Skolem* s, unsigned var_id) {
  * conflicted.
  */
 void skolem_propagate_partial_over_clause_for_lit(Skolem* s, Clause* c, Lit lit, bool define_both_sides, ILLEGAL_DEPENDENCIES_ENCODING ide) {
-    assert (ide == IDE_IGNORE || ide == IDE_GUARDED);
+    assert (ide == IDE_IGNORE); // to be extended
     assert(qcnf_contains_literal(c, lit) != 0);
-    assert(!skolem_is_deterministic(s, lit_to_var(lit)) || ide == IDE_GUARDED);
+    assert(!skolem_is_deterministic(s, lit_to_var(lit)));
     assert( skolem_get_unique_consequence(s, c) == 0 || skolem_get_unique_consequence(s, c) == lit );
     
     if (s->options->functional_synthesis) {
@@ -756,14 +747,11 @@ void skolem_propagate_partial_over_clause_for_lit(Skolem* s, Clause* c, Lit lit,
     for (unsigned i = 0; i < c->size; i++) {
         if (lit == c->occs[i]) {continue;}
         bool is_legal = skolem_may_depend_on(s, lit_to_var(lit), lit_to_var(c->occs[i]));
-        if (ide == IDE_GUARDED || is_legal) {
+        if (is_legal) {
             assert(skolem_is_deterministic(s, lit_to_var(c->occs[i])));
             f_add(s->f, -newlit);
             f_add(s->f, skolem_get_satlit(s, lit)); // prevlit
             f_add(s->f, skolem_get_satlit(s, - c->occs[i]));
-            if (ide == IDE_GUARDED && ! is_legal) {
-                f_add(s->f, lit > 0 ? s->dependency_choice_sat_lit : - s->dependency_choice_sat_lit);
-            }
             f_clause_finished(s->f);
             
             if (is_legal) {

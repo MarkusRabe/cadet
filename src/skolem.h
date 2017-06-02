@@ -112,8 +112,6 @@ struct Skolem {
     unsigned e_initially_deterministic; // what should be considered deterministic?
     
     
-    // Static objects
-    int dependency_choice_sat_lit; // something related to an earlier
     // THE empty_dependency object
     // Used when non-existent skolem_vars should return a dependency set; avoids alloc/free management
     union Dependencies empty_dependencies;
@@ -161,7 +159,6 @@ bool skolem_is_conflicted(Skolem*);
 
 typedef enum FIX_UNIQUE_ANTECEDENTS_MODE {
     FUAM_ONLY_LEGALS = 2,
-    FUAM_ONLY_ILLEGALS_GUARDED = 3,
 //    FUAM_IGNORE_ILLEGAL_DEP_LITERALS = 4,
 } FIX_UNIQUE_ANTECEDENTS_MODE;
 bool skolem_fix_lit_for_unique_antecedents(Skolem* s, Lit lit, bool define_both_sides, FIX_UNIQUE_ANTECEDENTS_MODE);
@@ -197,7 +194,6 @@ int skolem_get_constant_value(Skolem* s, Lit lit); // get the value of the varia
 
 typedef enum {
     IDE_IGNORE = 2,
-    IDE_GUARDED = 3,
 } ILLEGAL_DEPENDENCIES_ENCODING;
 void skolem_propagate_partial_over_clause_for_lit(Skolem*, Clause*, Lit, bool define_both_sides, ILLEGAL_DEPENDENCIES_ENCODING);
 

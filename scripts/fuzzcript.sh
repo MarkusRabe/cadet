@@ -1,4 +1,4 @@
-
+#!/bin/bash
 ###########################################################
 # The script expects three inputs. The first two inputs   #
 # are tool names and the last one is the number of random #

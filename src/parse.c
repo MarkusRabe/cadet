@@ -379,7 +379,7 @@ QCNF* create_qcnf_from_aiger(aiger* aig, Options* o) {
     
     qcnf_new_var(qcnf, aiger_quantification_polarity(input_group, false), aiger_quantification_levels(input_group), bads_qcnf_var);
     if (o->print_name_mapping) {
-        V0("bads summary variable %d\n", bads_qcnf_var);
+        V0("bads summary variable %u\n", bads_qcnf_var);
     }
     
     for (size_t i = 0; i < aig->num_bad; i++) {
@@ -406,7 +406,7 @@ QCNF* create_qcnf_from_aiger(aiger* aig, Options* o) {
     
     qcnf_new_var(qcnf, aiger_quantification_polarity(o->aiger_negated_encoding ? 0 : 1, false), aiger_quantification_levels(o->aiger_negated_encoding ? 0 : 1), constraints_qcnf_var);
     if (o->print_name_mapping) {
-        V0("constraints summary variable %d\n", constraints_qcnf_var);
+        V0("constraints summary variable %u\n", constraints_qcnf_var);
     }
     
     for (size_t i = 0; i < aig->num_constraints; i++) {

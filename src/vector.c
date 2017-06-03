@@ -54,7 +54,6 @@ void vector_reduce_count(vector* v, unsigned j) {
 
 void* vector_get(vector* v, unsigned i) {
     assert (v->count > i);
-    assert(i >= 0);
     return v->data[i];
 }
 

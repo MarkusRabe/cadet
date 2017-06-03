@@ -105,7 +105,6 @@ void partial_assignment_enlarge_val_vector(val_vector* vv, unsigned idx) {
     }
 }
 void partial_assignment_set_val(PartialAssignment* pa, unsigned var_id, VAL new) {
-    assert(var_id >= 0);
     partial_assignment_enlarge_val_vector(pa->vals, var_id);
     val_vector_set(pa->vals, var_id, new);
 }

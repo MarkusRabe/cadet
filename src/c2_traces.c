@@ -35,7 +35,7 @@ void c2_print_variable_states(C2* c2) {
             }
         }
         if (skolem_is_deterministic(c2->skolem, i)) {
-            V0(",%d",skolem_get_decision_lvl(c2->skolem, i));
+            V0(",%u", skolem_get_decision_lvl(c2->skolem, i));
         } else {
             V0(",");
         }

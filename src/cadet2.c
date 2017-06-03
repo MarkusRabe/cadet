@@ -308,7 +308,6 @@ Var* c2_pick_most_active_notdeterministic_variable(C2* c2) {
 
 void c2_backtrack_to_decision_lvl(C2 *c2, unsigned backtracking_lvl) {
     V2("Backtrack to level %u\n",backtracking_lvl);
-    assert(backtracking_lvl >= 0);
     assert(c2->stack->push_count == c2->skolem->stack->push_count);
     assert(c2->stack->push_count == c2->examples->stack->push_count);
     while (c2->stack->push_count > backtracking_lvl) {

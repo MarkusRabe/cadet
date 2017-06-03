@@ -1,4 +1,4 @@
-
+#!/bin/bash
 ###########################################################
 # The script expects two inputs. The an executable binary #
 # and a number of files to be generated.                  #

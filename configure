@@ -55,5 +55,9 @@ if [ "$satsolver" = "minisat" ]; then
 fi
 
 cat Makefile.in >> Makefile
+
+echo 'ensuring Python package numpy is available'
+pip install numpy
+
 echo 'configuration complete, type make to build.'
 

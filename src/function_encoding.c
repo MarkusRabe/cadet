@@ -13,7 +13,8 @@
 
 void f_add_clause(Skolem* s, Clause* c) {
     for (unsigned i = 0; i < c->size; i++) {
-        int sat_lit = skolem_get_satlit(s, c->occs[i]);
+        assert(skolem_is_deterministic(s, lit_to_var(c->occs[i])) || skolem_get_unique_consequence(s, c) == c->occs[i]);
+        int sat_lit = - skolem_get_satlit(s, - c->occs[i]);
         f_add(s->f, sat_lit);
     }
     f_clause_finished(s->f);
@@ -35,8 +36,6 @@ void f_add_clauses(Skolem* s, unsigned var_id, vector* occs) {
 
 
 /* Partial function propagation rule
- * bool add_guarded_illegal_dependencies is for use global conflict check, when illegal dependencies
- * need to be propagated (guarded by s->dependency_choice_sat_lit).
  *
  * Potential source of tricky bugs: when delaying conflict checks, all variables have to be defined
  * for BOTH SIDES, which is hardcoded in this function (because this propagation is typically being
@@ -129,29 +128,22 @@ void f_propagate_partial_over_clause_for_lit(Skolem* s, Clause* c, Lit lit, bool
 bool f_encode_unique_antecedents_for_lits(Skolem* s, Lit lit, bool define_both_sides) {
     unsigned var_id = lit_to_var(lit);
     assert(var_id != 0);
-#ifdef DEBUG
-    skolem_var* sv = skolem_var_vector_get(s->infos, lit_to_var(lit));
-    if (lit > 0) {
-        abortif(sv->pos_lit != -1, "asdf neg");
-    } else {
-        abortif(sv->neg_lit != -1, "asdf neg");
-    }
-#endif
-//    if (! define_both_sides) {
-//        skolem_update_satlit(s, lit, f_fresh_var(s->f)); // must be done before the two next calls to make 'satlit' available in the
+//#ifdef DEBUG
+//    skolem_var* sv = skolem_var_vector_get(s->infos, lit_to_var(lit));
+//    if (lit > 0) {
+//        abortif(sv->pos_lit != -1, "asdf neg");
+//    } else {
+//        abortif(sv->neg_lit != -1, "asdf neg");
 //    }
-    
+//#endif
+
     vector* lit_occs = qcnf_get_occs_of_lit(s->qcnf, lit);
     bool case_exists = false;
     for (unsigned i = 0; i < vector_count(lit_occs); i++) {
         Clause* c = vector_get(lit_occs, i);
         if (skolem_get_unique_consequence(s, c) == lit && ! skolem_clause_satisfied(s, c) && ! skolem_has_illegal_dependence(s, c)) {
             case_exists = true;
-//            if (define_both_sides) {
-                f_propagate_partial_over_clause_for_lit(s, c, lit, define_both_sides);
-//            } else {
-//                f_add_clause(s, c);
-//            }
+            f_propagate_partial_over_clause_for_lit(s, c, lit, define_both_sides);
         }
     }
     

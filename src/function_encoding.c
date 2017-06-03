@@ -60,7 +60,7 @@ void f_propagate_partial_over_clause_for_lit(Skolem* s, Clause* c, Lit lit, bool
     
     int satlit = f_fresh_var(s->f);
     union Dependencies dependencies = skolem_get_dependencies(s, lit_to_var(lit));
-    assert(!qcnf_is_DQBF(s->qcnf) || int_vector_is_strictly_sorted(dependencies.dependencies));
+    assert(s->qcnf->problem_type < QCNF_DQBF || int_vector_is_strictly_sorted(dependencies.dependencies));
     union Dependencies dependencies_copy = skolem_copy_dependencies(s, dependencies);
     for (unsigned i = 0; i < c->size; i++) {
         if (lit == c->occs[i]) {continue;}
@@ -74,7 +74,7 @@ void f_propagate_partial_over_clause_for_lit(Skolem* s, Clause* c, Lit lit, bool
             
             if (is_legal) {
                 union Dependencies occ_deps = skolem_get_dependencies(s, lit_to_var(c->occs[i]));
-                if (!qcnf_is_DQBF(s->qcnf)) {
+                if (s->qcnf->problem_type < QCNF_DQBF) {
                     if (dependencies_copy.dependence_lvl < occ_deps.dependence_lvl) {
                         dependencies_copy.dependence_lvl = occ_deps.dependence_lvl;
                     }
@@ -84,7 +84,7 @@ void f_propagate_partial_over_clause_for_lit(Skolem* s, Clause* c, Lit lit, bool
             }
         }
     }
-    if (qcnf_is_DQBF(s->qcnf)) {
+    if (s->qcnf->problem_type == QCNF_DQBF) {
         int_vector_sort(dependencies_copy.dependencies, compare_integers_natural_order);
 #ifdef DEBUG
         Scope* d = vector_get(s->qcnf->scopes, lit_to_var(lit));
@@ -128,15 +128,12 @@ void f_propagate_partial_over_clause_for_lit(Skolem* s, Clause* c, Lit lit, bool
 bool f_encode_unique_antecedents_for_lits(Skolem* s, Lit lit, bool define_both_sides) {
     unsigned var_id = lit_to_var(lit);
     assert(var_id != 0);
-//#ifdef DEBUG
-//    skolem_var* sv = skolem_var_vector_get(s->infos, lit_to_var(lit));
-//    if (lit > 0) {
-//        abortif(sv->pos_lit != -1, "asdf neg");
-//    } else {
-//        abortif(sv->neg_lit != -1, "asdf neg");
-//    }
-//#endif
 
+#ifdef DEBUG
+    skolem_var* sv = skolem_var_vector_get(s->infos, lit_to_var(lit));
+    assert((lit > 0 ? sv->pos_lit : sv->neg_lit) == -1); // not necessary, but currently given
+#endif
+    
     vector* lit_occs = qcnf_get_occs_of_lit(s->qcnf, lit);
     bool case_exists = false;
     for (unsigned i = 0; i < vector_count(lit_occs); i++) {

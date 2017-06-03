@@ -67,7 +67,7 @@ void skolem_print_skolem_var(Skolem* s, skolem_var* si, unsigned indent) {
         V1(" ");
     }
     V1("Dependencies: ");
-    if (!qcnf_is_DQBF(s->qcnf)) {
+    if (s->qcnf->problem_type < QCNF_DQBF) {
         V1("%u\n", si->dep.dependence_lvl);
     } else {
         int_vector_print(si->dep.dependencies);
@@ -244,11 +244,11 @@ void skolem_update_dependencies(Skolem* s, unsigned var_id, union Dependencies d
 #ifdef DEBUG
     Var* v = var_vector_get(s->qcnf->vars, var_id);
     Scope* scope = vector_get(s->qcnf->scopes, v->scope_id);
-    assert(! qcnf_is_DQBF(s->qcnf) || int_vector_includes_sorted(scope->vars, deps.dependencies));
+    assert(s->qcnf->problem_type < QCNF_DQBF || int_vector_includes_sorted(scope->vars, deps.dependencies));
 #endif
     skolem_var* sv = skolem_var_vector_get(s->infos, var_id);
     skolem_enlarge_skolem_var_vector(s, var_id);
-    if (qcnf_is_DQBF(s->qcnf)) {
+    if (s->qcnf->problem_type == QCNF_DQBF) {
         V4("Setting dependencies ");
         assert(int_vector_is_strictly_sorted(deps.dependencies));
         int_vector_print(deps.dependencies);
@@ -273,7 +273,7 @@ void skolem_undo_dependencies(Skolem* s, void* data) {
     union skolem_undo_union suu;
     suu.ptr = data;
     union Dependencies deps;
-    if (qcnf_is_DQBF(s->qcnf)) {
+    if (s->qcnf->problem_type == QCNF_DQBF) {
         struct DEPENDENCECY_UPDATE* du = (struct DEPENDENCECY_UPDATE*) data;
         deps.dependencies = du->dependencies;
         free(du);

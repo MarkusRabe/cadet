@@ -35,10 +35,11 @@ typedef struct C2_VAR_DATA C2_VAR_DATA;
 C2_VAR_DATA c2_initial_var_data();
 
 typedef enum {
-    QCNF_PROPOSITIONAL,
-    QCNF_2QBF,
-    QCNF_QBF,
-    QCNF_DQBF
+    QCNF_PROPOSITIONAL = 0,
+    QCNF_2QBF = 1,
+    QCNF_3QBF = 2,
+    QCNF_QBF = 3,
+    QCNF_DQBF = 4
 } PROBLEM_TYPE;
 
 struct Clause {
@@ -105,16 +106,11 @@ struct QCNF {
 QCNF* qcnf_init();
 void qcnf_free();
 
-//bool qcnf_is_2QBF(QCNF*);
-
 void qcnf_push(QCNF*);
 void qcnf_pop(QCNF*);
 
 bool qcnf_contains_empty_clause(QCNF*);
 bool qcnf_is_trivially_true(QCNF*);
-bool qcnf_is_propositional(QCNF*);
-bool qcnf_is_2QBF(QCNF*);
-bool qcnf_is_DQBF(QCNF*);
 bool qcnf_var_has_unique_maximal_dependency(QCNF*, unsigned var_id);
 
 // Clauses

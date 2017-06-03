@@ -51,7 +51,7 @@ Skolem* skolem_init(QCNF* qcnf, Options* o,
     s->conflict_var_id = 0;
     s->conflicted_clause = NULL;
     
-    if (qcnf_is_DQBF(s->qcnf)) {
+    if (s->qcnf->problem_type == QCNF_DQBF) {
         s->empty_dependencies.dependencies = int_vector_init();
     } else {
         s->empty_dependencies.dependence_lvl = 0;
@@ -849,7 +849,7 @@ void skolem_print_debug_info(Skolem* s) {
         skolem_var si = skolem_get_info(s, i);
         if (si.pos_lit != - s->satlit_true || si.neg_lit != - s->satlit_true) {
             V1("\n  Var %u, det %u, pos %d, neg %d, pure %d, ", i,si.deterministic,si.pos_lit,si.neg_lit, si.pure_neg || si.pure_pos);
-            if (!qcnf_is_DQBF(s->qcnf)) {
+            if (s->qcnf->problem_type < QCNF_DQBF) {
                 V1("dep_lvl %d\n", si.dep.dependence_lvl);
             } else {
                 V1("deps ");
@@ -897,7 +897,7 @@ void skolem_assume_constant_value(Skolem* s, Lit lit) {
     f_clause_finished(s->f);
     
     union Dependencies deps = skolem_get_dependencies(s, var_id);
-    if (qcnf_is_DQBF(s->qcnf)) {
+    if (s->qcnf->problem_type == QCNF_DQBF) {
         deps.dependencies = int_vector_copy(deps.dependencies);
     }
     
@@ -926,7 +926,7 @@ void skolem_assign_constant_value(Skolem* s, Lit lit, union Dependencies propaga
     if (propagation_deps.dependence_lvl == 1) {
         V3("Constant propagation with non-zero dependencies.\n");
     }
-    abortif(propagation_deps.dependence_lvl > 0 && ! qcnf_is_2QBF(s->qcnf), "Propagation of assumptions only supported in 2QBF.\n");
+    abortif(propagation_deps.dependence_lvl > 0 && s->qcnf->problem_type != QCNF_2QBF, "Propagation of assumptions only supported in 2QBF.\n");
     
     bool was_deterministic_already = skolem_is_deterministic(s, var_id);
     
@@ -1002,7 +1002,7 @@ void skolem_propagate_constants_over_clause(Skolem* s, Clause* c) {
 //                abort();
         }
     }
-    if (qcnf_is_DQBF(s->qcnf)) {
+    if (s->qcnf->problem_type == QCNF_DQBF) {
         maximal_deps.dependencies = int_vector_copy(maximal_deps.dependencies); // have to copy the set
     }
     
@@ -1033,7 +1033,7 @@ void skolem_propagate_constants_over_clause(Skolem* s, Clause* c) {
         skolem_assign_constant_value(s, unassigned_lit, maximal_deps, c);
     }
 cleanup:
-    if (qcnf_is_DQBF(s->qcnf)) {
+    if (s->qcnf->problem_type == QCNF_DQBF) {
         int_vector_free(maximal_deps.dependencies);
     }
 }

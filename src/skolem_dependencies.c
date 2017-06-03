@@ -12,7 +12,7 @@
 
 union Dependencies skolem_create_fresh_empty_dep(Skolem* s) {
     union Dependencies zero_dep;
-    if (!qcnf_is_DQBF(s->qcnf)) {
+    if (s->qcnf->problem_type < QCNF_DQBF) {
         zero_dep.dependence_lvl = 0;
     } else {
         zero_dep.dependencies = int_vector_init();
@@ -22,7 +22,7 @@ union Dependencies skolem_create_fresh_empty_dep(Skolem* s) {
 
 //int skolem_compare_dependencies(Skolem* s, union Dependencies deps1, union Dependencies deps2) {
 //    int cmp_val = 0;
-//    if (qcnf_is_DQBF(s->qcnf)) {
+//    if (s->qcnf->problem_type == QCNF_DQBF) {
 //        // Returns 0 if they are not comparable;
 //        assert(false); // check again upon first usage! In particular whether order of the arguments of int_vector_includes_sorted is correct.
 //        assert(int_vector_is_strictly_sorted(deps1.dependencies));
@@ -54,7 +54,7 @@ union Dependencies skolem_create_fresh_empty_dep(Skolem* s) {
 //}
 
 DEPENDENCY_COMPARISON skolem_compare_dependencies(Skolem* s, union Dependencies deps1, union Dependencies deps2) {
-    if (qcnf_is_DQBF(s->qcnf)) {
+    if (s->qcnf->problem_type == QCNF_DQBF) {
         NOT_IMPLEMENTED(); // check again upon first usage! In particular whether order of the arguments of int_vector_includes_sorted is correct.
         assert(int_vector_is_strictly_sorted(deps1.dependencies));
         assert(int_vector_is_strictly_sorted(deps2.dependencies));
@@ -92,14 +92,14 @@ DEPENDENCY_COMPARISON skolem_compare_dependencies(Skolem* s, union Dependencies 
 }
 
 void skolem_free_dependencies(Skolem* s, union Dependencies deps) {
-    if (qcnf_is_DQBF(s->qcnf)) {
+    if (s->qcnf->problem_type == QCNF_DQBF) {
         abortif(deps.dependencies == s->empty_dependencies.dependencies, "Trying to free static empty_dependencies object in skolem domain object.");
         int_vector_free(deps.dependencies);
     }
 }
 
 union Dependencies skolem_copy_dependencies(Skolem* s, union Dependencies deps) {
-    if (qcnf_is_DQBF(s->qcnf)) {
+    if (s->qcnf->problem_type == QCNF_DQBF) {
         union Dependencies res;
         res.dependencies = int_vector_copy(deps.dependencies);
         return res;
@@ -110,7 +110,7 @@ union Dependencies skolem_copy_dependencies(Skolem* s, union Dependencies deps) 
 
 void skolem_update_dependencies_for_lit(Skolem* s, union Dependencies* aggregate_dependencies, Lit lit) {
     union Dependencies occ_deps = skolem_get_dependencies(s, lit_to_var(lit));
-    if (qcnf_is_DQBF(s->qcnf)) {
+    if (s->qcnf->problem_type == QCNF_DQBF) {
         int_vector_add_all_sorted(aggregate_dependencies->dependencies, occ_deps.dependencies);
     } else {
         if (occ_deps.dependence_lvl > aggregate_dependencies->dependence_lvl) {
@@ -143,7 +143,7 @@ union Dependencies skolem_compute_dependencies(Skolem* s, unsigned var_id) {
         skolem_compute_dependencies_for_occs(s, &deps,   (Lit) var_id);
         skolem_compute_dependencies_for_occs(s, &deps, - (Lit) var_id);
     }
-    assert( ! qcnf_is_2QBF(s->qcnf) || deps.dependence_lvl <= 1);
+    assert( s->qcnf->problem_type > QCNF_3QBF || deps.dependence_lvl <= 1);
     return deps;
 }
 
@@ -151,13 +151,13 @@ union Dependencies skolem_compute_dependencies(Skolem* s, unsigned var_id) {
 // is 'var_id' allowed to depend on 'dep'?
 bool skolem_is_legal_dependency(Skolem* s, unsigned var_id, union Dependencies dep) {
     Var* v = var_vector_get(s->qcnf->vars, var_id);
-    if (qcnf_is_propositional(s->qcnf) || qcnf_is_2QBF(s->qcnf)) {
+    if (s->qcnf->problem_type <= QCNF_2QBF) {
         assert(v->scope_id >= dep.dependence_lvl);
         return true;
-    } else if (!qcnf_is_DQBF(s->qcnf)) { // QBF
+    } else if (s->qcnf->problem_type < QCNF_DQBF) { // 3QBF or QBF
         return v->scope_id >= dep.dependence_lvl;
     } else { // DQBF
-        assert(qcnf_is_DQBF(s->qcnf));
+        assert(s->qcnf->problem_type == QCNF_DQBF);
         Scope* v_scope = vector_get(s->qcnf->scopes, v->scope_id);
         return int_vector_includes_sorted(v_scope->vars, dep.dependencies);
     }
@@ -171,7 +171,7 @@ bool skolem_may_depend_on(Skolem* s, unsigned var_id, unsigned depending_on_var_
 }
 
 bool skolem_has_illegal_dependence(Skolem* s, Clause* c) {
-    if (qcnf_is_propositional(s->qcnf) || qcnf_is_2QBF(s->qcnf)) {
+    if (s->qcnf->problem_type <= QCNF_2QBF) {
         return false;
     } else {
         assert(skolem_has_unique_consequence(s, c));
@@ -188,7 +188,7 @@ bool skolem_has_illegal_dependence(Skolem* s, Clause* c) {
 }
 
 bool skolem_occs_contain_illegal_dependence(Skolem* s, Lit lit) {
-    if (qcnf_is_propositional(s->qcnf) || qcnf_is_2QBF(s->qcnf) || qcnf_var_has_unique_maximal_dependency(s->qcnf,lit_to_var(lit))) {
+    if (s->qcnf->problem_type <= QCNF_2QBF || qcnf_var_has_unique_maximal_dependency(s->qcnf,lit_to_var(lit))) {
         return false;
     }
     vector* occs = qcnf_get_occs_of_lit(s->qcnf, lit);
@@ -214,7 +214,7 @@ void skolem_validate_dependence_lvls(Skolem* s) {
             Var* v = var_vector_get(s->qcnf->vars, i);
             if (v->var_id != 0) {
                 union Dependencies deps = skolem_get_dependencies(s, i);
-                if (qcnf_is_DQBF(s->qcnf)) {
+                if (s->qcnf->problem_type == QCNF_DQBF) {
                     Scope* v_d = vector_get(s->qcnf->scopes, v->scope_id);
                     abortif(! int_vector_includes_sorted(v_d->vars, deps.dependencies), "Skolem validation failed.");
                 } else {

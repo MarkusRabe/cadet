@@ -194,7 +194,7 @@ QCNF* create_qcnf_from_qdimacs(FILE* file, char* header, int line_num) {
     
     if (int_vector_count(dependency_variables) != 0) {
         assert(vector_count(dependency_sets) == int_vector_count(dependency_variables));
-        assert(! qcnf_is_DQBF(qcnf));
+        assert(qcnf->problem_type < QCNF_DQBF);
         qcnf_convert_to_DQBF(qcnf);
         
         for (unsigned i = 0; i < vector_count(dependency_sets); i++) {
@@ -207,7 +207,7 @@ QCNF* create_qcnf_from_qdimacs(FILE* file, char* header, int line_num) {
         }
     }
     
-    if (qcnf_is_propositional(qcnf)) {
+    if (qcnf->problem_type == QCNF_PROPOSITIONAL) {
         V0("Propositional problem. Consider using a SAT solver.\n");
     }
     

@@ -22,20 +22,9 @@ bool qcnf_contains_empty_clause(QCNF* qcnf) {
 bool qcnf_is_trivially_true(QCNF* qcnf) {
     return vector_count(qcnf->clauses) == 0;
 }
-
-bool qcnf_is_propositional(QCNF* qcnf) {
-    return qcnf->problem_type == QCNF_PROPOSITIONAL;
-}
-bool qcnf_is_2QBF(QCNF* qcnf) {
-    return qcnf->problem_type == QCNF_2QBF;
-}
-bool qcnf_is_DQBF(QCNF* qcnf) {
-    return qcnf->problem_type == QCNF_DQBF;
-}
-
 bool qcnf_var_has_unique_maximal_dependency(QCNF* qcnf, unsigned var_id) {
     Var* v = var_vector_get(qcnf->vars, var_id);
-    return !qcnf_is_DQBF(qcnf) && v->scope_id == (vector_count(qcnf->scopes) - 1);
+    return qcnf->problem_type < QCNF_DQBF && v->scope_id == (vector_count(qcnf->scopes) - 1);
 }
 
 // Clauses
@@ -101,7 +90,7 @@ vector* qcnf_get_occs_of_lit(QCNF* qcnf, Lit lit) {
 // DOMAINS
 
 unsigned qcnf_scope_init(QCNF* qcnf, int_vector* vars) {
-    assert(qcnf_is_DQBF(qcnf));
+    assert(qcnf->problem_type == QCNF_DQBF);
     assert(int_vector_is_strictly_sorted(vars));
     
     Scope* scope = malloc(sizeof(Scope));
@@ -112,7 +101,7 @@ unsigned qcnf_scope_init(QCNF* qcnf, int_vector* vars) {
 }
 
 unsigned qcnf_scope_init_as_intersection(QCNF* qcnf, Scope* d1, Scope* d2) {
-    assert(qcnf_is_DQBF(qcnf));
+    assert(qcnf->problem_type == QCNF_DQBF);
     int_vector* vars = int_vector_init();
     int_vector* vars_smaller = int_vector_count(d1->vars) <  int_vector_count(d2->vars) ? d1->vars : d2->vars;
     int_vector* vars_larger  = int_vector_count(d1->vars) >= int_vector_count(d2->vars) ? d1->vars : d2->vars;
@@ -133,7 +122,7 @@ void qcnf_scope_free(Scope* d) {
 
 unsigned qcnf_get_empty_scope(QCNF* qcnf) {
 #ifdef DEBUG
-    if (qcnf_is_DQBF(qcnf)) {
+    if (qcnf->problem_type == QCNF_DQBF) {
         Scope* d = vector_get(qcnf->scopes, 0);
         assert(int_vector_count(d->vars) == 0);
     }
@@ -168,7 +157,7 @@ int qcnf_compare_literals_by_var_id(const void * a, const void * b) {
 QCNF* static_qcnf_variable_for_sorting = NULL; // TODO: this prevents C2 from being concurrent
 
 int qcnf_compare_scope_ids(QCNF* qcnf, unsigned scope_id1, unsigned scope_id2) {
-    if (!qcnf_is_DQBF(qcnf)) {
+    if (qcnf->problem_type < QCNF_DQBF) {
         return (int) scope_id1 - (int) scope_id2;
     }
     Scope* d1 = vector_get(qcnf->scopes, scope_id1);
@@ -238,7 +227,7 @@ Var* qcnf_new_var(QCNF* qcnf, bool is_universal, unsigned scope_id, unsigned var
     if (var_id > 1000000) {
         LOG_WARNING("Extremely large variable numbers detected (>1000000), consider compactifying variable names.\n");
     }
-    abortif(qcnf_is_DQBF(qcnf) && scope_id >= vector_count(qcnf->scopes), "Scope IDs must be initialized before usage for DQBF.");
+    abortif(qcnf->problem_type == QCNF_DQBF && scope_id >= vector_count(qcnf->scopes), "Scope IDs must be initialized before usage for DQBF.");
     
     V4("Introducing new variable %u to qlvl %u, universal: %d\n",var_id, scope_id, is_universal);
     
@@ -246,23 +235,32 @@ Var* qcnf_new_var(QCNF* qcnf, bool is_universal, unsigned scope_id, unsigned var
         vector_add(qcnf->scopes, NULL);
     }
     
-    // update the qcnf state // TODO: this is undoable!
-    switch (qcnf->problem_type) {
-        case QCNF_PROPOSITIONAL:
-            if (var_vector_count(qcnf->vars) == 1 && scope_id == 1) { // var_vector_count(qcnf->var) == 1 because the first element is always assigned NULL, see qcnf_init
-                qcnf->problem_type = QCNF_2QBF;
-            } else if (scope_id != 0) {
-                qcnf->problem_type = QCNF_QBF;
-            }
-            break;
-        case QCNF_2QBF:
-            if (scope_id != 1) {
-                qcnf->problem_type = QCNF_QBF;
-            }
-            break;
-        // nothing to do for QBF and DQBF
-        default:
-            break;
+    // update the qcnf state // TODO: make is undoable
+    if (scope_id > 1) {
+        qcnf->problem_type = QCNF_QBF;
+    } else {
+        switch (qcnf->problem_type) {
+            case QCNF_PROPOSITIONAL:
+                if (scope_id == 1) {
+                    if (var_vector_count(qcnf->vars) == 1) {
+                        /* var_vector_count(qcnf->var) == 1 means there is no variable,
+                         * because the first element is always assigned NULL, see qcnf_init
+                         */
+                        qcnf->problem_type = QCNF_2QBF;
+                    } else {
+                        qcnf->problem_type = QCNF_3QBF;
+                    }
+                }
+                break;
+            case QCNF_2QBF:
+                if (scope_id == 0) {
+                    qcnf->problem_type = QCNF_3QBF;
+                }
+                break;
+                // nothing to do for 3QBF, QBF, and DQBF
+            default:
+                break;
+        }
     }
     
     // create the variable and make sure that all variables with smaller var_ids exist
@@ -292,7 +290,7 @@ bool qcnf_var_exists(QCNF* qcnf, unsigned var_id) {
 }
 
 void qcnf_universal_reduction(QCNF* qcnf, Clause* clause) {
-    if (!qcnf_is_DQBF(qcnf)) {
+    if (qcnf->problem_type < QCNF_DQBF) {
         unsigned max_scope = 0;
         for (unsigned i = 0; i < clause->size; i++) {
             Lit lit = clause->occs[i];

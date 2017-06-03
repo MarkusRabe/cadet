@@ -717,7 +717,7 @@ cadet_res c2_sat(C2* c2) {
         return CADET_RESULT_UNSAT;
     }
     
-    if (qcnf_is_propositional(c2->qcnf) && ! c2->options->use_qbf_engine_also_for_propositional_problems) {
+    if (c2->qcnf->problem_type == QCNF_PROPOSITIONAL && ! c2->options->use_qbf_engine_also_for_propositional_problems) {
         c2->result = c2_check_propositional(c2->qcnf);
         if (c2->result == CADET_RESULT_UNSAT) {
             c2->state = C2_CEGAR_CONFLICT; // ensures the validation of the conflict does the right thing
@@ -726,8 +726,8 @@ cadet_res c2_sat(C2* c2) {
     }
     
     ////// THIS RESTRICTS US TO 2QBF
-    if (! qcnf_is_2QBF(c2->qcnf) && ! qcnf_is_propositional(c2->qcnf)) {
-        V0("Is not 2QBF. Currently not supported.\n");
+    if (c2->qcnf->problem_type > QCNF_2QBF) {
+        V0("Is not in 3QBF. Currently not supported.\n");
         return CADET_RESULT_UNKNOWN;
     }
     //////
@@ -943,7 +943,7 @@ void c2_new_variable(C2* c2, unsigned var_id) {
         skolem_update_satlit(c2->skolem, - (Lit) var_id, - innerlit);
         
         union Dependencies dep;
-        if (!qcnf_is_DQBF(c2->qcnf)) {
+        if (c2->qcnf->problem_type < QCNF_DQBF) {
             dep.dependence_lvl = v->scope_id;
         } else {
             dep.dependencies = int_vector_init();

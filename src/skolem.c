@@ -448,20 +448,56 @@ bool skolem_is_locally_conflicted(Skolem* s, unsigned var_id) {
     return result == SATSOLVER_SATISFIABLE;
 }
 
+bool skolem_antecedent_satisfiable(Skolem* s, Clause* c) {
+    NOT_IMPLEMENTED();
+}
+
+void skolem_propagate_determinicity_for_propositionals_for_occs(Skolem* s, Lit lit) {
+    assert(lit != 0);
+    Var* v = var_vector_get(s->qcnf->vars, lit_to_var(lit));
+    vector* occs = lit > 0 ? &v->pos_occs : &v->neg_occs;
+    for (unsigned i = 0; i < vector_count(occs); i++) {
+        Clause* c = vector_get(occs, i);
+        if (skolem_get_unique_consequence(s, c) == lit_to_var(lit) && ! skolem_clause_satisfied(s, c)) {
+            assert(skolem_has_illegal_dependence(s, c));
+            if (skolem_antecedent_satisfiable(s, c)) {
+                V0("Bahm!");
+                abort();
+            }
+        }
+    }
+}
+
+void skolem_propagate_determinicity_for_propositionals(Skolem* s, unsigned var_id) {
+    assert(var_id != 0);
+    V2("Checking backpropagation var %u\n", var_id);
+    
+    skolem_propagate_determinicity_for_propositionals_for_occs(s, (Lit) var_id);
+    if (skolem_get_constant_value(s, (Lit) var_id) != 0) {
+        NOT_IMPLEMENTED();
+    }
+    skolem_propagate_determinicity_for_propositionals_for_occs(s, - (Lit) var_id);
+}
+
 void skolem_propagate_determinicity(Skolem* s, unsigned var_id) {
     assert(!skolem_is_conflicted(s));
-    V4("Propagating determinicity for var %u\n", var_id);
-    
-    if (skolem_is_deterministic(s, var_id)) {
-        return;
-    }
     if (qcnf_is_universal(s->qcnf, var_id)) {
         abortif(s->mode != SKOLEM_MODE_RECORD_POTENTIAL_CONFLICTS,"Universal ended up in determinicity propagation queue. This should not happen in normal mode.");
         return;
     }
     
+    if (skolem_is_deterministic(s, var_id)) {
+        return;
+    }
+    
     Var* v = var_vector_get(s->qcnf->vars, var_id);
+    if (v->scope_id == 0) {
+        skolem_propagate_determinicity_for_propositionals(s, var_id);
+        return;
+    }
     assert(v->var_id == var_id);
+    
+    V4("Propagating determinicity for var %u\n", var_id);
     
     if (skolem_check_for_local_determinicity(s, v)) {
         V3("Var %u is deterministic.\n", var_id);
@@ -667,7 +703,6 @@ unsigned skolem_global_conflict_check(Skolem* s, unsigned var_id) {
         f_clause_finished(s->f);
     }
     
-    
 #ifdef DEBUG
     skolem_var si = skolem_get_info(s, var_id);
     assert(si.pos_lit != - si.neg_lit);
@@ -754,12 +789,6 @@ void skolem_undo(void* parent, char type, void* obj) {
                 s->deterministic_variables -= 1;
             }
             si->deterministic = (unsigned) suu.sus.val;
-            break;
-            
-        case SKOLEM_OP_UPDATE_INFO_UNIVERSAL:
-            si = skolem_var_vector_get(s->infos, suu.sus.var_id);
-            si->universal = (unsigned) suu.sus.val;
-            LOG_WARNING("Why would someone temporily set a variable to be universal???");
             break;
             
         case SKOLEM_OP_UPDATE_INFO_PURE_POS:

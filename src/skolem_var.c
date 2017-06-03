@@ -226,19 +226,6 @@ void skolem_update_deterministic(Skolem* s, unsigned var_id, unsigned determinis
         sv->deterministic = deterministic;
     }
 }
-void skolem_update_universal(Skolem* s, unsigned var_id, unsigned universal) {
-    assert(universal == 0 || universal == 1);
-    skolem_enlarge_skolem_var_vector(s, var_id);
-    skolem_var* sv = skolem_var_vector_get(s->infos, var_id);
-    if (universal != sv->universal) {
-        V4("Setting universal %d for var %u\n", universal, var_id);
-        union skolem_undo_union suu;
-        suu.sus.var_id = var_id;
-        suu.sus.val = sv->universal;
-        stack_push_op(s->stack, SKOLEM_OP_UPDATE_INFO_UNIVERSAL, suu.ptr);
-        sv->universal = universal;
-    }
-}
 
 void skolem_update_dependencies(Skolem* s, unsigned var_id, union Dependencies deps) {
 #ifdef DEBUG

@@ -178,7 +178,7 @@ bool skolem_has_illegal_dependence(Skolem* s, Clause* c) {
         Lit uc_lit = skolem_get_unique_consequence(s, c);
         for (int i = c->size - 1; i >= 0; i--) {
             if (c->occs[i] != uc_lit) {
-                if (! skolem_may_depend_on(s, lit_to_var(uc_lit), lit_to_var(c->occs[i]))) {
+                if (! skolem_may_depend_on(s, lit_to_var(uc_lit), lit_to_var(c->occs[i])) && ! skolem_lit_satisfied(s, c->occs[i])) {
                     return true;
                 }
             }

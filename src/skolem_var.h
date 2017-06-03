@@ -35,7 +35,6 @@ struct skolem_var {
     unsigned pure_pos : 1;
     unsigned pure_neg : 1;
     unsigned deterministic : 1;
-    unsigned universal : 1;
     union Dependencies dep; // depends on whether we consider a QBF or a DQBF
     
     // permanent portion of skolem_var
@@ -52,7 +51,6 @@ void skolem_update_satlit(Skolem* s, Lit lit, int new_satlit);
 void skolem_update_pure_pos(Skolem*, unsigned var_id, unsigned pos_lit);
 void skolem_update_pure_neg(Skolem*, unsigned var_id, unsigned pos_lit);
 void skolem_update_deterministic(Skolem*, unsigned var_id, unsigned deterministic);
-void skolem_update_universal(Skolem*, unsigned var_id, unsigned deterministic);
 void skolem_update_dependencies(Skolem*, unsigned var_id, union Dependencies deps);
 void skolem_undo_dependencies(Skolem*, void* data);
 

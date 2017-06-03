@@ -726,7 +726,7 @@ cadet_res c2_sat(C2* c2) {
     }
     
     ////// THIS RESTRICTS US TO 2QBF
-    if (c2->qcnf->problem_type > QCNF_2QBF) {
+    if (c2->qcnf->problem_type > QCNF_3QBF) {
         V0("Is not in 3QBF. Currently not supported.\n");
         return CADET_RESULT_UNKNOWN;
     }
@@ -950,10 +950,6 @@ void c2_new_variable(C2* c2, unsigned var_id) {
             int_vector_add(dep.dependencies, (int) v->var_id);
         }
         skolem_update_dependencies(c2->skolem, var_id, dep);
-        
-        if (v->is_universal) {
-            skolem_update_universal(c2->skolem, var_id, 1);
-        }
     }
 }
 

@@ -697,10 +697,7 @@ unsigned skolem_global_conflict_check(Skolem* s, unsigned var_id) {
     f_push(s->f);
     
     if (s->options->functional_synthesis) {
-        for (unsigned i = 0; i < int_vector_count(s->decision_indicator_sat_lits); i++) {
-            f_add(s->f, int_vector_get(s->decision_indicator_sat_lits, i));
-        }
-        f_clause_finished(s->f);
+        f_add_satlit_clause(s->f, s->decision_indicator_sat_lits);
     }
     
 #ifdef DEBUG
@@ -1103,20 +1100,22 @@ void skolem_decision(Skolem* s, Lit decision_lit) {
     // define:  new_val_satlit := (val_satlit || - opposite_satlit)
     int new_val_satlit = f_fresh_var(s->f);
     
-    // first clause: new_val_satlit => (val_satlit || - opposite_satlit)
-    f_add(s->f, - new_val_satlit);
-    f_add(s->f, val_satlit);
-    f_add(s->f, - opposite_satlit);
-    f_clause_finished(s->f);
+    f_add_OR(s->f, new_val_satlit, val_satlit, - opposite_satlit);
     
-    // second and third clause: (val_satlit || - opposite_satlit) => new_val_satlit
-    f_add(s->f, - val_satlit);
-    f_add(s->f, new_val_satlit);
-    f_clause_finished(s->f);
-    
-    f_add(s->f, opposite_satlit);
-    f_add(s->f, new_val_satlit);
-    f_clause_finished(s->f);
+//    // first clause: new_val_satlit => (val_satlit || - opposite_satlit)
+//    f_add(s->f, - new_val_satlit);
+//    f_add(s->f, val_satlit);
+//    f_add(s->f, - opposite_satlit);
+//    f_clause_finished(s->f);
+//    
+//    // second and third clause: (val_satlit || - opposite_satlit) => new_val_satlit
+//    f_add(s->f, - val_satlit);
+//    f_add(s->f, new_val_satlit);
+//    f_clause_finished(s->f);
+//    
+//    f_add(s->f, opposite_satlit);
+//    f_add(s->f, new_val_satlit);
+//    f_clause_finished(s->f);
     
     skolem_update_satlit(s, decision_lit, new_val_satlit);
     
@@ -1134,18 +1133,19 @@ void skolem_decision(Skolem* s, Lit decision_lit) {
         
         int_vector_add(s->decision_indicator_sat_lits, sat_lit_fresh);
 
-        f_add(s->f, sat_lit_fresh);
-        f_add(s->f, - new_val_satlit);
-        f_add(s->f,   val_satlit);
-        f_clause_finished(s->f);
-        
-        f_add(s->f, - sat_lit_fresh);
-        f_add(s->f,   new_val_satlit);
-        f_clause_finished(s->f);
-        
-        f_add(s->f, - sat_lit_fresh);
-        f_add(s->f, - val_satlit);
-        f_clause_finished(s->f);
+        f_add_AND(s->f, sat_lit_fresh, new_val_satlit, - val_satlit);
+//        f_add(s->f, sat_lit_fresh);
+//        f_add(s->f, - new_val_satlit);
+//        f_add(s->f,   val_satlit);
+//        f_clause_finished(s->f);
+//        
+//        f_add(s->f, - sat_lit_fresh);
+//        f_add(s->f,   new_val_satlit);
+//        f_clause_finished(s->f);
+//        
+//        f_add(s->f, - sat_lit_fresh);
+//        f_add(s->f, - val_satlit);
+//        f_clause_finished(s->f);
     }
     
     skolem_check_occs_for_unique_consequences(s,   (Lit) decision_var_id);

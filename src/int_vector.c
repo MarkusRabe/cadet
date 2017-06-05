@@ -47,7 +47,7 @@ void int_vector_free(int_vector* v) {
     free(v);
 }
 
-unsigned int_vector_count(int_vector* v) {
+unsigned int_vector_count(const int_vector* v) {
     return v->count;
 }
 
@@ -56,7 +56,7 @@ void int_vector_reduce_count(int_vector* v, unsigned j) {
     v->count = j;
 }
 
-int int_vector_get(int_vector* v, unsigned i) {
+int int_vector_get(const int_vector* v, unsigned i) {
     assert (i < v->count);
     return v->data[i];
 }

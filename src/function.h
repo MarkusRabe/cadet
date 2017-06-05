@@ -47,14 +47,14 @@ int f_sat(Function*);
 int f_result(Function*); // returns the result of the last SAT call
 int f_value(Function*, int lit); // returns the value of the lit. Must be in SAT state
 
+void f_add_satlit_clause(Function*, const int_vector*);
 //void f_add_clause(Function*, const int_vector*); // does not modify the int_vectorf
 //void f_add_unary_clause(Function*, int, int);
 //void f_add_binary_clause(Function*, int, int);
 //void f_add_ternary_clause(Function*, int, int, int);
 //
-//void f_add_AND();
-//void f_add_OR();
-
+void f_add_AND(Function*, int and_lit, int input1, int input2);
+void f_add_OR(Function*, int and_lit, int input1, int input2);
 
 
 

@@ -20,12 +20,12 @@ typedef struct {
 
 int_vector* int_vector_init();
 void int_vector_init_struct(int_vector*);
-unsigned int_vector_count(int_vector* v);
+unsigned int_vector_count(const int_vector* v);
 void int_vector_reduce_count(int_vector* v, unsigned j);
 void int_vector_add(int_vector* v, int value);
 void int_vector_add_sorted(int_vector* v, int value);
 void int_vector_set(int_vector* v, unsigned i, int value);
-int int_vector_get(int_vector* v, unsigned i);
+int int_vector_get(const int_vector* v, unsigned i);
 int int_vector_pop(int_vector* v);
 unsigned int_vector_find(int_vector* v, int value);
 unsigned int_vector_find_sorted(int_vector* v, int value);

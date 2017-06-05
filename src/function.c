@@ -106,27 +106,28 @@ int f_value(Function* f, int lit){
     return satsolver_deref(f->sat, lit);
 }
 
+void f_add_satlit_clause(Function* f, const int_vector* clause) {
+    for (unsigned i = 0; i < int_vector_count(clause); i++) {
+        f_add(f, int_vector_get(clause, i));
+    }
+    f_clause_finished(f);
+}
 
-//void f_add_clause(Function* f, const int_vector* lits) {
-//    NOT_IMPLEMENTED();
-//}
-//
-//void f_add_binary_clause(Function* f, int l1, int l2) {
-//    NOT_IMPLEMENTED();
-//}
-//
-//void f_add_ternary_clause(Function* f, int l1, int l2, int l3) {
-//    NOT_IMPLEMENTED();
-//}
-//
-//void f_add_AND_internal(Function* f, int res, int num_inputs, ...) {
-//    NOT_IMPLEMENTED();
-//}
-//
-//void f_add_AND(Function* f, int res, int input1, int input2) {
-//    f_add_AND_internal(f, res, 2, input1, input2);
-//}
-//
-//void f_add_OR(Function* f, int res, int input1, int input2) {
-//    f_add_AND(f, -res, -input1, -input2); // correct ??
-//}
+void f_add_AND(Function* f, int res, int input1, int input2) {
+    f_add(f, res);
+    f_add(f, - input1);
+    f_add(f, - input2);
+    f_clause_finished(f);
+    
+    f_add(f, - res);
+    f_add(f,   input1);
+    f_clause_finished(f);
+    
+    f_add(f, - res);
+    f_add(f,   input2);
+    f_clause_finished(f);
+}
+
+void f_add_OR(Function* f, int res, int input1, int input2) {
+    f_add_AND(f, - res, - input1, - input2);
+}

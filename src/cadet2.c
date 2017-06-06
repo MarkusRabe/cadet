@@ -710,7 +710,7 @@ cadet_res c2_sat(C2* c2) {
     }
     
     ////// THIS RESTRICTS US TO 3QBF
-    if (c2->qcnf->problem_type > QCNF_2QBF) {
+    if (c2->qcnf->problem_type > QCNF_3QBF) {
         V0("Is not in 3QBF. Currently not supported.\n");
         return CADET_RESULT_UNKNOWN;
     }
@@ -856,7 +856,7 @@ cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
             if (log_qdimacs_compliant) {
                 printf("s cnf 0\n");
             }
-            if (c2->options->certify_internally_UNSAT) {
+            if (c2->options->certify_internally_UNSAT && qcnf->problem_type <= QCNF_2QBF) {
                 switch (c2->state) {
                     case C2_SKOLEM_CONFLICT:
                         c2_print_qdimacs_certificate(c2, c2->skolem, skolem_get_value_for_conflict_analysis);

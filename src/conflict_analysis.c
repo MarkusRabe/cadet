@@ -42,7 +42,7 @@ void conflict_analysis_schedule_causing_vars_in_work_queue(conflict_analysis* ca
         assert(ca->domain_get_decision_lvl(ca->domain, lit_to_var(consequence)) >= ca->domain_get_decision_lvl(ca->domain, lit_to_var(l)) || ca->domain_get_value(ca->domain, consequence) == 1);
         
         if (! ca->domain_is_legal_dependence(ca->c2->skolem, lit_to_var(consequence), lit_to_var(l))) {
-            assert(ca->domain_get_value(ca->domain, l) == -1);
+//            assert(ca->domain_get_value(ca->domain, l) == -1);
             int_vector_add(ca->conflicting_assignment, - l);
             continue;
         }

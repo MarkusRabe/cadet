@@ -449,10 +449,17 @@ bool skolem_is_locally_conflicted(Skolem* s, unsigned var_id) {
 }
 
 bool skolem_antecedent_satisfiable(Skolem* s, Clause* c) {
-    NOT_IMPLEMENTED();
+    Lit uc = skolem_get_unique_consequence(s, c);
+    assert(uc != 0);
+    for (unsigned i = 0; i < c->size; i++) {
+        if (lit_to_var(c->occs[i]) != uc) {
+            f_assume(s->f, - skolem_get_satlit(s, c->occs[i]));
+        }
+    }
+    return f_sat(s->f) == SATSOLVER_SATISFIABLE;
 }
 
-void skolem_propagate_determinicity_for_propositionals_for_occs(Skolem* s, Lit lit) {
+Clause* skolem_propagate_determinicity_for_propositionals_for_occs(Skolem* s, Lit lit) {
     assert(lit != 0);
     Var* v = var_vector_get(s->qcnf->vars, lit_to_var(lit));
     vector* occs = lit > 0 ? &v->pos_occs : &v->neg_occs;
@@ -461,22 +468,35 @@ void skolem_propagate_determinicity_for_propositionals_for_occs(Skolem* s, Lit l
         if (skolem_get_unique_consequence(s, c) == lit_to_var(lit) && ! skolem_clause_satisfied(s, c)) {
             assert(skolem_has_illegal_dependence(s, c));
             if (skolem_antecedent_satisfiable(s, c)) {
-                V0("Bahm!");
-                abort();
+                return c;
             }
         }
     }
+    return NULL;
 }
 
 void skolem_propagate_determinicity_for_propositionals(Skolem* s, unsigned var_id) {
     assert(var_id != 0);
-    V2("Checking backpropagation var %u\n", var_id);
+    V3("Checking backpropagation for var %u\n", var_id);
+    assert(skolem_get_constant_value(s, (Lit) var_id) == 0);
     
-    skolem_propagate_determinicity_for_propositionals_for_occs(s, (Lit) var_id);
-    if (skolem_get_constant_value(s, (Lit) var_id) != 0) {
-        NOT_IMPLEMENTED();
+    Clause* reason_pos = skolem_propagate_determinicity_for_propositionals_for_occs(s, (Lit) var_id);
+    Clause* reason_neg = skolem_propagate_determinicity_for_propositionals_for_occs(s, - (Lit) var_id);
+    
+    if (reason_pos && reason_neg) {
+        LOG_ERROR("Backwards propagation conflict. Not implemented.");
+        abort();
     }
-    skolem_propagate_determinicity_for_propositionals_for_occs(s, - (Lit) var_id);
+    if (reason_pos || reason_neg) {
+        int val = 0;
+        if (reason_pos) {
+            val = (Lit) var_id;
+        } else{
+            val = - (Lit) var_id;
+        }
+        V1("Backpropagation of val %u\n", val);
+        skolem_assign_constant_value(s, val, s->empty_dependencies, (Clause*) ((uintptr_t) reason_pos | (uintptr_t) reason_neg));
+    }
 }
 
 void skolem_propagate_determinicity(Skolem* s, unsigned var_id) {
@@ -491,11 +511,11 @@ void skolem_propagate_determinicity(Skolem* s, unsigned var_id) {
     }
     
     Var* v = var_vector_get(s->qcnf->vars, var_id);
+    assert(v->var_id == var_id);
     if (v->scope_id == 0) {
         skolem_propagate_determinicity_for_propositionals(s, var_id);
         return;
     }
-    assert(v->var_id == var_id);
     
     V4("Propagating determinicity for var %u\n", var_id);
     
@@ -965,7 +985,7 @@ void skolem_assign_constant_value(Skolem* s, Lit lit, union Dependencies propaga
         vector* occs = qcnf_get_occs_of_lit(s->qcnf, -lit);
         for (unsigned i = 0; i < vector_count(occs); i++) {
             Clause* c = vector_get(occs, i);
-            if (skolem_get_unique_consequence(s, c) == -lit && ! skolem_clause_satisfied(s, c)) {
+            if (skolem_get_unique_consequence(s, c) == -lit && ! skolem_clause_satisfied(s, c) && ! skolem_has_illegal_dependence(s, c)) {
                 locally_conflicted = true;
                 break;
             }
@@ -1000,7 +1020,7 @@ void skolem_assign_constant_value(Skolem* s, Lit lit, union Dependencies propaga
      *
      */
     if (locally_conflicted) {
-        skolem_global_conflict_check(s,var_id);
+        skolem_global_conflict_check(s, var_id);
     }
 }
 

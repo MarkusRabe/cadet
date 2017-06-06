@@ -55,7 +55,7 @@ bool log_trace_for_profiling;
 #define V3(message, ...) if(debug_verbosity >= VERBOSITY_HIGH){ LOG_PRINTF("    "message, ## __VA_ARGS__); }
 #define V4(message, ...) if(debug_verbosity >= VERBOSITY_ALL){ LOG_PRINTF("      "message, ## __VA_ARGS__); }
 
-#define NOT_IMPLEMENTED() LOG_COLOR(KCYN, "Not yet implemented, abort\n"); abort();
+#define NOT_IMPLEMENTED() LOG_ERROR("Not yet implemented"); abort();
 
 #define LOG_COLOR(color,message, ...) if(log_colors){V0("%s", color);}V0(message, ## __VA_ARGS__);if(log_colors){V0(KNRM);}
 #define LOG_ERROR(message, ...) LOG_COLOR(KRED, "Error: "); fprintf(stdout, message "\n", ## __VA_ARGS__);

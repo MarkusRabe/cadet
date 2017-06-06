@@ -709,6 +709,18 @@ cadet_res c2_sat(C2* c2) {
         return c2->result;
     }
     
+    ////// THIS RESTRICTS US TO 3QBF
+    if (c2->qcnf->problem_type > QCNF_3QBF) {
+        V0("Is not in 3QBF. Currently not supported.\n");
+        return CADET_RESULT_UNKNOWN;
+    }
+    //////
+    
+    if (c2->qcnf->problem_type >= QCNF_3QBF) {
+        LOG_WARNING("CEGAR currently not compatible with 3QBF and beyond. Deactivating CEGAR.");
+        c2->options->cegar = false;
+    }
+    
     if (c2->qcnf->empty_clause != NULL) {
         V1("CNF contains an empty clause (clause id %u).\n", c2->qcnf->empty_clause->clause_id);
         c2->result = CADET_RESULT_UNSAT;
@@ -723,13 +735,6 @@ cadet_res c2_sat(C2* c2) {
         }
         return c2->result;
     }
-    
-    ////// THIS RESTRICTS US TO 2QBF
-    if (c2->qcnf->problem_type > QCNF_2QBF) {
-        V0("Is not in 3QBF. Currently not supported.\n");
-        return CADET_RESULT_UNKNOWN;
-    }
-    //////
     
     c2_initial_propagation(c2);
     

@@ -56,6 +56,7 @@ typedef struct {
     bool delete_clauses_on_restarts;
     bool propagate_pure_literals;
     bool enhanced_pure_literals;
+    bool conflict_cost_analysis;
     
     // Output options
     bool print_qdimacs;

@@ -122,14 +122,18 @@ Clause* conflict_analysis_find_reason_for_value(conflict_analysis* ca, Lit lit, 
             continue;
         }
         if (is_reason_for_lit(ca, c, lit)) {
-            unsigned cost = determine_cost(ca, c);
-            if (candidate == NULL || !candidate->consistent_with_originals || (cost < candidate_cost && c->consistent_with_originals)) { // TODO: prefer clauses that have only legal dependencies 
-                candidate = c;
-                candidate_cost = cost;
-                depends_on_illegals_candidate = ! conflict_analysis_depends_only_on_legals(ca, c, lit);
-            }
-            if (cost == 0) {
-                break; // unlikely
+            if (ca->c2->options->conflict_cost_analysis) {
+                unsigned cost = determine_cost(ca, c);
+                if (candidate == NULL || !candidate->consistent_with_originals || (cost < candidate_cost && c->consistent_with_originals)) { // TODO: prefer clauses that have only legal dependencies
+                    candidate = c;
+                    candidate_cost = cost;
+                    depends_on_illegals_candidate = ! conflict_analysis_depends_only_on_legals(ca, c, lit);
+                }
+                if (cost == 0) {
+                    break; // unlikely
+                }
+            } else {
+                return c;
             }
         }
     }

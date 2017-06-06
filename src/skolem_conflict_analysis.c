@@ -34,12 +34,48 @@ int skolem_get_value_for_conflict_analysis(void* domain, Lit lit) {
     }
 }
 
-bool skolem_is_relevant_clause(void* domain, Clause* c, Lit lit) {
+bool skolem_conflict_analysis_antecedent_satisfied(Skolem* s, Clause* c, Lit lit) {
+    assert(s->conflict_var_id == lit_to_var(lit) || skolem_get_value_for_conflict_analysis(s, lit) == 1);
+    assert(skolem_get_unique_consequence(s, c) == lit);
+    assert(qcnf_contains_literal(c, lit));
+    for (unsigned i = 0; i < c->size; i++) {
+        Lit other = c->occs[i];
+        assert(other != - lit);
+        if (other == lit) {continue;}
+        if (skolem_get_value_for_conflict_analysis(s, - other) != 1) { // all others must be surely false, if one of them isn't then the clause cannot be used as reason. This allows us to use conflicted variables as reasons.
+            return false;
+        }
+    }
+    return true;
+}
+
+Clause* skolem_get_reason_for_conflict_analysis(void* domain, Lit lit) {
     Skolem* s = (Skolem*) domain;
+    assert(lit != 0);
     unsigned var_id = lit_to_var(lit);
+    
     if (skolem_get_constant_value(domain, lit) == 1) { // if the constant has the opposite value, the reason_for_constant cannot be it.
-        return skolem_get_reason_for_constant(domain, var_id) == c->clause_id;
+        
+        unsigned clause_id = skolem_get_reason_for_constant(domain, var_id);
+        if (clause_id != INT_MAX) {
+            Clause* c = vector_get(s->qcnf->clauses, clause_id);
+            assert(c->clause_id == clause_id);
+            return c;
+        } else {
+            return NULL;
+        }
+        
     } else {
-        return lit_to_var(skolem_get_unique_consequence(s, c)) == var_id;
+        
+        Var* v = var_vector_get(s->qcnf->vars, var_id);
+        vector* occs = lit > 0 ? &v->pos_occs : &v->neg_occs;
+        
+        for (unsigned i = 0; i < vector_count(occs); i++) {
+            Clause* c = vector_get(occs, i);
+            if (skolem_get_unique_consequence(s, c) == lit && skolem_conflict_analysis_antecedent_satisfied(s, c, lit)) {
+                return c;
+            }
+        }
+        return NULL; // no reason found
     }
 }

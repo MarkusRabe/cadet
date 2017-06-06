@@ -48,7 +48,6 @@ Options* default_options() {
     o->delete_clauses_on_restarts = false;
     o->propagate_pure_literals = true;
     o->enhanced_pure_literals = false;
-    o->conflict_cost_analysis = true;
     
     // Printing
     o->print_detailed_miniscoping_stats = false;

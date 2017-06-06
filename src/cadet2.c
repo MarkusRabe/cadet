@@ -449,7 +449,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                                                    pa->conflicted_clause,
                                                    pa,
                                                    partial_assignment_get_value_for_conflict_analysis,
-                                                   partial_assignment_is_relevant_clause,
+                                                   partial_assignment_get_reason_for_conflict_analysis,
                                                    partial_assignment_is_legal_dependence,
                                                    partial_assignment_get_decision_lvl);
             conflicted_var_id = 0;
@@ -464,7 +464,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                                                        c2->skolem->conflicted_clause,
                                                        c2->skolem,
                                                        skolem_get_value_for_conflict_analysis,
-                                                       skolem_is_relevant_clause,
+                                                       skolem_get_reason_for_conflict_analysis,
                                                        skolem_is_legal_dependence_for_conflict_analysis,
                                                        skolem_get_decision_lvl_for_conflict_analysis);
                 conflicted_var_id = c2->skolem->conflict_var_id;

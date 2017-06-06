@@ -240,9 +240,13 @@ int partial_assignment_get_value_for_conflict_analysis(void* domain, Lit lit) {
     return lit > 0 ? x : -x;
 }
 
-bool partial_assignment_is_relevant_clause(void* domain, Clause* c, Lit lit) {
+Clause* partial_assignment_get_reason_for_conflict_analysis(void* domain, Lit lit) {
     PartialAssignment* pa = (PartialAssignment*) domain;
-    return vector_count(pa->causes) > lit_to_var(lit) && c == vector_get(pa->causes, lit_to_var(lit));
+    if (vector_count(pa->causes) > lit_to_var(lit)) {
+        return vector_get(pa->causes, lit_to_var(lit));
+    } else {
+        return NULL;
+    }
 }
 
 Clause* partial_assignment_get_relevant_clause(void* domain, unsigned var_id) {

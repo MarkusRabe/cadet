@@ -18,7 +18,7 @@ typedef struct {
     int_vector* conflicting_assignment;
     void* domain;
     int (*domain_get_value)(void* domain, Lit lit);
-    bool (*domain_is_relevant_clause)(void* domain, Clause* c, Lit lit);
+    Clause* (*domain_get_reason)(void* domain, Lit lit);
     bool (*domain_is_legal_dependence)(void* domain, unsigned var_id, unsigned depending_on);
     unsigned (*domain_get_decision_lvl)(void* domain, unsigned var_id);
     
@@ -82,20 +82,6 @@ bool conflict_analysis_depends_only_on_legals(conflict_analysis* ca, Clause* c, 
     return true;
 }
 
-bool is_reason_for_lit(conflict_analysis* ca, Clause* c, Lit lit) {
-    assert(ca->c2->skolem->conflict_var_id == lit_to_var(lit) || ca->domain_get_value(ca->domain, lit) == 1);
-    assert(qcnf_contains_literal(c, lit));
-    for (unsigned i = 0; i < c->size; i++) {
-        Lit other = c->occs[i];
-        assert(other != - lit);
-        if (other == lit) {continue;}
-        if (ca->domain_get_value(ca->domain, - other) != 1) { // all others must be surely false, if one of them isn't then the clause cannot be used as reason. This allows us to use conflicted variables as reasons.
-            return false;
-        }
-    }
-    return true;
-}
-
 unsigned determine_cost(conflict_analysis* ca, Clause* c) {
     unsigned cost = 0;
     for (unsigned i = 0; i < c->size; i++) {
@@ -106,40 +92,28 @@ unsigned determine_cost(conflict_analysis* ca, Clause* c) {
     return cost;
 }
 
-Clause* conflict_analysis_find_reason_for_value(conflict_analysis* ca, Lit lit, bool* depends_on_illegals) {
-    assert(lit != 0);
-    Var* v = var_vector_get(ca->c2->qcnf->vars, lit_to_var(lit));
-    vector* occs = lit > 0 ? &v->pos_occs : &v->neg_occs;
-    
-    Clause* candidate = NULL;
-    unsigned candidate_cost = UINT_MAX;
-    bool depends_on_illegals_candidate = false;
-    for (unsigned i = 0; i < vector_count(occs); i++) {
-        Clause* c = vector_get(occs, i);
-        
-        // it is questionable whether this optimization actually helps as it requires us to keep another data structure in cache
-        if (!ca->domain_is_relevant_clause(ca->domain, c, lit)) {
-            continue;
-        }
-        if (is_reason_for_lit(ca, c, lit)) {
-            if (ca->c2->options->conflict_cost_analysis) {
-                unsigned cost = determine_cost(ca, c);
-                if (candidate == NULL || !candidate->consistent_with_originals || (cost < candidate_cost && c->consistent_with_originals)) { // TODO: prefer clauses that have only legal dependencies
-                    candidate = c;
-                    candidate_cost = cost;
-                    depends_on_illegals_candidate = ! conflict_analysis_depends_only_on_legals(ca, c, lit);
-                }
-                if (cost == 0) {
-                    break; // unlikely
-                }
-            } else {
-                return c;
-            }
-        }
-    }
-    *depends_on_illegals = depends_on_illegals_candidate;
-    return candidate;
-}
+//Clause* conflict_analysis_find_reason_for_value(conflict_analysis* ca, Lit lit, bool* depends_on_illegals) {
+//    assert(lit != 0);
+//    Var* v = var_vector_get(ca->c2->qcnf->vars, lit_to_var(lit));
+//    vector* occs = lit > 0 ? &v->pos_occs : &v->neg_occs;
+//    
+//    Clause* candidate = NULL;
+//    unsigned candidate_cost = UINT_MAX;
+//    bool depends_on_illegals_candidate = false;
+//    for (unsigned i = 0; i < vector_count(occs); i++) {
+//        Clause* c = vector_get(occs, i);
+//        
+//        // it is questionable whether this optimization actually helps as it requires us to keep another data structure in cache
+//        if (!ca->domain_is_relevant_clause(ca->domain, c, lit)) {
+//            continue;
+//        }
+//        if (is_reason_for_lit(ca, c, lit)) {
+//            return c;
+//        }
+//    }
+//    *depends_on_illegals = depends_on_illegals_candidate;
+//    return candidate;
+//}
 
 void conflict_analysis_follow_implication_graph(conflict_analysis* ca) {
     
@@ -157,8 +131,7 @@ void conflict_analysis_follow_implication_graph(conflict_analysis* ca) {
         if (v->is_universal || d_lvl < ca->conflict_decision_lvl || is_value_decision) {
             int_vector_add(ca->conflicting_assignment, lit);
         } else {
-            bool depends_on_illegals = false;
-            Clause* reason = conflict_analysis_find_reason_for_value(ca, lit, &depends_on_illegals);
+            Clause* reason = ca->domain_get_reason(ca->domain, lit); // conflict_analysis_find_reason_for_value(ca, lit, &depends_on_illegals);
             if (reason == NULL) {
                 abortif(ca->c2->state == C2_SKOLEM_CONFLICT && ! c2_is_decision_var(ca->c2, v->var_id), "No reason for lit %d found in conflict analysis.\n", lit);
 //                assert(ca->c2->state == C2_EXAMPLES_CONFLICT && c2_is_decision_var(ca->c2, v->var_id)); // this means it was a decision variable for the example domain
@@ -237,7 +210,7 @@ int_vector* analyze_assignment_conflict(C2* c2,
                                         Clause* conflicted_clause,
                                         void* domain,
                                         int  (*domain_get_value)(void* domain, Lit lit),
-                                        bool (*domain_is_relevant_clause)(void* domain, Clause* c, Lit lit),
+                                        Clause* (*domain_get_reason)(void* domain, Lit lit),
                                         bool (*domain_is_legal_dependence)(void* domain, unsigned var_id, unsigned depending_on),
                                         unsigned (*domain_get_decision_lvl)(void* domain, unsigned var_id)) {
     V3("Computing conflict clause. Conflicted var: %u. Conflicted clause:", conflicted_var);
@@ -265,7 +238,7 @@ int_vector* analyze_assignment_conflict(C2* c2,
     
     // Function pointers
     ca->domain_get_value = domain_get_value;
-    ca->domain_is_relevant_clause = domain_is_relevant_clause;
+    ca->domain_get_reason = domain_get_reason;
     ca->domain_is_legal_dependence = domain_is_legal_dependence;
     ca->domain_get_decision_lvl = domain_get_decision_lvl;
     

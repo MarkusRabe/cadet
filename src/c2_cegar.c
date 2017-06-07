@@ -87,7 +87,7 @@ void cegar_update_interface(Cegar* cegar) {
     int_vector_sort(cegar->interface_vars, compare_integers_natural_order);
     int_vector_remove_duplicates(cegar->interface_vars);
     
-    if (debug_verbosity >= VERBOSITY_LOW) {
+    if (debug_verbosity >= VERBOSITY_MEDIUM) {
         V1("Interface vars:  ");
         int_vector_print(cegar->interface_vars);
         V1("\n");

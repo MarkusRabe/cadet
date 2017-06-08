@@ -101,7 +101,6 @@ char* c2_literal_color(C2* c2, Clause* c, Lit lit) {
 
 // WARNING: Calling this function may change the state of the sat solver!
 void c2_print_universals_assignment(C2* c2) {
-    V1("Assignment to the universals: ");
     for (unsigned i = 0; i < var_vector_count(c2->qcnf->vars); i++) {
         Var* v = var_vector_get(c2->qcnf->vars, i);
         if (v->var_id != 0 && v->is_universal) {
@@ -114,10 +113,10 @@ void c2_print_universals_assignment(C2* c2) {
                 NOT_IMPLEMENTED();
             }
             assert(val >= -1 && val <= 1);
-            V1("%d ", val * (int) v->var_id);
+            printf("%d ", val * (int) v->var_id);
         }
     }
-    V1("\n");
+    printf("\n");
 }
 
 void c2_print_debug_info(C2* c2) {

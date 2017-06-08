@@ -146,6 +146,13 @@ void skolem_recover_from_conflict(Skolem* s) {
             s->conflict_var_id = 0;
             s->conflicted_clause = NULL;
             break;
+        case SKOLEM_STATE_BACKPROPAGATION_CONFLICT:
+            assert(s->conflict_var_id != 0);
+            assert(s->conflicted_clause != NULL);
+            s->state = SKOLEM_STATE_READY;
+            s->conflict_var_id = 0;
+            s->conflicted_clause = NULL;
+            break;
         default:
             break;
     }
@@ -451,6 +458,7 @@ bool skolem_is_locally_conflicted(Skolem* s, unsigned var_id) {
 bool skolem_antecedent_satisfiable(Skolem* s, Clause* c) {
     Lit uc = skolem_get_unique_consequence(s, c);
     assert(uc != 0);
+    f_push(s->f);
     for (unsigned i = 0; i < c->size; i++) {
         if (lit_to_var(c->occs[i]) != uc) {
             f_assume(s->f, - skolem_get_satlit(s, c->occs[i]));
@@ -465,7 +473,7 @@ Clause* skolem_propagate_determinicity_for_propositionals_for_occs(Skolem* s, Li
     vector* occs = lit > 0 ? &v->pos_occs : &v->neg_occs;
     for (unsigned i = 0; i < vector_count(occs); i++) {
         Clause* c = vector_get(occs, i);
-        if (skolem_get_unique_consequence(s, c) == lit_to_var(lit) && ! skolem_clause_satisfied(s, c)) {
+        if (skolem_get_unique_consequence(s, c) == lit && ! skolem_clause_satisfied(s, c)) {
             assert(skolem_has_illegal_dependence(s, c));
             if (skolem_antecedent_satisfiable(s, c)) {
                 return c;
@@ -484,17 +492,22 @@ void skolem_propagate_determinicity_for_propositionals(Skolem* s, unsigned var_i
     Clause* reason_neg = skolem_propagate_determinicity_for_propositionals_for_occs(s, - (Lit) var_id);
     
     if (reason_pos && reason_neg) {
-        LOG_ERROR("Backwards propagation conflict. Not implemented.");
-        abort();
-    }
-    if (reason_pos || reason_neg) {
+        V3("Backpropagation conflict\n");
+        skolem_bump_conflict_potential(s, var_id);
+        abortif(s->conflict_var_id != 0, "Conflicted var should not be set here.");
+        s->conflict_var_id = var_id;
+        abortif(s->conflicted_clause != NULL, "Conflicted clause should not be set here.");
+        s->conflicted_clause = reason_neg; // the clause that corresponds to the assignment currently in the SAT solver.
+        abortif(s->state != SKOLEM_STATE_READY, "Skolem domain should be in ready state.");
+        s->state = SKOLEM_STATE_BACKPROPAGATION_CONFLICT;
+    } else if (reason_pos || reason_neg) {
         int val = 0;
         if (reason_pos) {
             val = (Lit) var_id;
         } else{
             val = - (Lit) var_id;
         }
-        V1("Backpropagation of val %u\n", val);
+        V1("Backpropagation of val %d\n", val);
         skolem_assign_constant_value(s, val, s->empty_dependencies, (Clause*) ((uintptr_t) reason_pos | (uintptr_t) reason_neg));
     }
 }
@@ -744,15 +757,11 @@ unsigned skolem_global_conflict_check(Skolem* s, unsigned var_id) {
     
     assert(s->conflict_var_id == 0);
     if (result == SATSOLVER_SATISFIABLE) {
-        V3("Conflict!\n");
-        
         double time_stamp_end = get_seconds();
         statistic_add_value(s->statistics.global_conflict_checks_sat, time_stamp_end - time_stamp_start);
-        
+        V3("Conflict!\n");
         skolem_bump_conflict_potential(s, var_id);
-        
         s->conflict_var_id = var_id;
-        
         abortif(s->conflicted_clause != NULL, "Conflicted clause should not be set here.");
         s->state = SKOLEM_STATE_SKOLEM_CONFLICT;
     } else {

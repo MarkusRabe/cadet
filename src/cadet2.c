@@ -485,7 +485,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                 
                 // Update Examples database
                 PartialAssignment* new_example = NULL;
-                if (c2->skolem->state == SKOLEM_STATE_SKOLEM_CONFLICT) {
+                if (c2->skolem->state == SKOLEM_STATE_SKOLEM_CONFLICT || c2->skolem->state == SKOLEM_STATE_BACKPROPAGATION_CONFLICT) {
                     new_example = examples_add_assignment_from_skolem(c2->examples, c2->skolem);
                     if (new_example && partial_assignment_is_conflicted(new_example)) {
                         assert(c2->result == CADET_RESULT_UNKNOWN);
@@ -496,7 +496,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                 }
                 
                 // Update CEGAR abstraction
-                if (c2->options->cegar && c2->skolem->state == SKOLEM_STATE_SKOLEM_CONFLICT) {
+                if (c2->options->cegar && (c2->skolem->state == SKOLEM_STATE_SKOLEM_CONFLICT || c2->skolem->state == SKOLEM_STATE_BACKPROPAGATION_CONFLICT)) {
                     sat_res res = SATSOLVER_SATISFIABLE;
                     for (unsigned i = 0; i < 100; i++) {
                         switch (cegar_build_abstraction_for_assignment(c2)) {
@@ -531,6 +531,8 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                         continue; // skip usual conflict analysis; continue with propagation
                     }
                 }
+                
+                c2_print_universals_assignment(c2); // DEBUG
                 
                 skolem_recover_from_conflict(c2->skolem);
 
@@ -598,10 +600,6 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
 
                     V1("Functional synthesis detected a cube of length %u that is over dlvl0 only. We exclude it from future conflict checks.\n", int_vector_count(conflict));
                     continue;
-                }
-                
-                if (debug_verbosity >= VERBOSITY_LOW) {
-                    c2_print_universals_assignment(c2);
                 }
                 
                 assert(c2->result == CADET_RESULT_UNKNOWN);

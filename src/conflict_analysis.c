@@ -49,8 +49,8 @@ void conflict_analysis_schedule_causing_vars_in_work_queue(conflict_analysis* ca
         
         assert(ca->c2->state != C2_SKOLEM_CONFLICT || skolem_get_unique_consequence((Skolem*) ca->domain, reason) == consequence || skolem_get_constant_value(ca->c2->skolem, consequence) == 1);
         
-        assert(ca->domain_get_value(ca->domain, l) == -1);
-        assert(ca->domain_get_value(ca->domain, -l) == 1);
+//        assert(ca->domain_get_value(ca->domain, l) == -1 || skolem_compare_dependencies(s, skolem_get_dependencies(s, lit_to_var(consequence)), skolem_get_dependencies(s, lit_to_var(l))) == DEPS_SMALLER );
+//        assert(ca->domain_get_value(ca->domain, -l) == 1 || skolem_compare_dependencies(s, skolem_get_dependencies(s, lit_to_var(consequence)), skolem_get_dependencies(s, lit_to_var(l))) == DEPS_SMALLER);
         
         // activity heuristics
         if (!set_contains(ca->queue->s, (void*) (int64_t) - l)) {
@@ -120,7 +120,7 @@ void conflict_analysis_follow_implication_graph(conflict_analysis* ca) {
     while (worklist_count(ca->queue) > 0) {
         Lit lit = (Lit) worklist_pop(ca->queue);
 
-        abortif(ca->c2->examples->state != EXAMPLES_STATE_INCONSISTENT_DECISION_CONFLICT && ca->domain_get_value(ca->domain, lit) != 1, "Variable to track in conflict analysis has no value.");
+        abortif(ca->c2->examples->state != EXAMPLES_STATE_INCONSISTENT_DECISION_CONFLICT && ca->c2->skolem->state != SKOLEM_STATE_BACKPROPAGATION_CONFLICT && ca->domain_get_value(ca->domain, lit) != 1, "Variable to track in conflict analysis has no value.");
         
         Var* v = var_vector_get(ca->c2->qcnf->vars, lit_to_var(lit));
         unsigned d_lvl = ca->domain_get_decision_lvl(ca->domain, lit_to_var(lit));
@@ -133,7 +133,9 @@ void conflict_analysis_follow_implication_graph(conflict_analysis* ca) {
         } else {
             Clause* reason = ca->domain_get_reason(ca->domain, lit); // conflict_analysis_find_reason_for_value(ca, lit, &depends_on_illegals);
             if (reason == NULL) {
-                abortif(ca->c2->state == C2_SKOLEM_CONFLICT && ! c2_is_decision_var(ca->c2, v->var_id), "No reason for lit %d found in conflict analysis.\n", lit);
+                abortif(ca->c2->state == C2_SKOLEM_CONFLICT
+                        && ! ca->c2->skolem->state == SKOLEM_STATE_BACKPROPAGATION_CONFLICT
+                        && ! c2_is_decision_var(ca->c2, v->var_id), "No reason for lit %d found in conflict analysis.\n", lit);
 //                assert(ca->c2->state == C2_EXAMPLES_CONFLICT && c2_is_decision_var(ca->c2, v->var_id)); // this means it was a decision variable for the example domain
                 int_vector_add(ca->conflicting_assignment, lit); // must be decision variable (and conflict caused by this decision)
             } else if (!reason->consistent_with_originals) { // decision clause!
@@ -213,9 +215,12 @@ int_vector* analyze_assignment_conflict(C2* c2,
                                         Clause* (*domain_get_reason)(void* domain, Lit lit),
                                         bool (*domain_is_legal_dependence)(void* domain, unsigned var_id, unsigned depending_on),
                                         unsigned (*domain_get_decision_lvl)(void* domain, unsigned var_id)) {
-    V3("Computing conflict clause. Conflicted var: %u. Conflicted clause:", conflicted_var);
+    V3("Computing conflict clause. Conflicted var: %u. Conflicted clause: ", conflicted_var);
     if (conflicted_clause) {
-        V3("%u\n", conflicted_clause->clause_id);
+        if (debug_verbosity >= VERBOSITY_HIGH) {
+            qcnf_print_clause(conflicted_clause, stdout);
+            V3(" with clause id %u\n", conflicted_clause->clause_id);
+        }
     } else {
         V3("NULL\n");
     }

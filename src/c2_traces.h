@@ -23,8 +23,7 @@ void c2_log_clause(C2*, Clause*);
 
 void c2_trace_for_profiling(C2*);
 
-
-void c2_print_universals_assignment(C2* c2); // WARNING: Calling this function may change the state of the sat solver!
 void c2_print_debug_info(C2* c2);
+void c2_print_universals_assignment(C2* c2);
 
 #endif /* cadet2_outputs_h */

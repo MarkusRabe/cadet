@@ -12,6 +12,7 @@
 #include "aiger_utils.h"
 #include "log.h"
 #include "satsolver.h"
+#include "c2_traces.h"
 
 #include <string.h>
 

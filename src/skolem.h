@@ -56,6 +56,10 @@ struct Skolem_Statistics {
     size_t local_conflict_checks;
     size_t global_conflict_checks;
     
+    size_t backpropagation_sat_checks;
+    size_t backpropagations;
+    size_t backpropagation_conflicts;
+
     size_t explicit_propagations;
     size_t explicit_propagation_conflicts;
     

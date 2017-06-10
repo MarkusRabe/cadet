@@ -293,12 +293,27 @@ Var* c2_pick_most_active_notdeterministic_variable(C2* c2) {
             assert(!v->is_universal);
             if (v->var_id != 0) {
                 assert(v->var_id == i);
-                float v_activity = c2_get_activity(c2, v->var_id);
-                assert(v_activity > -0.001);
-                if (decision_var_activity < v_activity) {
-                    decision_var_activity = v_activity;
-                    decision_var = v;
+                
+                if (c2->options->decisions_consistent_with_quantification_hierarchy) {
+                    assert(c2->skolem->qcnf->problem_type != QCNF_DQBF);
+                    float v_activity = c2_get_activity(c2, v->var_id);
+                    assert(v_activity > -0.001);
+                    if (decision_var == NULL
+                        || v->scope_id < decision_var->scope_id
+                        || (v->scope_id == decision_var->scope_id && decision_var_activity < v_activity)) {
+                        decision_var_activity = v_activity;
+                        decision_var = v;
+                    }
+                } else {
+                    float v_activity = c2_get_activity(c2, v->var_id);
+                    assert(v_activity > -0.001);
+                    if (decision_var_activity < v_activity) {
+                        decision_var_activity = v_activity;
+                        decision_var = v;
+                    }
                 }
+                
+                
             }
         }
     }
@@ -531,8 +546,6 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                         continue; // skip usual conflict analysis; continue with propagation
                     }
                 }
-                
-                c2_print_universals_assignment(c2); // DEBUG
                 
                 skolem_recover_from_conflict(c2->skolem);
 

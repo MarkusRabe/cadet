@@ -134,7 +134,7 @@ void conflict_analysis_follow_implication_graph(conflict_analysis* ca) {
             Clause* reason = ca->domain_get_reason(ca->domain, lit); // conflict_analysis_find_reason_for_value(ca, lit, &depends_on_illegals);
             if (reason == NULL) {
                 abortif(ca->c2->state == C2_SKOLEM_CONFLICT
-                        && ! ca->c2->skolem->state == SKOLEM_STATE_BACKPROPAGATION_CONFLICT
+                        && ca->c2->skolem->state != SKOLEM_STATE_BACKPROPAGATION_CONFLICT
                         && ! c2_is_decision_var(ca->c2, v->var_id), "No reason for lit %d found in conflict analysis.\n", lit);
 //                assert(ca->c2->state == C2_EXAMPLES_CONFLICT && c2_is_decision_var(ca->c2, v->var_id)); // this means it was a decision variable for the example domain
                 int_vector_add(ca->conflicting_assignment, lit); // must be decision variable (and conflict caused by this decision)

@@ -19,6 +19,7 @@ Options* default_options() {
     o->cegar_only = false;
     o->use_qbf_engine_also_for_propositional_problems = false;
     o->functional_synthesis = false;
+    o->decisions_consistent_with_quantification_hierarchy = true;
     
     // Examples domain
     o->examples_max_num = 0; // 0 corresponds to not doing examples at all

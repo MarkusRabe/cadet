@@ -79,6 +79,10 @@ Skolem* skolem_init(QCNF* qcnf, Options* o,
     s->statistics.pure_vars = 0;
     s->statistics.pure_constants = 0;
     
+    s->statistics.backpropagation_sat_checks = 0;
+    s->statistics.backpropagations = 0;
+    s->statistics.backpropagations = 0;
+    
     s->statistics.global_conflict_checks_sat = statistics_init(10000);
     s->statistics.global_conflict_checks_unsat = statistics_init(10000);
     
@@ -464,6 +468,7 @@ bool skolem_antecedent_satisfiable(Skolem* s, Clause* c) {
             f_assume(s->f, - skolem_get_satlit(s, c->occs[i]));
         }
     }
+    s->statistics.backpropagation_sat_checks += 1;
     return f_sat(s->f) == SATSOLVER_SATISFIABLE;
 }
 
@@ -491,16 +496,24 @@ void skolem_propagate_determinicity_for_propositionals(Skolem* s, unsigned var_i
     Clause* reason_pos = skolem_propagate_determinicity_for_propositionals_for_occs(s, (Lit) var_id);
     Clause* reason_neg = skolem_propagate_determinicity_for_propositionals_for_occs(s, - (Lit) var_id);
     
+    
     if (reason_pos && reason_neg) {
         V3("Backpropagation conflict\n");
-        skolem_bump_conflict_potential(s, var_id);
+        s->statistics.backpropagation_conflicts += 1;
+        
         abortif(s->conflict_var_id != 0, "Conflicted var should not be set here.");
         s->conflict_var_id = var_id;
+        skolem_update_decision_lvl(s, var_id, s->decision_lvl);
+        skolem_bump_conflict_potential(s, var_id);
+        
         abortif(s->conflicted_clause != NULL, "Conflicted clause should not be set here.");
         s->conflicted_clause = reason_neg; // the clause that corresponds to the assignment currently in the SAT solver.
+        
         abortif(s->state != SKOLEM_STATE_READY, "Skolem domain should be in ready state.");
         s->state = SKOLEM_STATE_BACKPROPAGATION_CONFLICT;
+        
     } else if (reason_pos || reason_neg) {
+        s->statistics.backpropagations += 1;
         int val = 0;
         if (reason_pos) {
             val = (Lit) var_id;
@@ -877,6 +890,9 @@ void skolem_print_statistics(Skolem* s) {
     V0("    of which are constants: %zu\n", s->statistics.pure_constants);
     V0("  Propagations of constants: %zu\n", s->statistics.explicit_propagations);
     V0("  Currently deterministic vars: %zu\n",s->deterministic_variables);
+    V0("  Backpropagation sat checks: %zu\n",s->statistics.backpropagation_sat_checks);
+    V0("  Backpropagations: %zu\n",s->statistics.backpropagations);
+    V0("  Backpropagation conflicts: %zu\n",s->statistics.backpropagation_conflicts);
     f_print_statistics(s->f);
     V0("  Histograms for SAT global conflict checks:\n");
     statistics_print(s->statistics.global_conflict_checks_sat);

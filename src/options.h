@@ -31,6 +31,7 @@ typedef struct {
     unsigned examples_max_num;
     unsigned initial_examples;
     bool functional_synthesis;
+    bool decisions_consistent_with_quantification_hierarchy;
     
     // Aiger interpretations
     const char* aiger_controllable_inputs;

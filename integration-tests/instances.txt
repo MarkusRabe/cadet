@@ -5846,7 +5846,6 @@ integration-tests/rf28rr.qdimacs | 10
 ../qbf-benchmarks/evaluations/qbfeval2016-QBF/tlc04-nonuniform-depth-56.qdimacs.gz | 30
 ../qbf-benchmarks/evaluations/qbfeval2016-QBF/tlc04-nonuniform-depth-98.qdimacs.gz | 30
 ../qbf-benchmarks/evaluations/qbfeval2016-QBF/tlc04-uniform-depth-36.qdimacs.gz | 30
-../qbf-benchmarks/evaluations/qbfeval2016-QBF/tmp | 30
 ../qbf-benchmarks/evaluations/qbfeval2016-QBF/toilet_a_02_10.2.qdimacs.gz | 30
 ../qbf-benchmarks/evaluations/qbfeval2016-QBF/toilet_a_04_01.4.qdimacs.gz | 30
 ../qbf-benchmarks/evaluations/qbfeval2016-QBF/toilet_a_04_01.6.qdimacs.gz | 30
@@ -7028,3 +7027,34 @@ integration-tests/rf28rr.qdimacs | 10
 ../qbf-benchmarks/synthesis/akshay/functional-synthesis/disjunctive_decomposition/pdtpmsns3_all_bit_differing_from_cycle.qdimacs.gz | 10
 ../qbf-benchmarks/synthesis/akshay/functional-synthesis/disjunctive_decomposition/pdtpmsrotate32_all_bit_differing_from_cycle.qdimacs.gz | 10
 ../qbf-benchmarks/synthesis/akshay/functional-synthesis/disjunctive_decomposition/pdtpmssfeistel_all_bit_differing_from_cycle.qdimacs.gz | 10
+
+[FiniteStateMachineIdentficication]
+../qbf-benchmarks/synthesis/Buzhinsky/FSM/arbiter-qbf-generate.sh.K0.qdimacs.gz | 30
+../qbf-benchmarks/synthesis/Buzhinsky/FSM/arbiter-qbf-generate.sh.K1.qdimacs.gz | 30
+../qbf-benchmarks/synthesis/Buzhinsky/FSM/arbiter-qbf-generate.sh.K2.qdimacs.gz | 30
+../qbf-benchmarks/synthesis/Buzhinsky/FSM/cas-protocol-generate.sh.K0.qdimacs.gz | 30
+../qbf-benchmarks/synthesis/Buzhinsky/FSM/cas-protocol-generate.sh.K1.qdimacs.gz | 30
+../qbf-benchmarks/synthesis/Buzhinsky/FSM/cas-protocol-generate.sh.K2.qdimacs.gz | 30
+../qbf-benchmarks/synthesis/Buzhinsky/FSM/cas-protocol-generate.sh.K3.qdimacs.gz | 30
+../qbf-benchmarks/synthesis/Buzhinsky/FSM/cas-protocol-generate.sh.K4.qdimacs.gz | 30
+../qbf-benchmarks/synthesis/Buzhinsky/FSM/cash-dispenser-generate.sh.K0.qdimacs.gz | 30
+../qbf-benchmarks/synthesis/Buzhinsky/FSM/cash-dispenser-generate.sh.K1.qdimacs.gz | 30
+../qbf-benchmarks/synthesis/Buzhinsky/FSM/cash-dispenser-generate.sh.K2.qdimacs.gz | 30
+../qbf-benchmarks/synthesis/Buzhinsky/FSM/clock-generate.sh.K0.qdimacs.gz | 30
+../qbf-benchmarks/synthesis/Buzhinsky/FSM/cvs-generate.sh.K0.qdimacs.gz | 30
+../qbf-benchmarks/synthesis/Buzhinsky/FSM/cvs-generate.sh.K1.qdimacs.gz | 30
+../qbf-benchmarks/synthesis/Buzhinsky/FSM/cvs-generate.sh.K2.qdimacs.gz | 30
+../qbf-benchmarks/synthesis/Buzhinsky/FSM/editor-generate.sh.K0.qdimacs.gz | 30
+../qbf-benchmarks/synthesis/Buzhinsky/FSM/editor-generate.sh.K1.qdimacs.gz | 30
+../qbf-benchmarks/synthesis/Buzhinsky/FSM/editor-generate.sh.K2.qdimacs.gz | 30
+../qbf-benchmarks/synthesis/Buzhinsky/FSM/editor-generate.sh.K3.qdimacs.gz | 30
+../qbf-benchmarks/synthesis/Buzhinsky/FSM/elevator-generate.sh.K0.qdimacs.gz | 30
+../qbf-benchmarks/synthesis/Buzhinsky/FSM/elevator-generate.sh.K1.qdimacs.gz | 30
+../qbf-benchmarks/synthesis/Buzhinsky/FSM/elevator-generate.sh.K2.qdimacs.gz | 30
+../qbf-benchmarks/synthesis/Buzhinsky/FSM/jhotdraw-generate.sh.K0.qdimacs.gz | 30
+../qbf-benchmarks/synthesis/Buzhinsky/FSM/jhotdraw-generate.sh.K1.qdimacs.gz | 30
+../qbf-benchmarks/synthesis/Buzhinsky/FSM/jhotdraw-generate.sh.K2.qdimacs.gz | 30
+../qbf-benchmarks/synthesis/Buzhinsky/FSM/jhotdraw-generate.sh.K3.qdimacs.gz | 30
+../qbf-benchmarks/synthesis/Buzhinsky/FSM/jhotdraw-generate.sh.K4.qdimacs.gz | 30
+../qbf-benchmarks/synthesis/Buzhinsky/FSM/priority-queue-generate.sh.K0.qdimacs.gz | 30
+../qbf-benchmarks/synthesis/Buzhinsky/FSM/vending-machine-generate.sh.K0.qdimacs.gz | 30

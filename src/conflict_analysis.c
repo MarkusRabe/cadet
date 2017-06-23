@@ -148,9 +148,9 @@ void conflict_analysis_follow_implication_graph(conflict_analysis* ca) {
                         && ! c2_is_decision_var(ca->c2, v->var_id), "No reason for lit %d found in conflict analysis.\n", lit);
 //                assert(ca->c2->state == C2_EXAMPLES_CONFLICT && c2_is_decision_var(ca->c2, v->var_id)); // this means it was a decision variable for the example domain
                 int_vector_add(ca->conflicting_assignment, lit); // must be decision variable (and conflict caused by this decision)
-            } else if (!reason->consistent_with_originals) { // decision clause!
-                assert(c2_is_decision_var(ca->c2, lit_to_var(lit)) || lit_to_var(lit) == ca->conflicted_var_id);
-                int_vector_add(ca->conflicting_assignment, lit);
+//            } else if (!reason->consistent_with_originals) { // decision clause!
+//                assert(c2_is_decision_var(ca->c2, lit_to_var(lit)) || lit_to_var(lit) == ca->conflicted_var_id);
+//                int_vector_add(ca->conflicting_assignment, lit);
             } else if (!legal_reason(ca, lit, reason)) {
                 int_vector_add(ca->conflicting_assignment, lit);
             } else {

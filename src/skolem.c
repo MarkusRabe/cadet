@@ -479,7 +479,7 @@ Clause* skolem_propagate_determinicity_for_propositionals_for_occs(Skolem* s, Li
     for (unsigned i = 0; i < vector_count(occs); i++) {
         Clause* c = vector_get(occs, i);
         if (skolem_get_unique_consequence(s, c) == lit && ! skolem_clause_satisfied(s, c)) {
-            assert(skolem_has_illegal_dependence(s, c));
+//            assert(skolem_has_illegal_dependence(s, c)); // Does not have to have illegal dependence, since it could be a clause just consisting of top level variables!
             if (skolem_antecedent_satisfiable(s, c)) {
                 return c;
             }

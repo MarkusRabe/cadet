@@ -182,13 +182,13 @@ void c2_print_learnt_clause_color_legend() {
         c2_printed_color_legend = true;
         V0("\n"); // prints a new line, but can be prefixed by 'c ' if in qdimacs printout mode.
         V0("Legend for the colored learnt clauses:\n");
-        LOG_COLOR(KRED,"Red: "); V0("Universal variables\n");
-        LOG_COLOR(KMAG,"Magenta: "); V0("Unique consequence\n");
-        LOG_COLOR(KGRN,"Green: "); V0("Decision var\n");
-        LOG_COLOR(KORANGE,"Orange: "); V0("Decision lvl 0\n");
-        LOG_COLOR(KYEL,"Yellow: "); V0("Decision lvl >0\n");
-        LOG_COLOR(KNRM,"Normal: "); V0("everything else\n");
-        V0("Bold numbers represent constants.\n");
+        LOG_COLOR(KRED,"    Red: "); V0("Universal variables\n");
+        LOG_COLOR(KMAG,"    Magenta: "); V0("Unique consequence\n");
+        LOG_COLOR(KGRN,"    Green: "); V0("Decision var\n");
+        LOG_COLOR(KORANGE,"    Orange: "); V0("Decision lvl 0\n");
+        LOG_COLOR(KYEL,"    Yellow: "); V0("Decision lvl >0\n");
+        LOG_COLOR(KNRM,"    Normal: "); V0("everything else\n");
+        V0("    Bold numbers represent constants.\n");
         V0("\n"); // prints a new line, but can be prefixed by 'c ' if in qdimacs printout mode.
     }
 }

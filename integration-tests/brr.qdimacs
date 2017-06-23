@@ -1,0 +1,20 @@
+c 2017-06-12 19:36:58 by qbfdd.py,v 1.2.2
+c qbfdd.py /Users/markus/work/cadet/git/integration-tests/bug_refinement.qdimacs /Users/markus/work/cadet/git/cadet -m ddmin -g b -S
+c 
+c mode: ddmin
+c rounds: 2
+c test runs: 141
+c time elapsed:  0.97s
+c total: clauses  : -4 (44.44%)
+c        variables: -1 (20.00%)
+c        literals : -10 (47.62%)
+c 
+p cnf 4 5
+e 2 0
+a 4 0
+e 1 3 0
+-2 -1 0
+2 1 0
+-4 -1 0
+4 1 -3 0
+4 3 0

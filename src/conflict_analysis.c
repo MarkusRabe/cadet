@@ -115,6 +115,16 @@ unsigned determine_cost(conflict_analysis* ca, Clause* c) {
 //    return candidate;
 //}
 
+bool legal_reason(conflict_analysis* ca, Lit lit, Clause* c) {
+    for (int i = 0; i < c->size; i++) {
+        if (c->occs[i] != lit && ! ca->domain_is_legal_dependence(ca->domain, lit_to_var(lit), lit_to_var(c->occs[i]))) {
+            return false;
+        }
+    }
+    return true;
+}
+
+
 void conflict_analysis_follow_implication_graph(conflict_analysis* ca) {
     
     while (worklist_count(ca->queue) > 0) {
@@ -140,6 +150,8 @@ void conflict_analysis_follow_implication_graph(conflict_analysis* ca) {
                 int_vector_add(ca->conflicting_assignment, lit); // must be decision variable (and conflict caused by this decision)
             } else if (!reason->consistent_with_originals) { // decision clause!
                 assert(c2_is_decision_var(ca->c2, lit_to_var(lit)) || lit_to_var(lit) == ca->conflicted_var_id);
+                int_vector_add(ca->conflicting_assignment, lit);
+            } else if (!legal_reason(ca, lit, reason)) {
                 int_vector_add(ca->conflicting_assignment, lit);
             } else {
                 assert(reason->original || reason->consistent_with_originals);

@@ -117,7 +117,8 @@ unsigned determine_cost(conflict_analysis* ca, Clause* c) {
 
 bool legal_reason(conflict_analysis* ca, Lit lit, Clause* c) {
     for (int i = 0; i < c->size; i++) {
-        if (c->occs[i] != lit && ! ca->domain_is_legal_dependence(ca->domain, lit_to_var(lit), lit_to_var(c->occs[i]))) {
+        if (c->occs[i] != lit && ca->domain_get_value(ca->domain, c->occs[i]) != -1) {
+//        if (c->occs[i] != lit && ! ca->domain_is_legal_dependence(ca->domain, lit_to_var(lit), lit_to_var(c->occs[i]))) {
             return false;
         }
     }

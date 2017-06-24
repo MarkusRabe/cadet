@@ -78,7 +78,7 @@ void val_vector_set(val_vector* v, unsigned i, int value) {
 
 void val_vector_add(val_vector* v, int value) {
     if (v->size == v->count) {
-        V4("Warning: Resizing variable vector. Variable pointers may be invalidated!\n");
+        V4("Warning: Resizing val vector. Variable pointers may be invalidated!\n");
         val_vector_increase(v);
     }
     v->data[v->count] = (char) value;

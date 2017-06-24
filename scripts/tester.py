@@ -362,15 +362,16 @@ def run_testcase(testcase):
     # BLOQQER += ' --bce=1 --ble=0 --eq=0 --ve=0 --exp=1 --cce=0 --hbce=0 --hble=0'
     
     if testcase.endswith('gz'):
-        if sys.platform == "linux" or sys.platform == "linux2":
-            # linux
-            file_reader = 'zcat'
-        elif sys.platform == "darwin":
-            # OS X
-            file_reader = 'gzcat'
-        elif sys.platform == "win32":
-            # Windows...
-            file_reader = 'zcat' # will not work
+        file_reader = 'gzip -dkc'
+#       if sys.platform == "linux" or sys.platform == "linux2":
+#             # linux
+#             file_reader = 'zcat'
+#         elif sys.platform == "darwin":
+#             # OS X
+#             file_reader = 'gzcat'
+#         elif sys.platform == "win32":
+#             # Windows...
+#             file_reader = 'zcat' # will not work
     else: 
         file_reader = 'cat'
     

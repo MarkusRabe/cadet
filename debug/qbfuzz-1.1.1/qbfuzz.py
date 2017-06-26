@@ -307,7 +307,7 @@ def _init(comments):
 
     # maximum number of literals per clause
     if _options.max_lits == None:
-        _options.max_lits = random.randint(_options.min_lits,
+        _options.max_lits = random.randint(max(_options.min_lits,3),
                                 max(_options.min_lits,
                                     min(_options.num_vars, MAX_LITS)))
         assert(_options.max_lits <= _options.num_vars)
@@ -655,7 +655,6 @@ def _generate_quantsets(num_vars, num_qsets, ratio):
 
     return quantsets
 
-
 def _generate_clause(num_ex_lits, num_un_lits):
     """
     _generate_clause(num_ex_lits : int,
@@ -779,8 +778,8 @@ def _generate_clauses(num_vars, num_clauses, min_lits, max_lits, ratio):
 
     clauses = []
     gen_clauses = 0
-
-    while gen_clauses < num_clauses: 
+    
+    while gen_clauses < num_clauses:
         clause = []
 
         # determine number of literals in new clause
@@ -788,10 +787,8 @@ def _generate_clauses(num_vars, num_clauses, min_lits, max_lits, ratio):
             num_lits = num_vars
         else:
             num_lits = random.randint(min_lits, max_lits)
-
         # calculate number of existential and universal literals in clause
         (num_ex_lits, num_un_lits) = _generate_num_lits(num_lits, ratio)
-        
         # add existential and universal literals to clause
         clause = _generate_clause(num_ex_lits, num_un_lits)
         assert(len(clause) > 0)

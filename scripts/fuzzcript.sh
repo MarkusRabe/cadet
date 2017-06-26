@@ -16,7 +16,9 @@ numerrors=0
 echo "Random seed: $random"
 for ((i = 1; i <= $3; i++)); do
     echo "--- Iteration #$i ---"
-    qdimacs=$(./debug/qbfuzz-1.1.1/qbfuzz.py --seed=$((random+i)) -c 200 -v 100 -s 2 -r 0.95) # 20% SAT
+    
+    ############### 2QBF
+    # qdimacs=$(./debug/qbfuzz-1.1.1/qbfuzz.py --seed=$((random+i)) -c 200 -v 100 -s 2 -r 0.95) # 20% SAT
     # qdimacs=$(./debug/qbfuzz-1.1.1/qbfuzz.py --seed=$((random+i)) -c 90 -v 30 -s 2 -r 0.9) # 30% SAT
     # qdimacs=$(./debug/qbfuzz-1.1.1/qbfuzz.py --seed=$((random+i)) -c 50 -v 50 -s 2 -r 0.9 --max=4) # 25% SAT
     # qdimacs=$(./debug/qbfuzz-1.1.1/qbfuzz.py --seed=$((random+i)) -c 50 -v 30 -s 2 -r 0.9 --max=6) # 40% SAT
@@ -25,6 +27,17 @@ for ((i = 1; i <= $3; i++)); do
     # qdimacs=$(./debug/qbfuzz-1.1.1/qbfuzz.py --seed=$((random+i)) -c 7 -v 4 -s 2 -r 0.6) # 15% SAT
     # qdimacs=$(./debug/qbfuzz-1.1.1/qbfuzz.py --seed=$((random+i)) -c 8 -v 7 -s 2 -r 0.6) # 40% SAT
     # qdimacs=$(./debug/qbfuzz-1.1.1/qbfuzz.py --seed=$((random+i)) -c 12 -v 11 -s 2 --max=2 -r 0.9)
+    
+    ############### 3QBF
+    # qdimacs=$(./debug/qbfuzz-1.1.1/qbfuzz.py --seed=$((random+i)) -c 200 -v 100 -s 3 -r 0.95)
+    # qdimacs=$(./debug/qbfuzz-1.1.1/qbfuzz.py --seed=$((random+i)) -c 90 -v 30 -s 3 -r 0.9) 
+    # qdimacs=$(./debug/qbfuzz-1.1.1/qbfuzz.py --seed=$((random+i)) -c 50 -v 50 -s 3 -r 0.9 --max=4)
+    # qdimacs=$(./debug/qbfuzz-1.1.1/qbfuzz.py --seed=$((random+i)) -c 50 -v 30 -s 3 -r 0.9 --max=6)
+    qdimacs=$(./debug/qbfuzz-1.1.1/qbfuzz.py --seed=$((random+i)) -c 20 -v 8 -s 3 -r 0.7)
+    # qdimacs=$(./debug/qbfuzz-1.1.1/qbfuzz.py --seed=$((random+i)) -c 20 -v 9 -s 3 -r 0.8) 
+    # qdimacs=$(./debug/qbfuzz-1.1.1/qbfuzz.py --seed=$((random+i)) -c 7 -v 4 -s 3 -r 0.6) 
+    # qdimacs=$(./debug/qbfuzz-1.1.1/qbfuzz.py --seed=$((random+i)) -c 8 -v 7 -s 3 -r 0.6) 
+    # qdimacs=$(./debug/qbfuzz-1.1.1/qbfuzz.py --seed=$((random+i)) -c 12 -v 11 -s 3 --max=2 -r 0.9)
     
     ################ FULL QBF
     # qdimacs=$(./debug/qbfuzz-1.1.1/qbfuzz.py)

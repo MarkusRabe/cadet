@@ -522,6 +522,11 @@ void skolem_propagate_determinicity_for_propositionals(Skolem* s, unsigned var_i
         }
         V1("Backpropagation of val %d\n", val);
         skolem_assign_constant_value(s, val, s->empty_dependencies, (Clause*) ((uintptr_t) reason_pos | (uintptr_t) reason_neg));
+    } else {
+        Var* v = var_vector_get(s->qcnf->vars, var_id);
+        pqueue_push(s->pure_var_queue,
+                    (int)(vector_count(&v->pos_occs) + vector_count(&v->neg_occs)),
+                    (void*) (size_t) var_id);
     }
 }
 

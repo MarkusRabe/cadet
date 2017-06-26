@@ -108,9 +108,7 @@ struct Skolem {
     worklist* clauses_to_check; // stores Clause*
     pqueue* determinicity_queue; // contains unsigned var_id
     pqueue* pure_var_queue; // contains unsigned var_id
-    
-    int satlit_true; // this satlit represents constant true; currently assigned constant 1
-    
+        
     // Configuration
     SKOLEM_MODE mode; // can be used to switch of all or certain types of conflicts
     unsigned u_initially_deterministic; // what should be considered deterministic?

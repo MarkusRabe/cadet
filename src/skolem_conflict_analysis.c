@@ -23,7 +23,7 @@ int skolem_get_value_for_conflict_analysis(void* domain, Lit lit) {
     assert(s->conflict_var_id == lit_to_var(lit) || skolem_is_deterministic(s, lit_to_var(lit)));
     int satlit = skolem_get_satlit(s, lit);
     int opposite_satlit = skolem_get_satlit(s, - lit);
-    assert(satlit != s->satlit_true || opposite_satlit != s->satlit_true);
+    assert(satlit != f_get_true(s->f) || opposite_satlit != f_get_true(s->f));
     if (s->state == SKOLEM_STATE_CONSTANTS_CONLICT) {
         return skolem_get_constant_value(s, lit);
     } else {

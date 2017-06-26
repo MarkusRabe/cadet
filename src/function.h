@@ -32,7 +32,7 @@ void f_print_statistics(Function*);
 
 // Variables
 int f_fresh_var(Function*);
-
+int f_get_true(Function*); // get the satlit corresponding to TRUE
 
 // Interaction
 void f_push(Function*);
@@ -53,8 +53,8 @@ void f_add_satlit_clause(Function*, const int_vector*);
 //void f_add_binary_clause(Function*, int, int);
 //void f_add_ternary_clause(Function*, int, int, int);
 //
-void f_add_AND(Function*, int and_lit, int input1, int input2);
-void f_add_OR(Function*, int and_lit, int input1, int input2);
+int f_add_AND(Function*, int input1, int input2);
+int f_add_OR(Function*, int input1, int input2);
 
 
 

@@ -83,8 +83,8 @@ void skolem_enlarge_skolem_var_vector(Skolem* s, unsigned var_id) {
     skolem_var sv;
     
     // undoable portion of skolem_vars
-    sv.pos_lit = - s->satlit_true;
-    sv.neg_lit = - s->satlit_true;
+    sv.pos_lit = - f_get_true(s->f);
+    sv.neg_lit = - f_get_true(s->f);
     sv.pure_pos = 0;
     sv.pure_neg = 0;
     sv.deterministic = 0;

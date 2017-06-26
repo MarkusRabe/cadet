@@ -21,9 +21,11 @@ struct Function {
     
     // Helper variables in the SAT solver
     int_vector* consistency_lits; // satlits representing consistency for up to level x
+    int satlit_true;
     
     int_vector* uncommitted_clause;
 };
+
 Function* f_init(QCNF* qcnf) {
     Function* f = malloc(sizeof(Function));
     f->qcnf = qcnf;
@@ -32,6 +34,13 @@ Function* f_init(QCNF* qcnf) {
     
     f->consistency_lits = int_vector_init();
     f->uncommitted_clause = int_vector_init();
+    
+    // Define the constant TRUE
+    f->satlit_true = satsolver_inc_max_var(f->sat);
+    assert(f->satlit_true == 1);
+    f_add(f, f->satlit_true);
+    f_clause_finished(f);
+    
     return f;
 }
 void f_free(Function* f) {
@@ -69,6 +78,9 @@ void f_print_statistics(Function* f) {
 
 int f_fresh_var(Function* f) {
     return satsolver_inc_max_var(f->sat);
+}
+int f_get_true(Function* f) {
+    return f->satlit_true;
 }
 
 
@@ -113,7 +125,11 @@ void f_add_satlit_clause(Function* f, const int_vector* clause) {
     f_clause_finished(f);
 }
 
-void f_add_AND(Function* f, int res, int input1, int input2) {
+int f_add_AND(Function* f, int input1, int input2) {
+    if (input1 == - f->satlit_true || input2 == f->satlit_true) {
+        return - f->satlit_true;
+    }
+    int res = f_fresh_var(f);
     f_add(f, res);
     f_add(f, - input1);
     f_add(f, - input2);
@@ -126,8 +142,10 @@ void f_add_AND(Function* f, int res, int input1, int input2) {
     f_add(f, - res);
     f_add(f,   input2);
     f_clause_finished(f);
+    
+    return res;
 }
 
-void f_add_OR(Function* f, int res, int input1, int input2) {
-    f_add_AND(f, - res, - input1, - input2);
+int f_add_OR(Function* f, int input1, int input2) {
+    return - f_add_AND(f, - input1, - input2);
 }

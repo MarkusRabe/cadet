@@ -101,6 +101,7 @@ integration-tests/stmt27rrr.qdimacs | 20
 integration-tests/brr.qdimacs | 20
 integration-tests/BLOCKS4iii7r.qdimacs | 10
 integration-tests/tmp-37605_reduced.qdimacs | 10
+integration-tests/fuzz4877r.qdimacs | 10
 
 
 [new-tests]

@@ -102,6 +102,7 @@ integration-tests/brr.qdimacs | 20
 integration-tests/BLOCKS4iii7r.qdimacs | 10
 integration-tests/tmp-37605_reduced.qdimacs | 10
 integration-tests/fuzz4877r.qdimacs | 10
+integration-tests/fuzz2828.qdimacs | 10
 
 
 [new-tests]
@@ -3230,26 +3231,28 @@ integration-tests/rf28rr.qdimacs | 10
 ../qbf-benchmarks/synthesis/rabe/sygus/gallery/polynomial.qdimacs.gz | 20
 
 [sygus-gallery3QBF]
-../qbf-benchmarks/sygus/gallery3QBF/Pollard.qdimacs.gz | 30
-../qbf-benchmarks/sygus/gallery3QBF/SetTest.qdimacs.gz | 30
-../qbf-benchmarks/sygus/gallery3QBF/compress.qdimacs.gz | 30
-../qbf-benchmarks/sygus/gallery3QBF/diagStencil.qdimacs.gz | 30
-../qbf-benchmarks/sygus/gallery3QBF/doublyLinkedList.qdimacs.gz | 30
-../qbf-benchmarks/sygus/gallery3QBF/enqueueSeqSK.qdimacs.gz | 30
-../qbf-benchmarks/sygus/gallery3QBF/isolateRightmost.qdimacs.gz | 30
-../qbf-benchmarks/sygus/gallery3QBF/jburnim_morton.qdimacs.gz | 30
-../qbf-benchmarks/sygus/gallery3QBF/listReverse.qdimacs.gz | 30
-../qbf-benchmarks/sygus/gallery3QBF/log2.qdimacs.gz | 30
-../qbf-benchmarks/sygus/gallery3QBF/logcount.qdimacs.gz | 30
-../qbf-benchmarks/sygus/gallery3QBF/lss.qdimacs.gz | 30
-../qbf-benchmarks/sygus/gallery3QBF/neohookean.qdimacs.gz | 30
-../qbf-benchmarks/sygus/gallery3QBF/parity.qdimacs.gz | 30
-../qbf-benchmarks/sygus/gallery3QBF/polynomial.qdimacs.gz | 30
-../qbf-benchmarks/sygus/gallery3QBF/registerlesSwap.qdimacs.gz | 30
-../qbf-benchmarks/sygus/gallery3QBF/reverse.qdimacs.gz | 30
-../qbf-benchmarks/sygus/gallery3QBF/tableBasedAddition.qdimacs.gz | 30
-../qbf-benchmarks/sygus/gallery3QBF/tutorial1.qdimacs.gz | 30
-../qbf-benchmarks/sygus/gallery3QBF/xpose.qdimacs.gz | 30
+../qbf-benchmarks/synthesis/rabe/sygus3QBF/gallery/Pollard.qdimacs.gz | 10
+../qbf-benchmarks/synthesis/rabe/sygus3QBF/gallery/compress.qdimacs.gz | 10
+../qbf-benchmarks/synthesis/rabe/sygus3QBF/gallery/diagStencil.qdimacs.gz | 10
+../qbf-benchmarks/synthesis/rabe/sygus3QBF/gallery/diagStencilClean.qdimacs.gz | 10
+../qbf-benchmarks/synthesis/rabe/sygus3QBF/gallery/doublyLinkedList.qdimacs.gz | 10
+../qbf-benchmarks/synthesis/rabe/sygus3QBF/gallery/enqueueSeqSK.qdimacs.gz | 10
+../qbf-benchmarks/synthesis/rabe/sygus3QBF/gallery/invariant.qdimacs.gz | 10
+../qbf-benchmarks/synthesis/rabe/sygus3QBF/gallery/isolateRightmost.qdimacs.gz | 10
+../qbf-benchmarks/synthesis/rabe/sygus3QBF/gallery/jburnim_morton.qdimacs.gz | 10
+../qbf-benchmarks/synthesis/rabe/sygus3QBF/gallery/listReverse.qdimacs.gz | 10
+../qbf-benchmarks/synthesis/rabe/sygus3QBF/gallery/log2.qdimacs.gz | 10
+../qbf-benchmarks/synthesis/rabe/sygus3QBF/gallery/logcount.qdimacs.gz | 10
+../qbf-benchmarks/synthesis/rabe/sygus3QBF/gallery/lss.qdimacs.gz | 10
+../qbf-benchmarks/synthesis/rabe/sygus3QBF/gallery/neohookean.qdimacs.gz | 10
+../qbf-benchmarks/synthesis/rabe/sygus3QBF/gallery/parity.qdimacs.gz | 10
+../qbf-benchmarks/synthesis/rabe/sygus3QBF/gallery/partition.qdimacs.gz | 10
+../qbf-benchmarks/synthesis/rabe/sygus3QBF/gallery/polynomial.qdimacs.gz | 10
+../qbf-benchmarks/synthesis/rabe/sygus3QBF/gallery/registerlesSwap.qdimacs.gz | 10
+../qbf-benchmarks/synthesis/rabe/sygus3QBF/gallery/reverse.qdimacs.gz | 10
+../qbf-benchmarks/synthesis/rabe/sygus3QBF/gallery/tableBasedAddition.qdimacs.gz | 10
+../qbf-benchmarks/synthesis/rabe/sygus3QBF/gallery/tutorial1.qdimacs.gz | 10
+../qbf-benchmarks/synthesis/rabe/sygus3QBF/gallery/xpose.qdimacs.gz | 10
 
 
 [gttt3x3]

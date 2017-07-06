@@ -1,0 +1,22 @@
+c 2017-07-05 16:29:49 by qbfdd.py,v 1.2.2
+c qbfdd.py /Users/markus/work/cadet/git/fuzz28284_134_20.qdimacs /Users/markus/work/cadet/git/cadet -m qobo -g b
+c 
+c mode: qobo
+c rounds: 1
+c test runs: 95
+c time elapsed:  0.76s
+c total: clauses  : -13 (65.00%)
+c        variables: -2 (25.00%)
+c        literals : -73 (81.11%)
+c 
+p cnf 6 7
+e 4 5 0
+a 1 0
+e 2 3 6 0
+5 -4 0
+6 1 0
+2 1 0
+-3 2 -6 0
+3 6 0
+-2 -1 0
+-4 -5 -2 -6 0

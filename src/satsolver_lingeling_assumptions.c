@@ -424,7 +424,7 @@ void satsolver_print_statistics(SATSolver* solver) {
 }
 
 void satsolver_measure_all_calls(SATSolver* solver) {
-    abort(); // not implemented
+    LOG_WARNING("Cannot measure time in SAT solver for Lingeling at the moment.");
 }
 
 #endif

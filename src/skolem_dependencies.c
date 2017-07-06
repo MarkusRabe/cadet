@@ -203,6 +203,12 @@ bool skolem_occs_contain_illegal_dependence(Skolem* s, Lit lit) {
     return false;
 }
 
+bool skolem_var_has_empty_maximal_dependencies(QCNF* q, unsigned var_id) {
+    Var* v = var_vector_get(q->vars, var_id);
+    assert(v->var_id == var_id);
+    return v->scope_id == 0;
+}
+
 
 ////////// INVARIANTS /////////////////
 

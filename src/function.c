@@ -126,7 +126,7 @@ void f_add_satlit_clause(Function* f, const int_vector* clause) {
 }
 
 int f_add_AND(Function* f, int input1, int input2) {
-    if (input1 == - f->satlit_true || input2 == f->satlit_true) {
+    if (input1 == - f->satlit_true || input2 == - f->satlit_true) {
         return - f->satlit_true;
     }
     int res = f_fresh_var(f);

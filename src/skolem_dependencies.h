@@ -32,6 +32,8 @@ bool skolem_occs_contain_illegal_dependence(Skolem* s, Lit lit);
 bool skolem_is_legal_dependency(Skolem* s, unsigned var_id, union Dependencies);
 bool skolem_may_depend_on(Skolem* s, unsigned var_id, unsigned depending_on);
 
+bool skolem_var_has_empty_maximal_dependencies(QCNF* q, unsigned var_id);
+
 union Dependencies skolem_compute_dependencies(Skolem* s, unsigned var_id);
 void skolem_update_dependencies_for_lit(Skolem* s, union Dependencies* aggregate_dependencies, Lit lit);
 

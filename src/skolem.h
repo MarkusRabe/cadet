@@ -105,7 +105,7 @@ struct Skolem {
      * if they are not deterministic, they are added to pure_var_queue to later check 
      * if they are pure.
      */
-    worklist* clauses_to_check; // stores Clause*
+    worklist* clauses_to_check; // stores Clause*; this worklist is used for both clauses that might propagate constants, and also for backpropagation checks. Its a bit weird
     pqueue* determinicity_queue; // contains unsigned var_id
     pqueue* pure_var_queue; // contains unsigned var_id
         

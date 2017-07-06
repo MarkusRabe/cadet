@@ -159,9 +159,7 @@ void skolem_recover_from_conflict(Skolem* s) {
 void skolem_new_clause(Skolem* s, Clause* c) {
     abortif(c == NULL, "Clause pointer is NULL in skolem_new_clause.\n");
     skolem_check_for_unique_consequence(s, c);
-    if (c->size == 1) {
-        worklist_push(s->clauses_to_check, c);
-    }
+    worklist_push(s->clauses_to_check, c);
 }
 
 bool skolem_is_initially_deterministic(Skolem* s, unsigned var_id) {
@@ -1210,9 +1208,7 @@ void skolem_decision(Skolem* s, Lit decision_lit) {
     }
     
     assert(opposite_case_exists || skolem_get_satlit(s, decision_lit) == f_get_true(s->f));
-//    if (opposite_case_exists) {
-        skolem_check_occs_for_unique_consequences(s,   (Lit) decision_var_id);
-//    }
+    skolem_check_occs_for_unique_consequences(s,   (Lit) decision_var_id);
     skolem_check_occs_for_unique_consequences(s, - (Lit) decision_var_id);
     
     // Decision variable needs to be deterministic before we can do conflict checks. Also this is why we have to check exactly here.

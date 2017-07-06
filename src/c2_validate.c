@@ -22,6 +22,10 @@ void c2_validate_var(C2* c2, unsigned var_id) {
     
     abortif(sv.reason_for_constant == INT_MAX && sv.dlvl_for_constant != 0, "");
     abortif(sv.reason_for_constant != INT_MAX && ! skolem_is_deterministic(c2->skolem, var_id), "");
+    
+    if (c2->qcnf->problem_type != QCNF_DQBF && sv.deterministic && skolem_get_constant_value(c2->skolem, (Lit) var_id) == 0) {
+        abortif(skolem_get_dependencies(c2->skolem, var_id).dependence_lvl == qcnf_get_empty_scope(c2->skolem->qcnf), "");
+    }
 }
 
 void c2_validate_unique_consequences(C2* c2) {

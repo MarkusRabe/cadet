@@ -159,7 +159,9 @@ void skolem_recover_from_conflict(Skolem* s) {
 void skolem_new_clause(Skolem* s, Clause* c) {
     abortif(c == NULL, "Clause pointer is NULL in skolem_new_clause.\n");
     skolem_check_for_unique_consequence(s, c);
-    worklist_push(s->clauses_to_check, c);
+    if (s->statistics.propagations != 0 || s->statistics.decisions != 0  || c->size == 1) { // odd condition: essentially checking if we are still reading the original formula. If so, then only clauses of size 1 need to be added to the worklist.   
+        worklist_push(s->clauses_to_check, c);
+    }
 }
 
 bool skolem_is_initially_deterministic(Skolem* s, unsigned var_id) {

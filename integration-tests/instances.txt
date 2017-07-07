@@ -3172,42 +3172,21 @@ integration-tests/rf28rr.qdimacs | 10
 ../qbf-benchmarks/synthesis/rabe/sygus/performance_benchmarks/UserServiceImpl.qdimacs.gz | 20
 
 [sygus-performance3QBF]
-../qbf-benchmarks/sygus/performance_benchmarks3QBF/ActivityService.qdimacs.gz | 30
-../qbf-benchmarks/sygus/performance_benchmarks3QBF/ActivityService2.qdimacs.gz | 30
-../qbf-benchmarks/sygus/performance_benchmarks3QBF/ConcreteActivityService.qdimacs.gz | 30
-../qbf-benchmarks/sygus/performance_benchmarks3QBF/ConcreteRoleAffectationService.qdimacs.gz | 30
-../qbf-benchmarks/sygus/performance_benchmarks3QBF/GuidanceService.qdimacs.gz | 30
-../qbf-benchmarks/sygus/performance_benchmarks3QBF/GuidanceService2.qdimacs.gz | 30
-../qbf-benchmarks/sygus/performance_benchmarks3QBF/IssueServiceImpl.qdimacs.gz | 30
-../qbf-benchmarks/sygus/performance_benchmarks3QBF/IterationService.qdimacs.gz | 30
-../qbf-benchmarks/sygus/performance_benchmarks3QBF/LoginService.qdimacs.gz | 30
-../qbf-benchmarks/sygus/performance_benchmarks3QBF/LoginService2.qdimacs.gz | 30
-../qbf-benchmarks/sygus/performance_benchmarks3QBF/NotificationServiceImpl2.qdimacs.gz | 30
-../qbf-benchmarks/sygus/performance_benchmarks3QBF/PhaseService.qdimacs.gz | 30
-../qbf-benchmarks/sygus/performance_benchmarks3QBF/ProcessBean.qdimacs.gz | 30
-../qbf-benchmarks/sygus/performance_benchmarks3QBF/ProjectService3.qdimacs.gz | 30
-../qbf-benchmarks/sygus/performance_benchmarks3QBF/UserServiceImpl.qdimacs.gz | 30
-../qbf-benchmarks/sygus/performance_benchmarks3QBF/demo2.py.qdimacs.gz | 30
-../qbf-benchmarks/sygus/performance_benchmarks3QBF/demo3.py.qdimacs.gz | 30
-../qbf-benchmarks/sygus/performance_benchmarks3QBF/demo4.py.qdimacs.gz | 30
-../qbf-benchmarks/sygus/performance_benchmarks3QBF/demo5.py.qdimacs.gz | 30
-../qbf-benchmarks/sygus/performance_benchmarks3QBF/scenarios_aig_insertion1.sb.pl.qdimacs.gz | 30
-../qbf-benchmarks/sygus/performance_benchmarks3QBF/scenarios_aig_insertion2.sb.pl.qdimacs.gz | 30
-../qbf-benchmarks/sygus/performance_benchmarks3QBF/scenarios_aig_traverse.sb.pl.qdimacs.gz | 30
-../qbf-benchmarks/sygus/performance_benchmarks3QBF/scenarios_lldelete1.sb.pl.qdimacs.gz | 30
-../qbf-benchmarks/sygus/performance_benchmarks3QBF/scenarios_llinsert2.sb.pl.qdimacs.gz | 30
-../qbf-benchmarks/sygus/performance_benchmarks3QBF/scenarios_llreverse.sb.pl.qdimacs.gz | 30
-../qbf-benchmarks/sygus/performance_benchmarks3QBF/scenarios_lltraversal.sb.pl.qdimacs.gz | 30
-../qbf-benchmarks/sygus/performance_benchmarks3QBF/scenarios_tree_delete.sb.pl.qdimacs.gz | 30
-../qbf-benchmarks/sygus/performance_benchmarks3QBF/scenarios_tree_delete1.sb.pl.qdimacs.gz | 30
-../qbf-benchmarks/sygus/performance_benchmarks3QBF/scenarios_tree_delete2.sb.pl.qdimacs.gz | 30
-../qbf-benchmarks/sygus/performance_benchmarks3QBF/scenarios_tree_delete3.sb.pl.qdimacs.gz | 30
-../qbf-benchmarks/sygus/performance_benchmarks3QBF/scenarios_tree_delete4.sb.pl.qdimacs.gz | 30
-../qbf-benchmarks/sygus/performance_benchmarks3QBF/scenarios_tree_insert_insert.sb.pl.qdimacs.gz | 30
-../qbf-benchmarks/sygus/performance_benchmarks3QBF/scenarios_tree_insert_search.sb.pl.qdimacs.gz | 30
-../qbf-benchmarks/sygus/performance_benchmarks3QBF/scenarios_tree_search.sb.pl.qdimacs.gz | 30
-../qbf-benchmarks/sygus/performance_benchmarks3QBF/scenarios_treemax.sb.pl.qdimacs.gz | 30
-../qbf-benchmarks/sygus/performance_benchmarks3QBF/scenarios_treemin.sb.pl.qdimacs.gz | 30
+../qbf-benchmarks/synthesis/rabe/sygus3QBF/performance_benchmarks/ActivityService2.qdimacs.gz | 10
+../qbf-benchmarks/synthesis/rabe/sygus3QBF/performance_benchmarks/ActivityService.qdimacs.gz | 10
+../qbf-benchmarks/synthesis/rabe/sygus3QBF/performance_benchmarks/ConcreteActivityService.qdimacs.gz | 10
+../qbf-benchmarks/synthesis/rabe/sygus3QBF/performance_benchmarks/ConcreteRoleAffectationService.qdimacs.gz | 10
+../qbf-benchmarks/synthesis/rabe/sygus3QBF/performance_benchmarks/GuidanceService2.qdimacs.gz | 10
+../qbf-benchmarks/synthesis/rabe/sygus3QBF/performance_benchmarks/GuidanceService.qdimacs.gz | 10
+../qbf-benchmarks/synthesis/rabe/sygus3QBF/performance_benchmarks/IssueServiceImpl.qdimacs.gz | 10
+../qbf-benchmarks/synthesis/rabe/sygus3QBF/performance_benchmarks/IterationService.qdimacs.gz | 10
+../qbf-benchmarks/synthesis/rabe/sygus3QBF/performance_benchmarks/LoginService2.qdimacs.gz | 10
+../qbf-benchmarks/synthesis/rabe/sygus3QBF/performance_benchmarks/LoginService.qdimacs.gz | 10
+../qbf-benchmarks/synthesis/rabe/sygus3QBF/performance_benchmarks/NotificationServiceImpl2.qdimacs.gz | 10
+../qbf-benchmarks/synthesis/rabe/sygus3QBF/performance_benchmarks/PhaseService.qdimacs.gz | 10
+../qbf-benchmarks/synthesis/rabe/sygus3QBF/performance_benchmarks/ProcessBean.qdimacs.gz | 10
+../qbf-benchmarks/synthesis/rabe/sygus3QBF/performance_benchmarks/ProjectService3.qdimacs.gz | 10
+../qbf-benchmarks/synthesis/rabe/sygus3QBF/performance_benchmarks/UserServiceImpl.qdimacs.gz | 10
 
 [sygus-gallery]
 ../qbf-benchmarks/synthesis/rabe/sygus/gallery/reverse.qdimacs.gz | 20

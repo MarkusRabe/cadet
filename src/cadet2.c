@@ -427,21 +427,6 @@ float c2_Jeroslow_Wang_log_weight(vector* clauses) {
     return weight;
 }
 
-void c2_check_failed_literals(C2* c2) {
-    statistics_start_timer(c2->statistics.failed_literals_stats);
-    for (unsigned i = 1; i < var_vector_count(c2->qcnf->vars); i++) { 
-        Var* v = var_vector_get(c2->qcnf->vars, i);
-        if (v->var_id != 0 && !skolem_is_deterministic(c2->skolem, i)) {
-            assert(!v->is_universal);
-            assert(v->var_id == i);
-            
-            c2_assume_constant(c2, (Lit) v->var_id);
-            c2_assume_constant(c2, -(Lit) v->var_id);
-        }
-    }
-    statistics_stop_and_record_timer(c2->statistics.failed_literals_stats);
-}
-
 void c2_assume_constant(C2* c2, Lit lit) {
     assert(skolem_can_propagate(c2->skolem));
     
@@ -459,6 +444,21 @@ void c2_assume_constant(C2* c2, Lit lit) {
     statistics_add_value(c2->statistics.failed_literals_stats, (double) (c2->skolem->statistics.propagations - propagations_start));
     
     skolem_pop(c2->skolem);
+}
+
+void c2_check_failed_literals(C2* c2) {
+    statistics_start_timer(c2->statistics.failed_literals_stats);
+    for (unsigned i = 1; i < var_vector_count(c2->qcnf->vars); i++) { 
+        Var* v = var_vector_get(c2->qcnf->vars, i);
+        if (v->var_id != 0 && !skolem_is_deterministic(c2->skolem, i)) {
+            assert(!v->is_universal);
+            assert(v->var_id == i);
+            
+            c2_assume_constant(c2, (Lit) v->var_id);
+            c2_assume_constant(c2, -(Lit) v->var_id);
+        }
+    }
+    statistics_stop_and_record_timer(c2->statistics.failed_literals_stats);
 }
 
 // MAIN LOOPS
@@ -643,6 +643,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
             
             assert(!skolem_can_propagate(c2->skolem));
             
+            c2_check_failed_literals(c2);
             // regular decision
             Var* decision_var = c2_pick_most_active_notdeterministic_variable(c2);
             

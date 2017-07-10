@@ -429,7 +429,7 @@ float c2_Jeroslow_Wang_log_weight(vector* clauses) {
 
 void c2_check_failed_literals(C2* c2) {
     statistics_start_timer(c2->statistics.failed_literals_stats);
-    for (unsigned i = 1; i < var_vector_count(c2->qcnf_vars); i++) { 
+    for (unsigned i = 1; i < var_vector_count(c2->qcnf->vars); i++) { 
         Var* v = var_vector_get(c2->qcnf->vars, i);
         if (v->var_id != 0 && !skolem_is_deterministic(c2->skolem, i)) {
             assert(!v->is_universal);
@@ -456,7 +456,7 @@ void c2_assume_constant(C2* c2, Lit lit) {
         c2->statistics.failed_literals_conflicts++;
     }
     
-    statistics_add_value(c2->statistics.failed_literal_stats, (double) (c2->skolem->statistics.propagations - propagations_start));
+    statistics_add_value(c2->statistics.failed_literals_stats, (double) (c2->skolem->statistics.propagations - propagations_start));
     
     skolem_pop(c2->skolem);
 }

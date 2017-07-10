@@ -69,6 +69,9 @@ C2* c2_init_qcnf(QCNF* qcnf, Options* options) {
     c2->statistics.lvls_backtracked = 0;
     c2->statistics.start_time = get_seconds();
     
+    c2->statistics.failed_literals_stats = statistics_init(10000);
+    c2->statistics.failed_literals_conflicts = 0;
+    
     // Magic constants
     c2->magic.initial_restart = 10; // [1..100] // depends also on restart factor
     c2->next_restart = c2->magic.initial_restart;
@@ -103,6 +106,7 @@ C2* c2_init(Options* options) {
 }
 
 void c2_free(C2* c2) {
+    statistics_free(c2->statistics.failed_literals_stats);
     skolem_free(c2->skolem);
     val_vector_free(c2->decision_vals);
     stack_free(c2->stack);
@@ -423,6 +427,40 @@ float c2_Jeroslow_Wang_log_weight(vector* clauses) {
     return weight;
 }
 
+void c2_assume_constant(C2* c2, Lit lit) {
+    assert(skolem_can_propagate(c2->skolem));
+    statistics_start_timer(c2->statistics.failed_literals_stats);
+    
+    size_t propagations_start = c2->skolem->statistics.propagations;
+
+    skolem_push(c2->skolem);
+    skolem_assume_constant_value(c2->skolem, lit);
+    skolem_propagate(c2->skolem);
+    
+    if (skolem_is_conflicted(c2->skolem)) {    
+        V1("Skolem conflict with assumed constant %d: %d\n", lit, c2->skolem->conflict_var_id);
+        c2->statistics.failed_literals_conflicts++;
+    }
+    
+    V1("Number of propagations when assigning %d: %d\n", lit, c2->skolem->statistics.propagations - propagations_start);
+    
+    skolem_pop(c2->skolem);
+    statistics_stop_and_record_timer(c2->statistics.failed_literals_stats);
+}
+
+void c2_check_failed_literals(C2* c2) {
+    for (unsigned i = 1; i < var_vector_count(c2->qcnf->vars); i++) { 
+        Var* v = var_vector_get(c2->qcnf->vars, i);
+        if (v->var_id != 0 && !skolem_is_deterministic(c2->skolem, i)) {
+            assert(!v->is_universal);
+            assert(v->var_id == i);
+            
+            c2_assume_constant(c2, (Lit) v->var_id);
+            c2_assume_constant(c2, -(Lit) v->var_id);
+        }
+    }
+}
+
 // MAIN LOOPS
 cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
     
@@ -605,6 +643,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
             
             assert(!skolem_can_propagate(c2->skolem));
             
+            c2_check_failed_literals(c2);
             // regular decision
             Var* decision_var = c2_pick_most_active_notdeterministic_variable(c2);
             
@@ -631,8 +670,10 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                 
                 int phase = 1;
                 if (c2->restarts >= c2->magic.num_restarts_before_Jeroslow_Wang) {
+				
                     float pos_JW_weight = c2_Jeroslow_Wang_log_weight(&decision_var->pos_occs);
                     float neg_JW_weight = c2_Jeroslow_Wang_log_weight(&decision_var->neg_occs);
+				
                     phase = pos_JW_weight > neg_JW_weight ? 1 : -1;
                 }
                 

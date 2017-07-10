@@ -44,6 +44,9 @@ struct C2_Statistics {
     size_t lvls_backtracked;
     
     double start_time;
+    
+    Stats* failed_literals_stats;
+    size_t failed_literals_conflicts;
 };
 
 struct C2_Magic_Values {

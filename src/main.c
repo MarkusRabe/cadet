@@ -30,6 +30,7 @@ void print_usage(const char* name) {
                                     "\t--cegar\t\t\tUse CEGAR strategy in addition to incremental determinization (default off).\n"
                                     "\t--cegar_only\t\tUse CEGAR strategy exclusively.\n"
                                     "\t--case_splits \t\tCase distinctions (default off) \n"
+                                    "\t--failed_literals \tCheck for failed literals (default off)\n"
                                     "\t--functional-synthesis\tFunctional synthesis. I.e. compute skolem functions for UNSAT instances.\n"
                                     "\t--sat_by_qbf\t\tUse QBF engine also for propositional problems. Uses SAT solver by default.\n"
                                     "\t--miniscoping \t\tEnables miniscoping \n"
@@ -223,6 +224,8 @@ int main(int argc, const char* argv[]) {
                         options->cegar = ! options->cegar;
                     } else if (strcmp(argv[i], "--cegar_only") == 0) {
                         options->cegar_only = ! options->cegar_only;
+                    } else if (strcmp(argv[i], "--failed_literals") == 0) {
+                        options->failed_literals = ! options->failed_literals;
                     } else if (strcmp(argv[i], "--sat_by_qbf") == 0) {
                         options->use_qbf_engine_also_for_propositional_problems = ! options->use_qbf_engine_also_for_propositional_problems;
                     } else if (strcmp(argv[i], "--delay_conflicts") == 0) {

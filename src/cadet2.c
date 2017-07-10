@@ -643,7 +643,10 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
             
             assert(!skolem_can_propagate(c2->skolem));
             
-            c2_check_failed_literals(c2);
+            if (c2->options->failed_literals) {
+                c2_check_failed_literals(c2);
+            }
+            
             // regular decision
             Var* decision_var = c2_pick_most_active_notdeterministic_variable(c2);
             

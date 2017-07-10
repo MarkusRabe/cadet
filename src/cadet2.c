@@ -429,6 +429,7 @@ float c2_Jeroslow_Wang_log_weight(vector* clauses) {
 
 void c2_assume_constant(C2* c2, Lit lit) {
     assert(skolem_can_propagate(c2->skolem));
+    statistics_start_timer(c2->statistics.failed_literals_stats);
     
     size_t propagations_start = c2->skolem->statistics.propagations;
 
@@ -444,10 +445,10 @@ void c2_assume_constant(C2* c2, Lit lit) {
     V1("Number of propagations when assigning %d: %d\n", lit, c2->skolem->statistics.propagations - propagations_start);
     
     skolem_pop(c2->skolem);
+    statistics_stop_and_record_timer(c2->statistics.failed_literals_stats);
 }
 
 void c2_check_failed_literals(C2* c2) {
-    statistics_start_timer(c2->statistics.failed_literals_stats);
     for (unsigned i = 1; i < var_vector_count(c2->qcnf->vars); i++) { 
         Var* v = var_vector_get(c2->qcnf->vars, i);
         if (v->var_id != 0 && !skolem_is_deterministic(c2->skolem, i)) {
@@ -458,7 +459,6 @@ void c2_check_failed_literals(C2* c2) {
             c2_assume_constant(c2, -(Lit) v->var_id);
         }
     }
-    statistics_stop_and_record_timer(c2->statistics.failed_literals_stats);
 }
 
 // MAIN LOOPS

@@ -441,7 +441,7 @@ void c2_assume_constant(C2* c2, Lit lit) {
         c2->statistics.failed_literals_conflicts++;
     }
     
-    statistics_add_value(c2->statistics.failed_literals_stats, (double) (c2->skolem->statistics.propagations - propagations_start));
+    statistic_add_value(c2->statistics.failed_literals_stats, (double) (c2->skolem->statistics.propagations - propagations_start));
     
     skolem_pop(c2->skolem);
 }

@@ -1172,7 +1172,7 @@ void skolem_update_clause_worklist(Skolem* s, int unassigned_lit) {
     }
 }
 
-// Different from satsolver assumptions. Assume fixes a constant for a variable that is already deterministic
+// Different from satsolver assumptions. Assumes a constant for a variable that is already deterministic
 void skolem_assume_constant_value(Skolem* s, Lit lit) {
     V3("Skolem: Assume value %d.\n", lit);
     unsigned var_id = lit_to_var(lit);

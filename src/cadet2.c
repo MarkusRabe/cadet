@@ -442,7 +442,7 @@ void c2_assume_constant(C2* c2, Lit lit) {
         c2->statistics.failed_literals_conflicts++;
     }
     
-    V1("Number of propagations when assigning %d: %d\n", lit, c2->skolem->statistics.propagations - propagations_start);
+    V2("Number of propagations when assigning %d: %zu\n", lit, c2->skolem->statistics.propagations - propagations_start);
     
     skolem_pop(c2->skolem);
     statistics_stop_and_record_timer(c2->statistics.failed_literals_stats);

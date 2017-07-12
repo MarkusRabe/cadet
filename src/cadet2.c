@@ -791,9 +791,9 @@ cadet_res c2_sat(C2* c2) {
     while (c2->result == CADET_RESULT_UNKNOWN) { // This loop controls the restarts
         switch (c2_run(c2, c2->next_restart)) {
             case CADET_RESULT_UNKNOWN:
-                V2("Restart %zu\n", c2->restarts);
-                assert(c2->skolem->decision_lvl == c2->restart_base_decision_lvl);
                 c2->restarts += 1;
+                V1("\nRestart %zu\n", c2->restarts);
+                assert(c2->skolem->decision_lvl == c2->restart_base_decision_lvl);
                 c2_restart_heuristics(c2);
                 
                 if (debug_verbosity >= VERBOSITY_MEDIUM) {

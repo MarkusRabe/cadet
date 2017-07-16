@@ -43,7 +43,7 @@ void vector_free(vector* v) {
     free(v);
 }
 
-unsigned vector_count(vector* v) {
+unsigned vector_count(const vector* v) {
     return v->count;
 }
 
@@ -52,7 +52,7 @@ void vector_reduce_count(vector* v, unsigned j) {
     v->count = j;
 }
 
-void* vector_get(vector* v, unsigned i) {
+void* vector_get(const vector* v, unsigned i) {
     assert (v->count > i);
     return v->data[i];
 }
@@ -127,6 +127,12 @@ void vector_add_sorted(vector* v, void* value) {
     }
     v->data[v->count] = value;
     v->count += 1;
+}
+
+void* vector_pop(vector* v) {
+    abortif(v->count == 0, "Pop from empty vector");
+    v->count -= 1;
+    return v->data[v->count];
 }
 
 void vector_insert_at(vector* v, unsigned i, void* value) {

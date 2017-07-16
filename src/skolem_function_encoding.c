@@ -1,12 +1,14 @@
 //
-//  function_encoding.c
+//  skolem_function_encoding.c
 //  cadet
 //
 //  Created by Markus Rabe on 01.06.17.
 //  Copyright © 2017 UC Berkeley. All rights reserved.
 //
 
-#include "function_encoding.h"
+#include "skolem_function_encoding.h"
+#include "function_private.h"
+#include "skolem_var.h"
 #include "log.h"
 
 #include <assert.h>
@@ -14,8 +16,7 @@
 void f_add_clause(Skolem* s, Clause* c) {
     for (unsigned i = 0; i < c->size; i++) {
         assert(skolem_is_deterministic(s, lit_to_var(c->occs[i])) || skolem_get_unique_consequence(s, c) == c->occs[i]);
-        int sat_lit = - skolem_get_satlit(s, - c->occs[i]);
-        f_add(s->f, sat_lit);
+        f_add_satlit(s->f, satlit_negate(skolem_get_satlit(s, - c->occs[i])) );
     }
     f_clause_finished(s->f);
 }
@@ -32,8 +33,6 @@ void f_add_clauses(Skolem* s, unsigned var_id, vector* occs) {
         }
     }
 }
-
-
 
 /* Partial function propagation rule
  *
@@ -58,7 +57,9 @@ void f_propagate_partial_over_clause_for_lit(Skolem* s, Clause* c, Lit lit, bool
     // -newlit || (prevlit || -x) && (prevlit || -y) && (prevlit || -z)
     // (-newlit || prevlit || -x) && (-newlit || prevlit || -y) && (-newlit || prevlit || -z)
     
-    int satlit = f_fresh_var(s->f);
+    satlit fresh;
+    fresh.x[0] = f_fresh_var(s->f);
+    fresh.x[1] = f_fresh_var(s->f);
     union Dependencies dependencies = skolem_get_dependencies(s, lit_to_var(lit));
     assert(s->qcnf->problem_type < QCNF_DQBF || int_vector_is_strictly_sorted(dependencies.dependencies));
     union Dependencies dependencies_copy = skolem_copy_dependencies(s, dependencies);
@@ -67,9 +68,9 @@ void f_propagate_partial_over_clause_for_lit(Skolem* s, Clause* c, Lit lit, bool
         bool is_legal = skolem_may_depend_on(s, lit_to_var(lit), lit_to_var(c->occs[i]));
         if (is_legal) {
             assert(skolem_is_deterministic(s, lit_to_var(c->occs[i])));
-            f_add(s->f, -satlit);
-            f_add(s->f, skolem_get_satlit(s, lit)); // prevlit
-            f_add(s->f, skolem_get_satlit(s, - c->occs[i]));
+            f_add_satlit(s->f, satlit_negate(fresh));
+            f_add_satlit(s->f, skolem_get_satlit(s, lit)); // prevlit
+            f_add_satlit(s->f, skolem_get_satlit(s, - c->occs[i]));
             f_clause_finished(s->f);
             
             if (is_legal) {
@@ -99,8 +100,8 @@ void f_propagate_partial_over_clause_for_lit(Skolem* s, Clause* c, Lit lit, bool
         // (-prevlit || newlit) && (x || y || z || newlit)
         
         // first clause
-        f_add(s->f, - skolem_get_satlit(s, lit)); // - prevlit
-        f_add(s->f, satlit);
+        f_add_satlit(s->f, satlit_negate(skolem_get_satlit(s, lit))); // - prevlit
+        f_add_satlit(s->f, fresh);
         f_clause_finished(s->f);
         
         // second clause
@@ -109,17 +110,16 @@ void f_propagate_partial_over_clause_for_lit(Skolem* s, Clause* c, Lit lit, bool
             bool is_legal = skolem_may_depend_on(s, lit_to_var(lit), lit_to_var(c->occs[i]));
             if (is_legal) {
                 assert(skolem_is_deterministic(s, lit_to_var(c->occs[i])));
-                f_add(s->f, skolem_get_satlit(s, c->occs[i]));
+                f_add_satlit(s->f, skolem_get_satlit(s, c->occs[i]));
             }
         }
-        f_add(s->f, satlit);
+        f_add_satlit(s->f, fresh);
         f_clause_finished(s->f);
     }
     
-    skolem_update_satlit(s, lit, satlit);
+    skolem_update_satlit(s, lit, fresh);
     skolem_update_dependencies(s, lit_to_var(lit), dependencies_copy);
 }
-
 
 /* Extends the literal definition of lit by the clauses with unique consequence.
  *
@@ -131,7 +131,8 @@ bool f_encode_unique_antecedents_for_lits(Skolem* s, Lit lit, bool define_both_s
 
 #ifdef DEBUG
     skolem_var* sv = skolem_var_vector_get(s->infos, lit_to_var(lit));
-    assert((lit > 0 ? sv->pos_lit : sv->neg_lit) == -1); // not necessary, but currently given
+    assert((lit > 0 ? sv->pos_lit.x[0] : sv->neg_lit.x[0]) == - f_get_true(s->f)); // not necessary, but currently given
+    assert((lit > 0 ? sv->pos_lit.x[1] : sv->neg_lit.x[1]) == - f_get_true(s->f)); // not necessary, but currently given
 #endif
     
     vector* lit_occs = qcnf_get_occs_of_lit(s->qcnf, lit);
@@ -145,4 +146,97 @@ bool f_encode_unique_antecedents_for_lits(Skolem* s, Lit lit, bool define_both_s
     }
     
     return case_exists;
+}
+
+void f_encode_give_fresh_satlit(Skolem* s, unsigned var_id) {
+    assert(skolem_get_satlit(s,   (Lit) var_id).x[0] == - f_get_true(s->f));
+    assert(skolem_get_satlit(s, - (Lit) var_id).x[0] == - f_get_true(s->f));
+    assert(skolem_get_satlit(s,   (Lit) var_id).x[1] == - f_get_true(s->f));
+    assert(skolem_get_satlit(s, - (Lit) var_id).x[1] == - f_get_true(s->f));
+    
+    // First we give the variable a fresh satlit, to make available for the clause encoding
+    satlit sl;
+    sl.x[0] = f_fresh_var(s->f);
+    if (s->qcnf->problem_type > QCNF_2QBF) {
+        sl.x[1] = f_fresh_var(s->f);
+    } else {
+        sl.x[1] = - f_get_true(s->f);
+    }
+    
+    skolem_update_satlit(s,   (Lit) var_id,               sl);
+    skolem_update_satlit(s, - (Lit) var_id, satlit_negate(sl));
+}
+
+void f_add_satlit_clause(Function* f, const vector* clause) {
+    for (unsigned i = 0; i < vector_count(clause); i++) {
+        union satlit_void_ptr_union sl;
+        sl.data = vector_get(clause, i);
+        f_add_satlit(f, sl.lit);
+    }
+    f_clause_finished(f);
+}
+
+void f_add_lit_clause_for_context(Skolem* s, const int_vector* clause, unsigned context) {
+    for (unsigned i = 0; i < int_vector_count(clause); i++) {
+        satlit lit = skolem_get_satlit(s, int_vector_get(clause, i));
+        f_add_satlit(s->f, lit);
+    }
+    f_clause_finished_for_context(s->f, context);
+}
+
+satlit f_add_AND(Function* f, satlit input1, satlit input2) {
+    satlit res;
+    res.x[0] = 0;
+    res.x[1] = 0;
+    
+    if (input1.x[0] == - f->satlit_true || input2.x[0] == - f->satlit_true) {
+        res.x[0] = - f->satlit_true;
+    } else if (input1.x[0] == f->satlit_true) {
+        res.x[0] = input2.x[0];
+    } else if (input2.x[0] == f->satlit_true) {
+        res.x[0] = input1.x[0];
+    } else {
+        res.x[0] = f_fresh_var(f);
+    }
+    
+    if (input1.x[1] == - f->satlit_true || input2.x[1] == - f->satlit_true) {
+        res.x[1] = - f->satlit_true;
+    } else if (input1.x[1] == f->satlit_true) {
+        res.x[1] = input2.x[1];
+    } else if (input2.x[1] == f->satlit_true) {
+        res.x[1] = input1.x[1];
+    } else {
+        res.x[1] = f_fresh_var(f);
+    }
+    
+    assert(res.x[0] != 0);
+    assert(res.x[1] != 0);
+    
+//    int res = 
+    f_add_satlit(f, res);
+    f_add_satlit(f, satlit_negate(input1));
+    f_add_satlit(f, satlit_negate(input2));
+    f_clause_finished(f);
+    
+    f_add_satlit(f, satlit_negate(res));
+    f_add_satlit(f, input1);
+    f_clause_finished(f);
+    
+    f_add_satlit(f, satlit_negate(res));
+    f_add_satlit(f, input2);
+    f_clause_finished(f);
+    
+    return res;
+}
+
+satlit f_add_OR(Function* f, satlit input1, satlit input2) {
+    return satlit_negate(f_add_AND(f, satlit_negate(input1), satlit_negate(input2)));
+}
+
+void f_encode_conflictedness(Skolem* s, unsigned var_id) {
+    satsolver_add(s->f->sat, skolem_get_satlit(s,   (Lit) var_id).x[0]);
+    f_clause_finished(s->f);
+    
+    satsolver_add(s->f->sat, skolem_get_satlit(s, - (Lit) var_id).x[1]);
+    f_clause_finished(s->f);
 }

@@ -58,7 +58,11 @@ void skolem_print_skolem_var(Skolem* s, skolem_var* si, unsigned indent) {
     for (unsigned i = 0; i < indent; i++) {
         V1(" ");
     }
-    V1("pos_lit %d, neg_lit %d\n", si->pos_lit, si->neg_lit);
+    V1("pos_lit %d, neg_lit %d\n", si->pos_lit.x[0], si->neg_lit.x[0]);
+    for (unsigned i = 0; i < indent; i++) {
+        V1(" ");
+    }
+    V1("alternative pos_lit %d, neg_lit %d\n", si->pos_lit.x[1], si->neg_lit.x[1]);
     for (unsigned i = 0; i < indent; i++) {
         V1(" ");
     }
@@ -83,8 +87,12 @@ void skolem_enlarge_skolem_var_vector(Skolem* s, unsigned var_id) {
     skolem_var sv;
     
     // undoable portion of skolem_vars
-    sv.pos_lit = - f_get_true(s->f);
-    sv.neg_lit = - f_get_true(s->f);
+    sv.pos_lit.x[0] = - f_get_true(s->f);
+    sv.pos_lit.x[1] = - f_get_true(s->f);
+    sv.neg_lit.x[0] = - f_get_true(s->f);
+    sv.neg_lit.x[1] = - f_get_true(s->f);
+    
+    // flags
     sv.pure_pos = 0;
     sv.pure_neg = 0;
     sv.deterministic = 0;
@@ -150,37 +158,44 @@ void skolem_undo_decision_lvl(Skolem* s, void* data) {
     sv->decision_lvl = (unsigned) suu.sus.val;
 }
 
-void skolem_update_pos_lit(Skolem* s, unsigned var_id, int pos_lit) {
+void skolem_update_pos_lit(Skolem* s, unsigned var_id, int pos_lit, bool alt) {
+    assert(alt == 0 || alt == 1);
+    assert(pos_lit != 0);
     skolem_enlarge_skolem_var_vector(s, var_id);
     skolem_var* sv = skolem_var_vector_get(s->infos, var_id);
-    if (pos_lit != sv->pos_lit) {
+    if (pos_lit != sv->pos_lit.x[alt]) {
         V4("Setting pos_lit %d for var %u\n", pos_lit, var_id);
         union skolem_undo_union suu;
+        suu.sus.alt = alt;
         suu.sus.var_id = var_id;
-        suu.sus.val = sv->pos_lit;
+        suu.sus.val = sv->pos_lit.x[alt];
         stack_push_op(s->stack, SKOLEM_OP_UPDATE_INFO_POS_LIT, suu.ptr);
-        sv->pos_lit = pos_lit;
+        sv->pos_lit.x[alt] = pos_lit;
     }
 }
 
-void skolem_update_neg_lit(Skolem* s, unsigned var_id, int neg_lit) {
+void skolem_update_neg_lit(Skolem* s, unsigned var_id, int neg_lit, bool alt) {
+    assert(alt == 0 || alt == 1);
     skolem_enlarge_skolem_var_vector(s, var_id);
     skolem_var* sv = skolem_var_vector_get(s->infos, var_id);
-    if (neg_lit != sv->neg_lit) {
+    if (neg_lit != sv->neg_lit.x[alt]) {
         V4("Setting neg_lit %d for var %u\n", neg_lit, var_id);
         union skolem_undo_union suu;
+        suu.sus.alt = alt;
         suu.sus.var_id = var_id;
-        suu.sus.val = sv->neg_lit;
+        suu.sus.val = sv->neg_lit.x[alt];
         stack_push_op(s->stack, SKOLEM_OP_UPDATE_INFO_NEG_LIT, suu.ptr);
-        sv->neg_lit = neg_lit;
+        sv->neg_lit.x[alt] = neg_lit;
     }
 }
 
-void skolem_update_satlit(Skolem* s, Lit lit, int new_satlit) {
+void skolem_update_satlit(Skolem* s, Lit lit, satlit new_satlit) {
     if (lit > 0) {
-        skolem_update_pos_lit(s, lit_to_var(lit), new_satlit);
+        skolem_update_pos_lit(s, lit_to_var(lit), new_satlit.x[0], 0);
+        skolem_update_pos_lit(s, lit_to_var(lit), new_satlit.x[1], 1);
     } else {
-        skolem_update_neg_lit(s, lit_to_var(lit), new_satlit);
+        skolem_update_neg_lit(s, lit_to_var(lit), new_satlit.x[0], 0);
+        skolem_update_neg_lit(s, lit_to_var(lit), new_satlit.x[1], 1);
     }
 }
 
@@ -301,4 +316,10 @@ union Dependencies skolem_get_dependencies(Skolem* s, unsigned var_id) {
     assert((int) var_id > 0); // is not a lit
     skolem_var si = skolem_get_info(s, var_id);
     return si.dep;
+}
+
+satlit satlit_negate(satlit x) {
+    x.x[0] = - x.x[0];
+    x.x[1] = - x.x[1];
+    return x;
 }

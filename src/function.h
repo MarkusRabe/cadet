@@ -11,15 +11,21 @@
 
 #include "int_vector.h"
 #include "qcnf.h"
+#include "skolem_var.h"
 
 #include <stdbool.h>
 
 struct Function;
 typedef struct Function Function;
 
+// for converting satlits into void* and vice versa
+union satlit_void_ptr_union {
+    void* data;
+    satlit lit;
+};
+
 Function* f_init(QCNF*);
 void f_free(Function* f);
-
 
 // Configure and profile the sat solver
 void f_trace_satsolver_commands(Function*);
@@ -29,33 +35,24 @@ void f_set_max_var(Function*, int max_var);
 int f_get_max_var(Function*);
 void f_print_statistics(Function*);
 
-
 // Variables
-int f_fresh_var(Function*);
 int f_get_true(Function*); // get the satlit corresponding to TRUE
+satlit f_get_true_satlit(Function* f);
 
 // Interaction
 void f_push(Function*);
 void f_pop(Function*);
 
-void f_add(Function*, int lit);
+int f_sat(Function*);
+int f_result(Function*); // returns the result of the last SAT call
+int f_value(Function*, int satlit); // returns the value of the satlit. Must be in SAT state.
+
+void f_add_satlit(Function*, satlit lit);
 void f_clause_finished(Function*);
 void f_clause_finished_for_context(Function*, unsigned context);
 
-void f_assume(Function*, int lit);
-int f_sat(Function*);
-int f_result(Function*); // returns the result of the last SAT call
-int f_value(Function*, int lit); // returns the value of the lit. Must be in SAT state
+int f_fresh_var(Function*);
 
-void f_add_satlit_clause(Function*, const int_vector*);
-//void f_add_clause(Function*, const int_vector*); // does not modify the int_vectorf
-//void f_add_unary_clause(Function*, int, int);
-//void f_add_binary_clause(Function*, int, int);
-//void f_add_ternary_clause(Function*, int, int, int);
-//
-int f_add_AND(Function*, int input1, int input2);
-int f_add_OR(Function*, int input1, int input2);
-
-
+void f_assume(Function*, satlit lit);
 
 #endif /* function_h */

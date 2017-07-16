@@ -9,6 +9,7 @@
 #include "c2_cegar.h"
 #include "log.h"
 #include "function.h"
+#include "skolem_function_encoding.h"
 
 Cegar* cegar_init(Skolem* s) {
     Cegar* cegar = malloc(sizeof(Cegar));
@@ -107,12 +108,15 @@ void cegar_new_cube(Cegar* c, int_vector* cube) {
     
     vector_add(c->solved_cubes, cube);
     
+#ifdef DEBUG
     for (unsigned i = 0 ; i < int_vector_count(cube); i++) {
         int lit = int_vector_get(cube, i);
-        int satlit = skolem_get_satlit(c->skolem, lit);
-        f_add(c->skolem->f, satlit);
+        assert(skolem_is_deterministic(c->skolem, lit_to_var(lit)));
+        assert(skolem_get_decision_lvl(c->skolem, lit_to_var(lit) == 0)); // currently needed
     }
-    f_clause_finished_for_context(c->skolem->f, 0);
+#endif
+    
+    f_add_lit_clause_for_context(c->skolem, cube, 0);
     
     c->cubes_num += 1;
     c->recent_average_cube_size = (float) int_vector_count(cube) * (float) 0.1 + c->recent_average_cube_size * (float) 0.9;

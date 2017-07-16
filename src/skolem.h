@@ -19,6 +19,7 @@
 #include "skolem_var_vector.h"
 #include "skolem_dependencies.h"
 #include "skolem_var.h"
+#include "skolem_constants.h"
 #include "options.h"
 #include "statistics.h"
 
@@ -97,7 +98,7 @@ struct Skolem {
     int_vector* unique_consequence; // contains lit indexed by clause_id
     
     // Extra data structure required for functional synthesis
-    int_vector* decision_indicator_sat_lits; // contains var_id of temporary vars
+    vector* decision_indicator_sat_lits; // contains var_id of temporary vars
     
     /* Propagation worklists:
      * Constants are propagated through the clauses_to_check worklist.
@@ -144,8 +145,6 @@ void skolem_assign_constant_value(Skolem*,Lit,union Dependencies, Clause* reason
 void skolem_assume_constant_value(Skolem*,Lit);
 int skolem_get_constant_value(Skolem*, Lit);
 bool skolem_is_initially_deterministic(Skolem* s, unsigned var_id);
-bool skolem_lit_satisfied(Skolem* s, Lit lit);
-bool skolem_clause_satisfied(Skolem* s, Clause* c);
 
 bool skolem_can_propagate(Skolem*);
 void skolem_propagate(Skolem*);
@@ -187,8 +186,6 @@ void skolem_update_clause_worklist(Skolem* s, int unassigned_lit);
 void skolem_propagate_determinicity_over_clause(Skolem*,QCNF*,Clause*);
 void skolem_propagate_explicit_assignments(Skolem* s);
 
-int skolem_get_constant_value(Skolem* s, Lit lit); // get the value of the variable, if it is a constant
-
 void skolem_check_occs_for_unique_consequences(Skolem*, Lit lit);
 void skolem_check_for_unique_consequence(Skolem*, Clause*);
 void skolem_set_unique_consequence(Skolem*, Clause*, Lit);
@@ -197,6 +194,6 @@ bool skolem_has_unique_consequence(Skolem*, Clause*);
 bool skolem_is_locally_conflicted(Skolem*, unsigned var_id);
 
 // used by debug.c
-int skolem_get_satlit(Skolem* s, Lit lit);
+satlit skolem_get_satlit(Skolem* s, Lit lit);
 
 #endif /* skolem_h */

@@ -13,8 +13,8 @@
 void c2_validate_var(C2* c2, unsigned var_id) {
     skolem_var sv = skolem_get_info(c2->skolem, var_id);
     abortif(sv.pure_neg && sv.pure_pos, "");
-    abortif(sv.deterministic && sv.pos_lit == 0 && sv.neg_lit == 0, "");
-    abortif(sv.deterministic && sv.pos_lit == 0 && sv.neg_lit == 0, "");
+    abortif(sv.deterministic && sv.pos_lit.x[0] == 0 && sv.neg_lit.x[0] == 0, "");
+    abortif(sv.deterministic && sv.pos_lit.x[0] == 0 && sv.neg_lit.x[0] == 0, "");
     
     int decision_val = c2_get_decision_val(c2, var_id);
     abortif(decision_val != 0 && (sv.pure_pos || sv.pure_neg), "");

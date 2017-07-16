@@ -17,6 +17,7 @@
 #include "c2_traces.h"
 #include "c2_casesplits.h"
 #include "skolem_dependencies.h"
+#include "skolem_function_encoding.h"
 #include "c2_cegar.h"
 #include "satsolver.h"
 
@@ -202,8 +203,6 @@ void c2_initial_propagation(C2* c2) {
         for (unsigned i = 0; i < int_vector_count(c2->qcnf->universals_constraints_from_aiger_encoding); i++) {
             unsigned var_id = (unsigned) int_vector_get(c2->qcnf->universals_constraints_from_aiger_encoding, i);
             abortif( ! skolem_is_deterministic(c2->skolem, var_id), "Constraint variable is not determinsitic. This should be a constraint purely over the universals.");
-            f_add(c2->skolem->f, skolem_get_satlit(c2->skolem, (Lit) var_id));
-            f_clause_finished(c2->skolem->f);
             skolem_assume_constant_value(c2->skolem, (Lit) var_id);
         }
         
@@ -234,13 +233,7 @@ void c2_replenish_skolem_satsolver(C2* c2) {
     // Now, we re-introduce the cubes that we have solved already.
     for (unsigned i = 0; i < vector_count(old_cegar->solved_cubes); i++) {
         int_vector* cube = (int_vector*) vector_get(old_cegar->solved_cubes, i);
-        for (unsigned j = 0; j < int_vector_count(cube); j++) {
-            Lit lit = int_vector_get(cube, j);
-            assert(skolem_is_deterministic(c2->skolem, lit_to_var(lit)));
-            int satlit = skolem_get_satlit(c2->skolem, lit);
-            f_add(c2->skolem->f, satlit);
-        }
-        f_clause_finished_for_context(c2->skolem->f, 0);
+        f_add_lit_clause_for_context(c2->skolem, cube, 0);
     }
     
     skolem_free(old_skolem);
@@ -953,9 +946,11 @@ void c2_new_variable(C2* c2, unsigned var_id) {
         
         skolem_update_deterministic(c2->skolem, var_id, 1);
         
-        int innerlit = f_fresh_var(c2->skolem->f);
-        skolem_update_satlit(c2->skolem, (Lit) var_id, innerlit);
-        skolem_update_satlit(c2->skolem, - (Lit) var_id, - innerlit);
+        satlit innerlit;
+        innerlit.x[0] = f_fresh_var(c2->skolem->f);
+        innerlit.x[1] = f_fresh_var(c2->skolem->f);
+        skolem_update_satlit(c2->skolem,   (Lit) var_id,               innerlit );
+        skolem_update_satlit(c2->skolem, - (Lit) var_id, satlit_negate(innerlit));
         
         union Dependencies dep;
         if (c2->qcnf->problem_type < QCNF_DQBF) {

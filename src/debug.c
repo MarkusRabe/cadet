@@ -14,8 +14,7 @@
 
 // Generates random inputs to the skolem function and tests for
 // satisfiability of the skolem solver. This makes sure that
-// the skolem function is not too strong, which may cause the
-// Function to
+// the skolem function is not too strong.
 void debug_fuzz_for_incompleteness(C2* c2, unsigned num_trials) {
     
     assert(debug_verbosity >= VERBOSITY_NONE);
@@ -41,8 +40,8 @@ void debug_fuzz_for_incompleteness(C2* c2, unsigned num_trials) {
             int val = rand()%2 ? 1 : -1;
 //            int val = v->var_id == 5 ? -1 : 1;
             int_vector_set(assignment, i, val);
-            Lit l = skolem_get_satlit(c2->skolem, val * (int)v->var_id);
-            f_add(c2->skolem->f, l);
+            satlit l = skolem_get_satlit(c2->skolem, val * (int)v->var_id);
+            f_add_satlit(c2->skolem->f, l);
             f_clause_finished(c2->skolem->f);
 //            V4("  asserting var %u, satlit %d\n", v->var_id, l);
         }

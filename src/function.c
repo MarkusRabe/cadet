@@ -7,6 +7,7 @@
 //
 
 #include "function.h"
+#include "function_private.h"
 #include "satsolver.h"
 #include "util.h"
 #include "debug.h"
@@ -14,37 +15,29 @@
 
 #include <stdarg.h>
 
-
-struct Function {
-    QCNF* qcnf;
-    SATSolver* sat;
-    
-    // Helper variables in the SAT solver
-    int_vector* consistency_lits; // satlits representing consistency for up to level x
-    int satlit_true;
-    
-    int_vector* uncommitted_clause;
-};
+//// INITIALIZATION
 
 Function* f_init(QCNF* qcnf) {
     Function* f = malloc(sizeof(Function));
     f->qcnf = qcnf;
-    
     f->sat = satsolver_init();
+    
+    f->new_clause = vector_init();
     
     f->consistency_lits = int_vector_init();
     f->uncommitted_clause = int_vector_init();
     
     // Define the constant TRUE
     f->satlit_true = satsolver_inc_max_var(f->sat);
-    assert(f->satlit_true == 1);
-    f_add(f, f->satlit_true);
-    f_clause_finished(f);
+    assert(f->satlit_true == 1); // Not strictly required but I can sleep better with this assertion.
+    satsolver_add(f->sat, f->satlit_true);
+    satsolver_clause_finished(f->sat);
     
     return f;
 }
 void f_free(Function* f) {
     satsolver_free(f->sat);
+    vector_free(f->new_clause);
     int_vector_free(f->consistency_lits);
     int_vector_free(f->uncommitted_clause);
     free(f);
@@ -83,30 +76,30 @@ int f_get_true(Function* f) {
     return f->satlit_true;
 }
 
+satlit f_get_true_satlit(Function* f) {
+    satlit sl;
+    sl.x[0] = f->satlit_true;
+    sl.x[1] = f->satlit_true;
+    return sl;
+}
 
-//// INTERACTION
+//// DIRECT INTERACTION
 
 void f_push(Function* f) {
+    assert(vector_count(f->new_clause) == 0);
     satsolver_push(f->sat);
 }
 void f_pop(Function* f) {
+    assert(vector_count(f->new_clause) == 0);
     satsolver_pop(f->sat);
 }
-
-void f_add(Function* f, int lit) {
-    satsolver_add(f->sat, lit);
-}
-void f_clause_finished(Function* f) {
-    satsolver_clause_finished(f->sat);
-}
-void f_clause_finished_for_context(Function* f, unsigned context) {
-    satsolver_clause_finished_for_context(f->sat, context);
-}
-
-void f_assume(Function* f, int lit) {
-    satsolver_assume(f->sat, lit);
+void f_assume(Function* f, satlit lit) {
+    assert(vector_count(f->new_clause) == 0);
+    satsolver_assume(f->sat, lit.x[0]);
+    satsolver_assume(f->sat, lit.x[1]);
 }
 sat_res f_sat(Function* f) {
+    assert(vector_count(f->new_clause) == 0);
     sat_res res = satsolver_sat(f->sat);
     assert(res == SATSOLVER_SATISFIABLE || res == SATSOLVER_UNSATISFIABLE);
     return res;
@@ -114,38 +107,42 @@ sat_res f_sat(Function* f) {
 int f_result(Function* f) {
     return satsolver_state(f->sat);
 }
-int f_value(Function* f, int lit){
+int f_value(Function* f, int lit) {
     return satsolver_deref(f->sat, lit);
 }
 
-void f_add_satlit_clause(Function* f, const int_vector* clause) {
-    for (unsigned i = 0; i < int_vector_count(clause); i++) {
-        f_add(f, int_vector_get(clause, i));
-    }
-    f_clause_finished(f);
+void f_add_satlit(Function* f, satlit lit) {
+    union satlit_void_ptr_union u;
+    u.lit = lit;
+    vector_add(f->new_clause, u.data);
 }
-
-int f_add_AND(Function* f, int input1, int input2) {
-    if (input1 == - f->satlit_true || input2 == - f->satlit_true) {
-        return - f->satlit_true;
+void f_clause_finished(Function* f) {
+    for (unsigned i = 0; i < vector_count(f->new_clause); i++) {
+        union satlit_void_ptr_union u;
+        u.data = vector_get(f->new_clause, i);
+        satsolver_add(f->sat, u.lit.x[0]);
     }
-    int res = f_fresh_var(f);
-    f_add(f, res);
-    f_add(f, - input1);
-    f_add(f, - input2);
-    f_clause_finished(f);
-    
-    f_add(f, - res);
-    f_add(f,   input1);
-    f_clause_finished(f);
-    
-    f_add(f, - res);
-    f_add(f,   input2);
-    f_clause_finished(f);
-    
-    return res;
+    satsolver_clause_finished(f->sat);
+    for (unsigned i = 0; i < vector_count(f->new_clause); i++) {
+        union satlit_void_ptr_union u;
+        u.data = vector_get(f->new_clause, i);
+        satsolver_add(f->sat, u.lit.x[1]);
+    }
+    satsolver_clause_finished(f->sat);
+    vector_reset(f->new_clause);
 }
-
-int f_add_OR(Function* f, int input1, int input2) {
-    return - f_add_AND(f, - input1, - input2);
+void f_clause_finished_for_context(Function* f, unsigned context) {
+    for (unsigned i = 0; i < vector_count(f->new_clause); i++) {
+        union satlit_void_ptr_union u;
+        u.data = vector_get(f->new_clause, i);
+        satsolver_add(f->sat, u.lit.x[0]);
+    }
+    satsolver_clause_finished_for_context(f->sat, context);
+    for (unsigned i = 0; i < vector_count(f->new_clause); i++) {
+        union satlit_void_ptr_union u;
+        u.data = vector_get(f->new_clause, i);
+        satsolver_add(f->sat, u.lit.x[1]);
+    }
+    satsolver_clause_finished_for_context(f->sat, context);
+    vector_reset(f->new_clause);
 }

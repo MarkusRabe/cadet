@@ -230,3 +230,20 @@ void skolem_validate_dependence_lvls(Skolem* s) {
         }
 #endif
 }
+
+void skolem_validate_skolem_vars(Skolem* s) {
+    for (unsigned i = 1; i < skolem_var_vector_count(s->infos); i++) {
+        skolem_var sv = skolem_get_info(s, i);
+        assert(sv.pos_lit.x[0] != 0);
+        assert(sv.pos_lit.x[1] != 0);
+        assert(sv.neg_lit.x[0] != 0);
+        assert(sv.neg_lit.x[1] != 0);
+        
+        // none or both must be constant true
+        assert(sv.pos_lit.x[0] != f_get_true(s->f) || sv.pos_lit.x[1] == f_get_true(s->f));
+        assert(sv.pos_lit.x[0] == f_get_true(s->f) || sv.pos_lit.x[1] != f_get_true(s->f));
+        // none or both must be constant false
+        assert(sv.pos_lit.x[0] != -f_get_true(s->f) || sv.pos_lit.x[1] == -f_get_true(s->f));
+        assert(sv.pos_lit.x[0] == -f_get_true(s->f) || sv.pos_lit.x[1] != -f_get_true(s->f));
+    }
+}

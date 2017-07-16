@@ -87,7 +87,7 @@ void skolem_var_vector_print(skolem_var_vector* v) {
     V4("skolem_var_vector (%u,%u) ", v->count, v->size);
     for (unsigned j = 0; j < v->count; j++) {
         skolem_var sv = v->data[j];
-        V1(" (%d %d %d%d%d)", sv.pos_lit, sv.neg_lit, sv.pure_pos, sv.pure_neg, sv.deterministic);
+        V1(" (%d/%d %d/%d %d%d%d)", sv.pos_lit.x[0], sv.pos_lit.x[1], sv.neg_lit.x[0], sv.neg_lit.x[1], sv.pure_pos, sv.pure_neg, sv.deterministic);
     }
     V1("\n");
 }

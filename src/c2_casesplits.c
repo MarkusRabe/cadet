@@ -39,7 +39,7 @@ void c2_backtrack_case_split(C2* c2) {
         Lit l = int_vector_get(c2->case_split_stack, i);
         assert(skolem_is_deterministic(c2->skolem,lit_to_var(l)));
         assert(skolem_get_constant_value(c2->skolem, l) == 0);
-        f_add(c2->skolem->f, skolem_get_satlit(c2->skolem, - l));
+        f_add_satlit(c2->skolem->f, skolem_get_satlit(c2->skolem, - l));
         int_vector_add(solved_cube, -l);
     }
     f_clause_finished(c2->skolem->f);
@@ -89,7 +89,7 @@ bool c2_case_split(C2* c2) {
             }
             
             for (unsigned j = 0; j < int_vector_count(c2->case_split_stack); j++) {
-                assert(skolem_get_satlit(c2->skolem, int_vector_get(c2->case_split_stack, j)));
+                assert(skolem_get_satlit(c2->skolem, int_vector_get(c2->case_split_stack, j)).x[0] != - f_get_true(c2->skolem->f));
             }
             
             f_assume(c2->skolem->f, skolem_get_satlit(c2->skolem, most_notorious_literal));

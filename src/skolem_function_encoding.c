@@ -235,8 +235,8 @@ satlit f_add_OR(Function* f, satlit input1, satlit input2) {
 
 void f_encode_conflictedness(Skolem* s, unsigned var_id) {
     satsolver_add(s->f->sat, skolem_get_satlit(s,   (Lit) var_id).x[0]);
-    f_clause_finished(s->f);
+    satsolver_clause_finished(s->f->sat);
     
-    satsolver_add(s->f->sat, skolem_get_satlit(s, - (Lit) var_id).x[1]);
-    f_clause_finished(s->f);
+    satsolver_add(s->f->sat, skolem_get_satlit(s, - (Lit) var_id).x[0]);
+    satsolver_clause_finished(s->f->sat);
 }

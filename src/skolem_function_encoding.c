@@ -43,7 +43,6 @@ void f_add_clauses(Skolem* s, unsigned var_id, vector* occs) {
  */
 void f_propagate_partial_over_clause_for_lit(Skolem* s, Clause* c, Lit lit, bool define_both_sides) {
     assert(qcnf_contains_literal(c, lit) != 0);
-    assert(!skolem_is_deterministic(s, lit_to_var(lit)));
     assert( skolem_get_unique_consequence(s, c) == 0 || skolem_get_unique_consequence(s, c) == lit );
     
     if (s->options->functional_synthesis) {

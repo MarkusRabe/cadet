@@ -112,7 +112,7 @@ void cegar_new_cube(Cegar* c, int_vector* cube) {
     for (unsigned i = 0 ; i < int_vector_count(cube); i++) {
         int lit = int_vector_get(cube, i);
         assert(skolem_is_deterministic(c->skolem, lit_to_var(lit)));
-        assert(skolem_get_decision_lvl(c->skolem, lit_to_var(lit) == 0)); // currently needed
+        assert(skolem_get_decision_lvl(c->skolem, lit_to_var(lit)) == 0); // currently needed
     }
 #endif
     

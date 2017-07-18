@@ -162,7 +162,7 @@ void c2_print_statistics(C2* c2) {
     qcnf_print_statistics(c2->qcnf);
     skolem_print_statistics(c2->skolem);
     cegar_print_statistics(c2->cegar);
-    if (c2->examples) {
+    if (c2->options->examples_max_num > 0) {
         examples_print_statistics(c2->examples);
     }
     V0("CADET statistics:\n")

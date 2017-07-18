@@ -635,17 +635,17 @@ void skolem_propagate_pure_variable(Skolem* s, unsigned var_id) {
         skolem_update_decision_lvl(s, var_id, s->decision_lvl);
         bool locally_conflicted = skolem_is_locally_conflicted(s, var_id);
         if ( ! locally_conflicted) {
-            f_encode_unique_antecedents_for_lits(s, pure_polarity * (Lit) var_id, true);
+            bool pure_case_exists = f_encode_unique_antecedents_for_lits(s, pure_polarity * (Lit) var_id, true);
             skolem_var si = skolem_get_info(s, var_id);
             
             // also triggers checks for new unique consequences
             if (pure_polarity > 0) {
-                assert(vector_count(&v->pos_occs) == 0 || si.pos_lit.x[0] != -f_get_true(s->f));
+                assert(vector_count(&v->pos_occs) == 0 || si.pos_lit.x[0] != -f_get_true(s->f) || ! pure_case_exists);
                 skolem_update_satlit(s, - (Lit) var_id, satlit_negate(si.pos_lit));
                 skolem_update_deterministic(s, var_id, 1);
                 skolem_update_pure_pos(s, var_id, 1);
             } else {
-                assert(vector_count(&v->neg_occs) == 0 || si.neg_lit.x[0] != -f_get_true(s->f));
+                assert(vector_count(&v->neg_occs) == 0 || si.neg_lit.x[0] != -f_get_true(s->f) || ! pure_case_exists);
                 skolem_update_satlit(s, (Lit) var_id, satlit_negate(si.neg_lit));
                 skolem_update_deterministic(s, var_id, 1);
                 skolem_update_pure_neg(s, var_id, 1);
@@ -1002,7 +1002,7 @@ void skolem_assign_constant_value(Skolem* s, Lit lit, union Dependencies propaga
     unsigned var_id = lit_to_var(lit);
     assert(!skolem_is_conflicted(s));
 //    assert(skolem_get_satlit(s, lit) != f_get_true(s->f)); // not constant already, not a big problem, but why should this happen?
-    abortif(skolem_get_satlit(s, -lit).x[0] == f_get_true(s->f) || skolem_get_satlit(s, -lit).x[1] == f_get_true(s->f), "Propagation ended in inconsistent state.\n");
+    abortif(skolem_get_satlit(s, -lit).x[0] == f_get_true(s->f), "Propagation ended in inconsistent state.\n");
     
     V3("Skolem: Assign value %d.\n",lit);
     skolem_update_clause_worklist(s, lit);

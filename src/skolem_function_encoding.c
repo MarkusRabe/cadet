@@ -156,11 +156,11 @@ void f_encode_give_fresh_satlit(Skolem* s, unsigned var_id) {
     // First we give the variable a fresh satlit, to make available for the clause encoding
     satlit sl;
     sl.x[0] = f_fresh_var(s->f);
-    if (s->qcnf->problem_type > QCNF_2QBF) {
+//    if (s->qcnf->problem_type > QCNF_2QBF) {
         sl.x[1] = f_fresh_var(s->f);
-    } else {
-        sl.x[1] = - f_get_true(s->f);
-    }
+//    } else {
+//        sl.x[1] = - f_get_true(s->f);
+//    }
     
     skolem_update_satlit(s,   (Lit) var_id,               sl);
     skolem_update_satlit(s, - (Lit) var_id, satlit_negate(sl));

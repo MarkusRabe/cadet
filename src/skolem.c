@@ -1176,7 +1176,7 @@ void skolem_update_clause_worklist(Skolem* s, int unassigned_lit) {
 void skolem_assume_constant_value(Skolem* s, Lit lit) {
     V3("Skolem: Assume value %d.\n", lit);
     unsigned var_id = lit_to_var(lit);
-    assert(skolem_is_deterministic(s, var_id));
+    assert(skolem_is_deterministic(s, var_id) || s->options->failed_literals);
     
     satsolver_add(s->skolem, skolem_get_satsolver_lit(s, lit));
     satsolver_clause_finished(s->skolem);

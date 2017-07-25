@@ -72,24 +72,57 @@ void c2_case_split_backtracking_heuristics(C2* c2) {
     c2->next_restart = c2->magic.initial_restart;
 }
 
+// Returns the number of propagations for this assumption
+unsigned c2_assume_constant(C2* c2, Lit lit) {
+    assert(!skolem_can_propagate(c2->skolem));
+    statistics_start_timer(c2->statistics.failed_literals_stats);
+    
+    size_t propagations_start = c2->skolem->statistics.propagations;
+    
+    skolem_push(c2->skolem);
+    skolem_assume_constant_value(c2->skolem, lit);
+    skolem_propagate(c2->skolem);
+    
+    if (skolem_is_conflicted(c2->skolem)) {
+        V1("Skolem conflict with assumed constant %d: %d\n", lit, c2->skolem->conflict_var_id);
+        c2->statistics.failed_literals_conflicts++;
+    }
+    
+    V2("Number of propagations when assigning %d: %zu\n", lit, c2->skolem->statistics.propagations - propagations_start);
+    
+    skolem_pop(c2->skolem);
+    statistics_stop_and_record_timer(c2->statistics.failed_literals_stats);
+    
+//    return ??
+}
+
+Lit c2_case_split_pick_literal(C2* c2) {
+    for (unsigned i = 1; i < var_vector_count(c2->qcnf->vars); i++) {
+        Var* v = var_vector_get(c2->qcnf->vars, i);
+        if (v->var_id != 0 && skolem_is_deterministic(c2->skolem, i) && skolem_get_constant_value(c2->skolem, (Lit) v->var_id) == 0) {
+            
+            c2_assume_constant(c2, (Lit) v->var_id);
+            c2_assume_constant(c2, -(Lit) v->var_id);
+        }
+    }
+    // return ??
+}
+
 bool c2_case_split(C2* c2) {
     
     bool progress = false; // indicates whether this function call changed anything.
     
-    Lit most_notorious_literal = c2_pick_most_notorious_literal(c2);
-    float notoriousity = c2_notoriousity(c2, most_notorious_literal);
-    float threshold = c2_notoriousity_threshold(c2);
+//    Lit most_notorious_literal = c2_pick_most_notorious_literal(c2);
+    Lit most_notorious_literal = c2_case_split_pick_literal(c2);
     if (most_notorious_literal != 0) {
+        float notoriousity = c2_notoriousity(c2, most_notorious_literal);
+        float threshold = c2_notoriousity_threshold(c2);
         c2->conflicts_between_case_splits_countdown = c2->conflicts_between_case_splits;
         if (notoriousity > threshold) {
             if (debug_verbosity >= VERBOSITY_LOW) {
                 V1("Found notorious literal");
                 options_print_literal_name(c2->options, c2_literal_color(c2, NULL, most_notorious_literal), most_notorious_literal);
                 V1(" with notoriousity %.2f; greater than threshold %.2f.\n", notoriousity, threshold);
-            }
-            
-            for (unsigned j = 0; j < int_vector_count(c2->case_split_stack); j++) {
-                assert(skolem_get_satsolver_lit(c2->skolem, int_vector_get(c2->case_split_stack, j)));
             }
             
             satsolver_assume(c2->skolem->skolem, skolem_get_satsolver_lit(c2->skolem, most_notorious_literal));

@@ -774,6 +774,17 @@ cadet_res c2_sat(C2* c2) {
                 debug_print_histogram_of_activities(c2,false);
                 debug_print_histogram_of_activities(c2,true);
             }
+            
+            if (c2->options->case_splits
+//            && c2->restarts >= c2->magic.num_restarts_before_case_splits
+//            && c2->conflicts_between_case_splits_countdown == 0
+//            && c2->cases_explored == 0 // this limits the case splits to 1!!!
+            ) {
+                bool progress_through_case_split = c2_case_split(c2); //Does it serve any purpose to check this here? Was used to pass a decision in original use
+                if (c2->result != CADET_RESULT_UNKNOWN) { // either the above if statement or c2_case_split may result in SAT/UNSAT
+//                    return c2->result;    //This will result in an infinite loop as is, possibly something else to be done with this result?
+                }
+            }
         }
     }
     

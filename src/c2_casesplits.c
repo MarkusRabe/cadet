@@ -115,6 +115,7 @@ Lit c2_case_split_pick_literal(C2* c2) {
 }
 
 bool c2_case_split(C2* c2) {
+    assert(!skolem_can_propagate(c2->skolem));
 
     bool progress = false; // indicates whether this function call changed anything.
 

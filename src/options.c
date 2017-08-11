@@ -11,24 +11,24 @@
 
 Options* default_options() {
     Options* o = malloc(sizeof(Options));
-    
+
     o->easy_debugging_mode_c2 = false;
 
     // Computational enginges
-    o->cegar = true;
+    o->cegar = false;
     o->cegar_only = false;
     o->delay_conflict_checks = false;
     o->use_qbf_engine_also_for_propositional_problems = false;
     o->functional_synthesis = false;
-    
+
     // Examples domain
     o->examples_max_num = 0; // 0 corresponds to not doing examples at all
     o->initial_examples = 0;
-    
+
     // Aiger interpretations
     o->aiger_controllable_inputs = "pi_"; // "controllable_";
     o->aiger_negated_encoding = false;
-    
+
     // Certificates
     o->certify_internally_UNSAT = true;
     o->certify_UNSAT = false;
@@ -36,11 +36,11 @@ Options* default_options() {
     o->certificate_file_name = NULL;
     o->certificate_type = CAQECERT;
     o->certificate_aiger_mode = aiger_ascii_mode;
-    
+
     // Case splits
-    o->case_splits = false;
+    o->case_splits = true;
     o->case_splits_only_at_decision_level_0 = true;
-    
+
     // Optimizations
     o->miniscoping = false;
     o->find_smallest_reason = true;
@@ -50,18 +50,18 @@ Options* default_options() {
     o->propagate_pure_literals = true;
     o->enhanced_pure_literals = false;
     o->failed_literals = false;
-    
+
     // Printing
     o->print_detailed_miniscoping_stats = false;
     o->print_name_mapping = true;
     o->print_statistics = true;
     o->print_qdimacs = false;
     o->variable_names = NULL;
-    
+
     o->trace_learnt_clauses = false;
     o->trace_for_visualization = false;
     o->trace_for_profiling = false;
-    
+
     return o;
 }
 

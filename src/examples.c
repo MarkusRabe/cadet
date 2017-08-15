@@ -61,7 +61,7 @@ void take_pa_decision(Examples* e, PartialAssignment* pa, Lit decision_lit) {
 }
 
 bool examples_is_decision_consistent_with_skolem_pa(Examples* e, Skolem* s, Lit decision_lit, PartialAssignment* pa) {
-    if (partial_assignment_get_value_for_conflict_analysis(pa, decision_lit) == -1) {
+    if (partial_assignment_get_value_for_conflict_analysis(pa, decision_lit, 0) == -1) {
         // OK, the decision var has to have the opposite value. Is that justified only based on the clauses with unique consequence?
         
         // Is any of the antecedents of the opposite lit satisfied? I.e. is this decision doomed to produce a conflict?
@@ -128,7 +128,7 @@ void examples_redo(Examples* e, Skolem* s, PartialAssignment* pa) {
         } else if (e->stack->type_vector[i] == EXAMPLES_OP_DECISION && ! partial_assignment_is_conflicted(pa)) {
             Lit decision_lit = (Lit) e->stack->obj_vector[i];
             if (examples_is_decision_consistent_with_skolem_for_pa(e, s, decision_lit, pa)) {
-                if (partial_assignment_get_value_for_conflict_analysis(pa, decision_lit) == 0) {
+                if (partial_assignment_get_value_for_conflict_analysis(pa, decision_lit, 0) == 0) {
                     take_pa_decision(e, pa, decision_lit);
                 }
             } else {
@@ -191,7 +191,7 @@ PartialAssignment* examples_add_assignment_from_skolem(Examples* e, Skolem* s) {
         if (! partial_assignment_is_conflicted(pa)) {
             for (unsigned i = 1; i < var_vector_count(e->qcnf->vars); i++) {
                 if (qcnf_var_exists(e->qcnf, i) && qcnf_is_universal(e->qcnf, i)) {
-                    int val = skolem_get_value_for_conflict_analysis(s, (Lit) i);
+                    int val = skolem_get_value_for_conflict_analysis(s, (Lit) i, 0);
                     if (val == 0) {
                         val = (rand() % 2) * 2 - 1;
                     }
@@ -267,9 +267,9 @@ PartialAssignment* examples_get_conflicted_assignment(Examples* e) {
     return e->conflicted_pa;
 }
 
-int examples_get_value_for_conflict_analysis(void* domain, Lit lit) {
+int examples_get_value_for_conflict_analysis(void* domain, Lit lit, bool second_copy) {
     Examples* e = (Examples*) domain;
-    return partial_assignment_get_value_for_conflict_analysis((void*) e->conflicted_pa, lit);
+    return partial_assignment_get_value_for_conflict_analysis((void*) e->conflicted_pa, lit, 0);
 }
 
 void examples_push(Examples* e) {
@@ -311,7 +311,7 @@ void examples_decision(Examples* e, Lit decision_lit) {
     stack_push_op(e->stack, EXAMPLES_OP_DECISION, (void*) (long) decision_lit);
     for (unsigned i = 0; i < vector_count(e->ex); i++) {
         PartialAssignment* pa = vector_get(e->ex, i);
-        if (partial_assignment_get_value_for_conflict_analysis(pa, decision_lit) == 0) {
+        if (partial_assignment_get_value_for_conflict_analysis(pa, decision_lit, 0) == 0) {
             take_pa_decision(e, pa, decision_lit);
         }
         if (partial_assignment_is_conflicted(pa)) {

@@ -225,7 +225,8 @@ bool partial_assignment_is_legal_dependence(void* s, unsigned var_id, unsigned d
 }
 #pragma clang diagnostic pop
 
-int partial_assignment_get_value_for_conflict_analysis(void* domain, Lit lit) {
+int partial_assignment_get_value_for_conflict_analysis(void* domain, Lit lit, bool second_copy) {
+    assert(second_copy == 0); // There is only one copy; this argument is just here for compatibility with general conflict analysis
     assert(lit != 0);
     VAL val = partial_assignment_get_val((PartialAssignment*) domain, lit_to_var(lit));
     assert(val != bottom);
@@ -240,7 +241,7 @@ int partial_assignment_get_value_for_conflict_analysis(void* domain, Lit lit) {
     return lit > 0 ? x : -x;
 }
 
-Clause* partial_assignment_get_reason_for_conflict_analysis(void* domain, Lit lit) {
+Clause* partial_assignment_get_reason_for_conflict_analysis(void* domain, Lit lit, bool second_copy) {
     PartialAssignment* pa = (PartialAssignment*) domain;
     if (vector_count(pa->causes) > lit_to_var(lit)) {
         return vector_get(pa->causes, lit_to_var(lit));
@@ -353,7 +354,7 @@ bool partial_assignment_is_antecedent_satisfied(PartialAssignment* pa, Clause* c
     assert(qcnf_contains_literal(c, consequence));
     for (unsigned i = 0; i < c->size; i++) {
         Lit l = c->occs[i];
-        if (l != consequence && partial_assignment_get_value_for_conflict_analysis(pa, l) != -1) {
+        if (l != consequence && partial_assignment_get_value_for_conflict_analysis(pa, l, 0) != -1) {
             return false;
         }
     }

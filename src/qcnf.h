@@ -142,6 +142,8 @@ unsigned qcnf_scope_init_as_intersection(QCNF*, Scope*, Scope*);
 void qcnf_scope_free(Scope*);
 //void qcnf_close_scopes_under_intersection(QCNF*);
 unsigned qcnf_get_empty_scope(QCNF*);
+unsigned qcnf_get_scope(QCNF*, unsigned var_id);
+
 
 // Comparators
 int qcnf_compare_clauses_by_size (const void * a, const void * b);

@@ -73,8 +73,8 @@ void partial_assignment_new_clause(PartialAssignment* pa, Clause* c);
 
 // INTERACTION WITH CONFLICT ANALYSIS
 bool partial_assignment_is_legal_dependence(void* s, unsigned var_id, unsigned depending_on);
-int partial_assignment_get_value_for_conflict_analysis(void* domain, Lit lit);
-Clause* partial_assignment_get_reason_for_conflict_analysis(void* domain, Lit lit);
+int partial_assignment_get_value_for_conflict_analysis(void* domain, Lit lit, bool second_copy);
+Clause* partial_assignment_get_reason_for_conflict_analysis(void* domain, Lit lit, bool second_copy);
 Clause* partial_assignment_get_relevant_clause(void* domain, unsigned var_id);
 unsigned partial_assignment_get_decision_lvl(void* domain, unsigned var_id);
 

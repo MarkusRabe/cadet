@@ -21,10 +21,8 @@ struct Function {
     vector* new_clause;
     
     // Helper variables in the SAT solver
-    int_vector* consistency_lits; // satlits representing consistency for up to level x
     int satlit_true;
-    
-    int_vector* uncommitted_clause;
+    int_vector* consistency_literals;
 };
 
 #endif /* function_private_h */

@@ -49,7 +49,7 @@ void cegar_free(Cegar* c);
  * May change the state of C2 when termination criterion is found.
  */
 cadet_res cegar_build_abstraction_for_assignment(C2*);
-int cegar_get_val(void* domain, Lit lit);
+int cegar_get_val(void* domain, Lit lit, bool second_copy);
 cadet_res cegar_solve_2QBF(C2* c2, int rounds_num);
 void cegar_do_cegar_if_effective(C2* c2);
 bool cegar_try_to_handle_conflict(Cegar*);

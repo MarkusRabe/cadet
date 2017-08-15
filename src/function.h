@@ -12,6 +12,7 @@
 #include "int_vector.h"
 #include "qcnf.h"
 #include "skolem_var.h"
+#include "util.h"
 
 #include <stdbool.h>
 
@@ -43,11 +44,14 @@ satlit f_get_true_satlit(Function* f);
 void f_push(Function*);
 void f_pop(Function*);
 
-int f_sat(Function*);
-int f_result(Function*); // returns the result of the last SAT call
+sat_res f_sat(Function*);
+sat_res f_sat_with_consistency(Function* f, unsigned scope_id);
+sat_res f_result(Function*); // returns the result of the last SAT call
 int f_value(Function*, int satlit); // returns the value of the satlit. Must be in SAT state.
 
 void f_add_satlit(Function*, satlit lit);
+void f_add_internal(Function*, int); // passes through to the satsolver; use with caution
+void f_clause_finished_internal(Function*); // passes through to the satsolver; use with caution
 void f_clause_finished(Function*);
 void f_clause_finished_for_context(Function*, unsigned context);
 

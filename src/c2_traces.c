@@ -106,9 +106,9 @@ void c2_print_universals_assignment(C2* c2) {
         if (v->var_id != 0 && v->is_universal) {
             int val;
             if (c2->state == C2_SKOLEM_CONFLICT) {
-                val = skolem_get_value_for_conflict_analysis(c2->skolem, (Lit) v->var_id);
+                val = skolem_get_value_for_conflict_analysis(c2->skolem, (Lit) v->var_id, 0);
             } else if (c2->state == C2_EXAMPLES_CONFLICT) {
-                val = examples_get_value_for_conflict_analysis(c2->examples, (Lit) v->var_id);
+                val = examples_get_value_for_conflict_analysis(c2->examples, (Lit) v->var_id, 0);
             } else {
                 NOT_IMPLEMENTED();
             }

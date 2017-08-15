@@ -218,9 +218,10 @@ void cegar_do_cegar_if_effective(C2* c2) {
     }
 }
 
-int cegar_get_val(void* domain, Lit lit) {
+int cegar_get_val(void* domain, Lit lit, bool second_copy) {
+    assert(second_copy == 0); // not sure how the second copy should interact with CEGAR
     Skolem* s = (Skolem*) domain;
-    int val = skolem_get_value_for_conflict_analysis(s, lit);
+    int val = skolem_get_value_for_conflict_analysis(s, lit, 0);
     if (val == 0) {
         val = 1;
     }
@@ -238,7 +239,7 @@ cadet_res cegar_build_abstraction_for_assignment(C2* c2) {
         unsigned var_id = (unsigned) int_vector_get(cegar->interface_vars, i);
         int_vector_set(cegar->is_used_in_lemma, var_id, 1); // reset values
         
-        int val = cegar_get_val(c2->skolem, (int) var_id);
+        int val = cegar_get_val(c2->skolem, (int) var_id, 0);
         satsolver_assume(cegar->exists_solver, val * (Lit) var_id);
         V4(" %d", val * (Lit) var_id);
     }
@@ -296,7 +297,7 @@ bool cegar_try_to_handle_conflict(Cegar* cegar) {
         unsigned var_id = (unsigned) int_vector_get(cegar->interface_vars, i);
         int_vector_set(cegar->is_used_in_lemma, var_id, 1); // reset values
         
-        int val = cegar_get_val(cegar->skolem, (int) var_id);
+        int val = cegar_get_val(cegar->skolem, (int) var_id, 0);
         satsolver_assume(cegar->exists_solver, val * (Lit) var_id);
         V3(" %d", val * (Lit) var_id);
     }

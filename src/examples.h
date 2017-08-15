@@ -51,7 +51,7 @@ void examples_redo(Examples*, Skolem*, PartialAssignment* pa);
 void examples_new_clause(Examples*, Clause*);
 void examples_propagate(Examples*);
 
-int examples_get_value_for_conflict_analysis(void*,Lit);
+int examples_get_value_for_conflict_analysis(void*,Lit, bool second_copy);
 bool examples_is_decision_consistent_with_skolem(Examples*, Skolem*, Lit decision_lit);
 void examples_decision(Examples*, Lit decision_lit);
 void examples_decision_consistent_with_skolem(Examples*, Skolem*, Lit decision_lit);

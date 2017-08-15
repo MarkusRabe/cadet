@@ -136,8 +136,8 @@ void skolem_free(Skolem*);
 
 // INTERACTION WITH CONFLICT ANALYSIS
 bool skolem_is_legal_dependence_for_conflict_analysis(void* s, unsigned var_id, unsigned depending_on);
-int skolem_get_value_for_conflict_analysis(void* skolem, Lit lit);
-Clause* skolem_get_reason_for_conflict_analysis(void* skolem, Lit lit);
+int skolem_get_value_for_conflict_analysis(void* domain, Lit lit, bool second_copy);
+Clause* skolem_get_reason_for_conflict_analysis(void* skolem, Lit lit, bool second_copy);
 
 // INTERACTION WITH CADET2
 void skolem_new_clause(Skolem*,Clause*);

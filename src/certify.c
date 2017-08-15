@@ -17,20 +17,38 @@
 #include <string.h>
 
 
-void c2_print_qdimacs_certificate(C2* c2, void* domain, int (*get_value)(void* domain, Lit lit)) {
+void c2_print_qdimacs_certificate(C2* c2, void* domain, int (*get_value)(void* domain, Lit lit, bool second_copy)) {
     printf("V");
+    unsigned outermost_scope_id = UINT_MAX;
+    bool universal = false;
+    if (c2->qcnf->problem_type == QCNF_2QBF) {
+        outermost_scope_id = 1;
+        universal = true;
+    } else if (c2->qcnf->problem_type == QCNF_DQBF) {
+        outermost_scope_id = 0;
+        universal = false;
+    } else { // QBF
+        for (unsigned i = 1; i < var_vector_count(c2->qcnf->vars); i++) {
+            Var* v = var_vector_get(c2->qcnf->vars, i);
+            if (v && v->var_id == i && v->original && v->scope_id <= outermost_scope_id && v->is_universal >= universal) {
+                outermost_scope_id = v->scope_id;
+                universal = v->is_universal;
+            }
+        }
+    }
     for (unsigned i = 1; i < var_vector_count(c2->qcnf->vars); i++) {
         Var* v = var_vector_get(c2->qcnf->vars, i);
-        if (v && v->var_id != 0 && v->is_universal) {
-            if (get_value(domain, (Lit) v->var_id) != 0) {
-                printf(" %d", get_value(domain, (Lit) v->var_id) * (Lit) v->var_id);
+        if (v && v->var_id != 0 && v->original && v->scope_id == outermost_scope_id && v->is_universal == universal) {
+            if (get_value(domain, (Lit) v->var_id, 0) != 0) {
+                printf(" %d", get_value(domain, (Lit) v->var_id, 0) * (Lit) v->var_id);
             }
         }
     }
     printf("\n");
 }
 
-bool c2_cert_check_UNSAT(QCNF* qcnf, void* domain, int (*get_value)(void* domain, Lit lit)) {
+bool c2_cert_check_UNSAT(QCNF* qcnf, void* domain, int (*get_value)(void* domain, Lit lit, bool second_copy)) {
+    assert(qcnf->problem_type == QCNF_2QBF);
     
     SATSolver* checker = satsolver_init();
     satsolver_set_max_var(checker, (int) var_vector_count(qcnf->vars));
@@ -49,7 +67,7 @@ bool c2_cert_check_UNSAT(QCNF* qcnf, void* domain, int (*get_value)(void* domain
         Var* v = var_vector_get(qcnf->vars, i);
         abortif(!v, "What!?");
         if (v->var_id != 0 && v->is_universal && v->original) {
-            int val = get_value(domain, (Lit) v->var_id);
+            int val = get_value(domain, (Lit) v->var_id, 0);
             abortif(val < -1 || val > 1, "Inconsistent value");
             if (val == 0) {
                 val = 1;

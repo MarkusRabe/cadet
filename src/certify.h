@@ -17,8 +17,8 @@
 #include <stdio.h>
 
 void c2_cert_AIG_certificate(C2* c2);
-void c2_print_qdimacs_certificate(C2* c2, void* domain, int (*get_value)(void* domain, Lit lit));
-bool c2_cert_check_UNSAT(QCNF* qcnf, void* domain, int (*get_value)(void* domain, Lit lit));
+void c2_print_qdimacs_certificate(C2* c2, void* domain, int (*get_value)(void* domain, Lit lit, bool second_copy));
+bool c2_cert_check_UNSAT(QCNF* qcnf, void* domain, int (*get_value)(void* domain, Lit lit, bool second_copy));
 
 //int aiger_lit2lit(unsigned aigerlit);
 

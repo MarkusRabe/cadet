@@ -138,7 +138,7 @@ bool f_encode_unique_antecedents_for_lits(Skolem* s, Lit lit, bool define_both_s
     bool case_exists = false;
     for (unsigned i = 0; i < vector_count(lit_occs); i++) {
         Clause* c = vector_get(lit_occs, i);
-        if (skolem_get_unique_consequence(s, c) == lit && ! skolem_clause_satisfied(s, c) && ! skolem_has_illegal_dependence(s, c)) {
+        if (skolem_get_unique_consequence(s, c) == lit && ! skolem_clause_satisfied(s, c)) {
             case_exists = true;
             f_propagate_partial_over_clause_for_lit(s, c, lit, define_both_sides);
         }
@@ -236,6 +236,32 @@ void f_encode_conflictedness(Skolem* s, unsigned var_id) {
     satsolver_add(s->f->sat, skolem_get_satlit(s,   (Lit) var_id).x[0]);
     satsolver_clause_finished(s->f->sat);
     
-    satsolver_add(s->f->sat, skolem_get_satlit(s, - (Lit) var_id).x[0]);
+    satsolver_add(s->f->sat, skolem_get_satlit(s, - (Lit) var_id).x[1]);
+    satsolver_clause_finished(s->f->sat);
+}
+
+void f_encode_consistency(Skolem* s, unsigned var_id) {
+    int consistency_literal = int_vector_get(s->f->consistency_literals, qcnf_get_scope(s->qcnf, var_id));
+    
+    // Positive satlits
+    satsolver_add(s->f->sat, - consistency_literal);
+    satsolver_add(s->f->sat,   skolem_get_satlit(s, (Lit) var_id).x[0]);
+    satsolver_add(s->f->sat, - skolem_get_satlit(s, (Lit) var_id).x[1]);
+    satsolver_clause_finished(s->f->sat);
+    
+    satsolver_add(s->f->sat, - consistency_literal);
+    satsolver_add(s->f->sat, - skolem_get_satlit(s,   (Lit) var_id).x[1]);
+    satsolver_add(s->f->sat,   skolem_get_satlit(s,   (Lit) var_id).x[0]);
+    satsolver_clause_finished(s->f->sat);
+    
+    // Negative satlits
+    satsolver_add(s->f->sat, - consistency_literal);
+    satsolver_add(s->f->sat,   skolem_get_satlit(s, - (Lit) var_id).x[0]);
+    satsolver_add(s->f->sat, - skolem_get_satlit(s, - (Lit) var_id).x[1]);
+    satsolver_clause_finished(s->f->sat);
+    
+    satsolver_add(s->f->sat, - consistency_literal);
+    satsolver_add(s->f->sat, - skolem_get_satlit(s, - (Lit) var_id).x[1]);
+    satsolver_add(s->f->sat,   skolem_get_satlit(s, - (Lit) var_id).x[0]);
     satsolver_clause_finished(s->f->sat);
 }

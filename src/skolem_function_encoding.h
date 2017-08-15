@@ -18,7 +18,6 @@ struct Function_encoding;
 
 void f_add_clauses(Skolem*, unsigned var_id, vector* occs);
 
-//void f_propagate_partial_over_clause_for_lit(Skolem*, Clause*, Lit, bool define_both_sides);
 bool f_encode_unique_antecedents_for_lits(Skolem*, Lit, bool define_both_sides);
 
 void f_encode_give_fresh_satlit(Skolem* s, unsigned var_id);
@@ -30,5 +29,6 @@ satlit f_add_AND(Function*, satlit input1, satlit input2);
 satlit f_add_OR(Function*, satlit input1, satlit input2);
 
 void f_encode_conflictedness(Skolem*, unsigned var_id); // Add two clauses saying that the variable is true and false at the same time. Needed for global conflictedness check.
+void f_encode_consistency(Skolem*, unsigned var_id); // Make the variable deterministic FOR ITS SCOPE
 
 #endif /* skolem_function_encoding_h */

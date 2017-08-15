@@ -964,6 +964,7 @@ void c2_new_variable(C2* c2, unsigned var_id) {
             int_vector_add(dep.dependencies, (int) v->var_id);
         }
         skolem_update_dependencies(c2->skolem, var_id, dep);
+        f_encode_consistency(c2->skolem, var_id);
     }
 }
 

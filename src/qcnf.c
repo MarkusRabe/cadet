@@ -129,6 +129,12 @@ unsigned qcnf_get_empty_scope(QCNF* qcnf) {
 #endif
     return 0;
 }
+unsigned qcnf_get_scope(QCNF* qcnf, unsigned var_id) {
+    assert(var_id != 0);
+    Var* v = var_vector_get(qcnf->vars, var_id);
+    assert(v->var_id == var_id);
+    return v->scope_id;
+}
 
 
 // COMPARATORS

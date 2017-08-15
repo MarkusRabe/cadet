@@ -24,22 +24,35 @@ Function* f_init(QCNF* qcnf) {
     
     f->new_clause = vector_init();
     
-    f->consistency_lits = int_vector_init();
-    f->uncommitted_clause = int_vector_init();
-    
     // Define the constant TRUE
     f->satlit_true = satsolver_inc_max_var(f->sat);
     assert(f->satlit_true == 1); // Not strictly required but I can sleep better with this assertion.
     satsolver_add(f->sat, f->satlit_true);
     satsolver_clause_finished(f->sat);
     
+    // Introduce consistency literals
+    f->consistency_literals = int_vector_init();
+    for (unsigned i = 0; i < vector_count(qcnf->scopes); i++) {
+        // i is the scope ID
+        int_vector_add(f->consistency_literals, satsolver_inc_max_var(f->sat));
+    }
+    // Make consistency literals
+    if (qcnf->problem_type != QCNF_DQBF) {
+        for (unsigned i = 0; i < vector_count(qcnf->scopes)    - 1    ; i++) {
+            satsolver_add(f->sat,   int_vector_get(f->consistency_literals, i));
+            satsolver_add(f->sat, - int_vector_get(f->consistency_literals, i+1));
+            satsolver_clause_finished(f->sat);
+        }
+    } else {
+        NOT_IMPLEMENTED();
+    }
+    
     return f;
 }
 void f_free(Function* f) {
     satsolver_free(f->sat);
     vector_free(f->new_clause);
-    int_vector_free(f->consistency_lits);
-    int_vector_free(f->uncommitted_clause);
+    int_vector_free(f->consistency_literals);
     free(f);
 }
 
@@ -104,6 +117,14 @@ sat_res f_sat(Function* f) {
     assert(res == SATSOLVER_SATISFIABLE || res == SATSOLVER_UNSATISFIABLE);
     return res;
 }
+sat_res f_sat_with_consistency(Function* f, unsigned scope_id) {
+    if (f->qcnf->problem_type == QCNF_DQBF) {
+        NOT_IMPLEMENTED();
+    }
+    int consistency_literal = int_vector_get(f->consistency_literals, scope_id);
+    satsolver_assume(f->sat, consistency_literal);
+    return f_sat(f);
+}
 int f_result(Function* f) {
     return satsolver_state(f->sat);
 }
@@ -111,6 +132,14 @@ int f_value(Function* f, int lit) {
     return satsolver_deref(f->sat, lit);
 }
 
+void f_add_internal(Function* f, int lit) {
+    assert(vector_count(f->new_clause) == 0);
+    satsolver_add(f->sat, lit);
+}
+void f_clause_finished_internal(Function* f) {
+    assert(vector_count(f->new_clause) == 0);
+    satsolver_add(f->sat, 0);
+}
 void f_add_satlit(Function* f, satlit lit) {
     union satlit_void_ptr_union u;
     u.lit = lit;

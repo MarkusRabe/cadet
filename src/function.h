@@ -24,6 +24,7 @@ union satlit_void_ptr_union {
     void* data;
     satlit lit;
 };
+//assert(sizeof(satlit) == sizeof(void*));
 
 Function* f_init(QCNF*);
 void f_free(Function* f);

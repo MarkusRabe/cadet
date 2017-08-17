@@ -22,6 +22,11 @@ Function* f_init(QCNF* qcnf) {
     f->qcnf = qcnf;
     f->sat = satsolver_init();
     
+//    f_trace_for_profiling_initialize(f);
+#ifdef SATSOLVER_TRACE
+    satsolver_trace_commands(f->sat);
+#endif
+    
     f->new_clause = vector_init();
     
     // Define the constant TRUE
@@ -138,7 +143,7 @@ void f_add_internal(Function* f, int lit) {
 }
 void f_clause_finished_internal(Function* f) {
     assert(vector_count(f->new_clause) == 0);
-    satsolver_add(f->sat, 0);
+    satsolver_clause_finished(f->sat);
 }
 void f_add_satlit(Function* f, satlit lit) {
     union satlit_void_ptr_union u;

@@ -714,7 +714,7 @@ cadet_res c2_sat(C2* c2) {
     }
     
     ////// THIS RESTRICTS US TO 2QBF or 3QBF
-//    if (c2->qcnf->problem_type > QCNF_3QBF) {
+//    if (c2->qcnf->problem_type != QCNF_3QBF) {
 //        V0("Is not in 3QBF. Currently not supported.\n");
 //        return CADET_RESULT_UNKNOWN;
 //    }

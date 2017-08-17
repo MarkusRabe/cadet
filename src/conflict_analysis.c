@@ -81,9 +81,10 @@ unsigned determine_cost(conflict_analysis* ca, Clause* c) {
     return cost;
 }
 
-bool legal_reason(conflict_analysis* ca, Lit lit, Clause* c) {
+bool legal_reason(conflict_analysis* ca, Lit lit, Clause* c, int copy) {
+    assert(copy == 0 || copy == 1);
     for (int i = 0; i < c->size; i++) {
-        if (c->occs[i] != lit && ca->domain_get_value(ca->domain, c->occs[i], 0) != -1) {
+        if (c->occs[i] != lit && ca->domain_get_value(ca->domain, c->occs[i], copy) != -1) {
 //        if (c->occs[i] != lit && ! ca->domain_is_legal_dependence(ca->domain, lit_to_var(lit), lit_to_var(c->occs[i]))) {
             return false;
         }
@@ -92,45 +93,53 @@ bool legal_reason(conflict_analysis* ca, Lit lit, Clause* c) {
 }
 
 
-void conflict_analysis_follow_implication_graph(conflict_analysis* ca, bool second_copy) {
+void conflict_analysis_follow_implication_graph(conflict_analysis* ca) {
     
     while (worklist_count(ca->queue) > 0) {
         Lit lit = (Lit) worklist_pop(ca->queue);
 
-        abortif(ca->c2->examples->state != EXAMPLES_STATE_INCONSISTENT_DECISION_CONFLICT && ca->c2->skolem->state != SKOLEM_STATE_BACKPROPAGATION_CONFLICT && ca->domain_get_value(ca->domain, lit, second_copy) != 1, "Variable to track in conflict analysis has no value.");
+        abortif(ca->c2->examples->state != EXAMPLES_STATE_INCONSISTENT_DECISION_CONFLICT && ca->c2->skolem->state != SKOLEM_STATE_BACKPROPAGATION_CONFLICT && ca->domain_get_value(ca->domain, lit, 0) != 1 && ca->domain_get_value(ca->domain, lit, 1) != 1, "Variable to track in conflict analysis has no value.");
         
         Var* v = var_vector_get(ca->c2->qcnf->vars, lit_to_var(lit));
         unsigned d_lvl = ca->domain_get_decision_lvl(ca->domain, lit_to_var(lit));
         assert(d_lvl <= ca->conflict_decision_lvl);
         
-        bool is_value_decision = c2_is_decision_var(ca->c2, v->var_id) && skolem_get_constant_value(ca->c2->skolem, lit) == 1; // TODO: remove the value decision case; treat it as normal decisions
+//        bool is_value_decision = c2_is_decision_var(ca->c2, v->var_id) && skolem_get_constant_value(ca->c2->skolem, lit) == 1; // TODO: remove the value decision case; treat it as normal decisions
         
-        if (v->is_universal || d_lvl < ca->conflict_decision_lvl || is_value_decision) {
+        if (v->is_universal || d_lvl < ca->conflict_decision_lvl) {
             int_vector_add(ca->conflicting_assignment, lit);
         } else {
-            if (ca->domain_get_value(ca->domain, lit, second_copy) == ca->domain_get_value(ca->domain, lit, second_copy)) {
-                Clause* reason = ca->domain_get_reason(ca->domain, lit, second_copy); // conflict_analysis_find_reason_for_value(ca, lit, &depends_on_illegals);
-                if (reason == NULL) {
-                    abortif(ca->c2->state == C2_SKOLEM_CONFLICT
-                            && ca->c2->skolem->state != SKOLEM_STATE_BACKPROPAGATION_CONFLICT
-                            && ! c2_is_decision_var(ca->c2, v->var_id), "No reason for lit %d found in conflict analysis.\n", lit);
-                    //                assert(ca->c2->state == C2_EXAMPLES_CONFLICT && c2_is_decision_var(ca->c2, v->var_id)); // this means it was a decision variable for the example domain
-                    int_vector_add(ca->conflicting_assignment, lit); // must be decision variable (and conflict caused by this decision)
-                    //            } else if (!reason->consistent_with_originals) { // decision clause!
-                    //                assert(c2_is_decision_var(ca->c2, lit_to_var(lit)) || lit_to_var(lit) == ca->conflicted_var_id);
-                    //                int_vector_add(ca->conflicting_assignment, lit);
-                } else if (!legal_reason(ca, lit, reason)) { // TODO: document why
-                    int_vector_add(ca->conflicting_assignment, lit);
-                } else {
-                    assert(reason->original || reason->consistent_with_originals);
-                    if (debug_verbosity >= VERBOSITY_HIGH) {
-                        V3("  Reason for %d is clause %u: ", lit, reason->clause_id);
-                        qcnf_print_clause(reason, stdout);
-                    }
-                    conflict_analysis_schedule_causing_vars_in_work_queue(ca, reason, lit);
-                }
+            
+            int reason_copy = 0;
+            // Find out which copy of the Skolem function holds the reason
+            if (ca->domain_get_value(ca->domain, lit, 0) == 1) {
+                reason_copy = 0;
             } else {
-                
+                assert(ca->domain_get_value(ca->domain, lit, 1) == 1);
+                reason_copy = 1;
+            }
+            
+            Clause* reason = ca->domain_get_reason(ca->domain, lit, reason_copy); // conflict_analysis_find_reason_for_value(ca, lit, &depends_on_illegals);
+            if (reason == NULL) {
+                abortif(ca->c2->state == C2_SKOLEM_CONFLICT
+                        && ca->c2->skolem->state != SKOLEM_STATE_BACKPROPAGATION_CONFLICT
+                        && ! c2_is_decision_var(ca->c2, v->var_id)
+                        && skolem_may_depend_on(ca->c2->skolem, lit_to_var(lit), ca->conflicted_var_id),
+                        "No reason for lit %d found in conflict analysis.\n", lit);
+                //                assert(ca->c2->state == C2_EXAMPLES_CONFLICT && c2_is_decision_var(ca->c2, v->var_id)); // this means it was a decision variable for the example domain
+                int_vector_add(ca->conflicting_assignment, lit); // must be decision variable (and conflict caused by this decision)
+                //            } else if (!reason->consistent_with_originals) { // decision clause!
+                //                assert(c2_is_decision_var(ca->c2, lit_to_var(lit)) || lit_to_var(lit) == ca->conflicted_var_id);
+                //                int_vector_add(ca->conflicting_assignment, lit);
+            } else if (!legal_reason(ca, lit, reason, reason_copy)) { // TODO: document why
+                int_vector_add(ca->conflicting_assignment, lit);
+            } else {
+                assert(reason->original || reason->consistent_with_originals);
+                if (debug_verbosity >= VERBOSITY_HIGH) {
+                    V3("  Reason for %d is clause %u: ", lit, reason->clause_id);
+                    qcnf_print_clause(reason, stdout);
+                }
+                conflict_analysis_schedule_causing_vars_in_work_queue(ca, reason, lit);
             }
         }
     }
@@ -252,7 +261,7 @@ int_vector* analyze_assignment_conflict(C2* c2,
         worklist_push(ca->queue, (void*) - (int64_t) conflicted_var);
     }
     
-    conflict_analysis_follow_implication_graph(ca, 0);
+    conflict_analysis_follow_implication_graph(ca);
     
     V2("Conflict: ");
     if (debug_verbosity >= VERBOSITY_MEDIUM) {

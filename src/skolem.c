@@ -36,10 +36,6 @@ Skolem* skolem_init(QCNF* qcnf, Options* o,
     s->decision_lvl = 0;
     
     s->f = f_init(qcnf);
-    f_trace_for_profiling_initialize(s->f);
-#ifdef SATSOLVER_TRACE
-    f_trace_commands(s->f);
-#endif
     
     s->infos = skolem_var_vector_init_with_size(var_vector_count(qcnf->vars) + var_vector_count(qcnf->vars) / 2); // should usually prevent any resizing of the skolem_var_vector
     s->conflict_var_id = 0;
@@ -331,6 +327,9 @@ bool skolem_clause_satisfied_when_in_doubt(Skolem* s, Clause* c, Lit lit) {
     if (vector_count(opp_occs) > s->magic.blocked_clause_occurrence_cutoff) {
         return false;
     }
+    if (skolem_has_illegal_dependence(s, c)) {
+        return false;
+    }
     for (unsigned i = 0; i < vector_count(opp_occs); i++) {
         Clause* other = vector_get(opp_occs, i);
         assert(qcnf_contains_literal(other, - lit));
@@ -608,7 +607,7 @@ void skolem_propagate_determinicity(Skolem* s, unsigned var_id) {
         illegal_dependencies &&
         qcnf_get_scope(s->qcnf, var_id) == qcnf_get_empty_scope(s->qcnf) &&
         skolem_some_antecedent_satisfiable(s, var_id)) {
-        
+        V3("Var %u got backpropagated.\n", var_id);
         deterministic = true;
     }
     
@@ -619,10 +618,9 @@ void skolem_propagate_determinicity(Skolem* s, unsigned var_id) {
         
         bool locally_conflicted = skolem_is_locally_conflicted(s, var_id);
         if (locally_conflicted) {
-            
             // Add unique consequences using new satlits
-            f_encode_unique_antecedents_for_lits(s, (Lit)   (int) var_id, illegal_dependencies);
-            f_encode_unique_antecedents_for_lits(s, (Lit) - (int) var_id, illegal_dependencies);
+            f_encode_unique_antecedents_for_lits(s, (Lit)   (int) var_id, false);
+            f_encode_unique_antecedents_for_lits(s, (Lit) - (int) var_id, false);
             
         } else {
             // this is just a performance optimization; introduces fewer satlits
@@ -787,8 +785,9 @@ unsigned skolem_global_conflict_check(Skolem* s, unsigned var_id) {
     assert(si.neg_lit.x[0] != - f_get_true(s->f));
 #endif
     
-    f_encode_consistency(s, var_id);
     f_encode_conflictedness(s, var_id);
+    
+//    f_encode_consistency(s, var_id);
     
     //        satsolver_set_default_phase_lit(s->f, skolem_get_satlit(s,   (Lit) potentially_contflicted), 1);
     //        satsolver_set_default_phase_lit(s->f, skolem_get_satlit(s, - (Lit) potentially_contflicted), 1);
@@ -825,6 +824,8 @@ unsigned skolem_global_conflict_check(Skolem* s, unsigned var_id) {
         f_add_satlit(s->f, satlit_negate(skolem_get_satlit(s,   (Lit) var_id)));
         f_add_satlit(s->f, satlit_negate(skolem_get_satlit(s, - (Lit) var_id)));
         f_clause_finished(s->f);
+        
+        assert(!s->conflict_var_id);
     }
     
 //        f_set_default_phase_lit(s->f, skolem_get_satlit(s,   (Lit) potentially_contflicted), 2);

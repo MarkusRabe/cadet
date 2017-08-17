@@ -64,23 +64,22 @@ void f_propagate_partial_over_clause_for_lit(Skolem* s, Clause* c, Lit lit, bool
     union Dependencies dependencies_copy = skolem_copy_dependencies(s, dependencies);
     for (unsigned i = 0; i < c->size; i++) {
         if (lit == c->occs[i]) {continue;}
+        
+        assert(skolem_is_deterministic(s, lit_to_var(c->occs[i])));
+        f_add_satlit(s->f, satlit_negate(fresh));
+        f_add_satlit(s->f, skolem_get_satlit(s, lit)); // prevlit
+        f_add_satlit(s->f, skolem_get_satlit(s, - c->occs[i]));
+        f_clause_finished(s->f);
+        
         bool is_legal = skolem_may_depend_on(s, lit_to_var(lit), lit_to_var(c->occs[i]));
         if (is_legal) {
-            assert(skolem_is_deterministic(s, lit_to_var(c->occs[i])));
-            f_add_satlit(s->f, satlit_negate(fresh));
-            f_add_satlit(s->f, skolem_get_satlit(s, lit)); // prevlit
-            f_add_satlit(s->f, skolem_get_satlit(s, - c->occs[i]));
-            f_clause_finished(s->f);
-            
-            if (is_legal) {
-                union Dependencies occ_deps = skolem_get_dependencies(s, lit_to_var(c->occs[i]));
-                if (s->qcnf->problem_type < QCNF_DQBF) {
-                    if (dependencies_copy.dependence_lvl < occ_deps.dependence_lvl) {
-                        dependencies_copy.dependence_lvl = occ_deps.dependence_lvl;
-                    }
-                } else {
-                    int_vector_add_all_sorted(dependencies_copy.dependencies, occ_deps.dependencies);
+            union Dependencies occ_deps = skolem_get_dependencies(s, lit_to_var(c->occs[i]));
+            if (s->qcnf->problem_type < QCNF_DQBF) {
+                if (dependencies_copy.dependence_lvl < occ_deps.dependence_lvl) {
+                    dependencies_copy.dependence_lvl = occ_deps.dependence_lvl;
                 }
+            } else {
+                int_vector_add_all_sorted(dependencies_copy.dependencies, occ_deps.dependencies);
             }
         }
     }
@@ -106,11 +105,11 @@ void f_propagate_partial_over_clause_for_lit(Skolem* s, Clause* c, Lit lit, bool
         // second clause
         for (unsigned i = 0; i < c->size; i++) {
             if (lit == c->occs[i]) {continue;}
-            bool is_legal = skolem_may_depend_on(s, lit_to_var(lit), lit_to_var(c->occs[i]));
-            if (is_legal) {
-                assert(skolem_is_deterministic(s, lit_to_var(c->occs[i])));
-                f_add_satlit(s->f, skolem_get_satlit(s, c->occs[i]));
-            }
+//            bool is_legal = skolem_may_depend_on(s, lit_to_var(lit), lit_to_var(c->occs[i]));
+//            if (is_legal) {
+            assert(skolem_is_deterministic(s, lit_to_var(c->occs[i])));
+            f_add_satlit(s->f, skolem_get_satlit(s, c->occs[i]));
+//            }
         }
         f_add_satlit(s->f, fresh);
         f_clause_finished(s->f);
@@ -241,27 +240,37 @@ void f_encode_conflictedness(Skolem* s, unsigned var_id) {
 }
 
 void f_encode_consistency(Skolem* s, unsigned var_id) {
+    satlit slpos = skolem_get_satlit(s,   (Lit) var_id);
+    satlit slneg = skolem_get_satlit(s, - (Lit) var_id);
+    
+    if (slpos.x[0] == slpos.x[1] && slneg.x[0] == slneg.x[1]) {
+        return;
+    }
+    
     int consistency_literal = int_vector_get(s->f->consistency_literals, qcnf_get_scope(s->qcnf, var_id));
     
     // Positive satlits
     satsolver_add(s->f->sat, - consistency_literal);
-    satsolver_add(s->f->sat,   skolem_get_satlit(s, (Lit) var_id).x[0]);
-    satsolver_add(s->f->sat, - skolem_get_satlit(s, (Lit) var_id).x[1]);
+    satsolver_add(s->f->sat,   slpos.x[0]);
+    satsolver_add(s->f->sat, - slpos.x[1]);
     satsolver_clause_finished(s->f->sat);
     
     satsolver_add(s->f->sat, - consistency_literal);
-    satsolver_add(s->f->sat, - skolem_get_satlit(s,   (Lit) var_id).x[1]);
-    satsolver_add(s->f->sat,   skolem_get_satlit(s,   (Lit) var_id).x[0]);
+    satsolver_add(s->f->sat, - slpos.x[0]);
+    satsolver_add(s->f->sat,   slpos.x[1]);
     satsolver_clause_finished(s->f->sat);
     
-    // Negative satlits
-    satsolver_add(s->f->sat, - consistency_literal);
-    satsolver_add(s->f->sat,   skolem_get_satlit(s, - (Lit) var_id).x[0]);
-    satsolver_add(s->f->sat, - skolem_get_satlit(s, - (Lit) var_id).x[1]);
-    satsolver_clause_finished(s->f->sat);
-    
-    satsolver_add(s->f->sat, - consistency_literal);
-    satsolver_add(s->f->sat, - skolem_get_satlit(s, - (Lit) var_id).x[1]);
-    satsolver_add(s->f->sat,   skolem_get_satlit(s, - (Lit) var_id).x[0]);
-    satsolver_clause_finished(s->f->sat);
+    if (slneg.x[0] != - slpos.x[0]
+        || slneg.x[1] != - slpos.x[1]) {
+        // Negative satlits
+        satsolver_add(s->f->sat, - consistency_literal);
+        satsolver_add(s->f->sat,   slneg.x[0]);
+        satsolver_add(s->f->sat, - slneg.x[1]);
+        satsolver_clause_finished(s->f->sat);
+        
+        satsolver_add(s->f->sat, - consistency_literal);
+        satsolver_add(s->f->sat, - slneg.x[0]);
+        satsolver_add(s->f->sat,   slneg.x[1]);
+        satsolver_clause_finished(s->f->sat);
+    }
 }

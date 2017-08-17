@@ -164,7 +164,9 @@ bool skolem_is_legal_dependency(Skolem* s, unsigned var_id, union Dependencies d
 }
 
 bool skolem_may_depend_on(Skolem* s, unsigned var_id, unsigned depending_on_var_id) {
-    assert(var_id != depending_on_var_id);
+    if (var_id == depending_on_var_id){
+        return true;
+    }
     skolem_var other_si = skolem_get_info(s, depending_on_var_id);
     assert(other_si.deterministic);
     return skolem_is_legal_dependency(s, var_id, other_si.dep);

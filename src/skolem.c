@@ -782,8 +782,11 @@ unsigned skolem_global_conflict_check(Skolem* s, unsigned var_id) {
 #ifdef DEBUG
     skolem_var si = skolem_get_info(s, var_id);
     assert(si.pos_lit.x[0] != - si.neg_lit.x[0]);
+    assert(si.pos_lit.x[1] != - si.neg_lit.x[1]);
     assert(si.pos_lit.x[0] != - f_get_true(s->f));
     assert(si.neg_lit.x[0] != - f_get_true(s->f));
+    assert(si.pos_lit.x[1] != - f_get_true(s->f));
+    assert(si.neg_lit.x[1] != - f_get_true(s->f));
 #endif
     
     f_encode_conflictedness(s, var_id);
@@ -973,7 +976,7 @@ void skolem_update_clause_worklist(Skolem* s, int unassigned_lit) {
 }
 
 // Different from satsolver assumptions. Assume fixes a constant for a variable that is already deterministic
-void skolem_assume_constant_value(Skolem* s, Lit lit) {
+void skolem_assume_constant_value(Skolem* s, union Dependencies propagation_deps, Lit lit) {
     V3("Skolem: Assume value %d.\n", lit);
     unsigned var_id = lit_to_var(lit);
     assert(skolem_is_deterministic(s, var_id));
@@ -981,14 +984,9 @@ void skolem_assume_constant_value(Skolem* s, Lit lit) {
     f_add_satlit(s->f, skolem_get_satlit(s, lit));
     f_clause_finished(s->f);
     
-    union Dependencies deps = skolem_get_dependencies(s, var_id);
-    if (s->qcnf->problem_type == QCNF_DQBF) {
-        deps.dependencies = int_vector_copy(deps.dependencies);
-    }
-    
     assert(s->mode == SKOLEM_MODE_STANDARD);
     s->mode = SKOLEM_MODE_CONSTANT_PROPAGATIONS_TO_DETERMINISTICS;
-    skolem_assign_constant_value(s, lit, deps, NULL);
+    skolem_assign_constant_value(s, lit, propagation_deps, NULL);
     s->mode = SKOLEM_MODE_STANDARD;
     
     // TODO: the assignment might cause many global conflict checks. Suppressing them for variables that are deterministic already seems brutal, but might be OK. If this leads to an inconsistent function definition, no conflicts can be produced in the global conflict check, which is fine in this case. Also, it shouldn't be possible, since we picked a notorious var that had this value already lots of times.
@@ -1025,7 +1023,7 @@ void skolem_assign_constant_value(Skolem* s, Lit lit, union Dependencies propaga
         for (unsigned i = 0; i < vector_count(occs); i++) {
             Clause* c = vector_get(occs, i);
 //            assert(! skolem_has_illegal_dependence(s, c) || !skolem_antecedent_satisfiable(s, c)); // This should be excluded in the constant propagation, but this very function call may happen in the constant propagation.
-            if (skolem_get_unique_consequence(s, c) == -lit && ! skolem_clause_satisfied(s, c) && ! skolem_has_illegal_dependence(s, c)) { 
+            if (skolem_get_unique_consequence(s, c) == -lit && ! skolem_clause_satisfied(s, c)) {
                 locally_conflicted = true;
                 break;
             }
@@ -1144,7 +1142,7 @@ void skolem_decision(Skolem* s, Lit decision_lit) {
     
     
     satlit new_val_satlit = f_get_true_satlit(s->f); // to be updated if it turns out not to be a constant decision
-    bool opposite_case_exists = false;
+    bool opposite_case_exists = false; // will stay false for outer_existential variables; guaranteed by eager backpropagation
     
     /* For variables in the outer existential quantifier we cannot fix a function and there 
      * cannot be a decision conflict, because this was already checked during backpropagation.
@@ -1213,10 +1211,11 @@ void skolem_decision(Skolem* s, Lit decision_lit) {
     bool value_decision = ! opposite_case_exists;
     assert(qcnf_get_empty_scope(s->qcnf) !=  skolem_get_dependencies(s, decision_var_id).dependence_lvl || value_decision);
     
-    if (value_decision) {
+    if (value_decision) { // is guaranteed to happen for outer_existential variables
         V3("Value decision for var %u\n", decision_var_id);
         assert(skolem_get_satlit(s, - decision_lit).x[0] == - f_get_true(s->f));
-        skolem_assign_constant_value(s, decision_lit, s->empty_dependencies, NULL);
+        skolem_assume_constant_value(s, s->empty_dependencies, decision_lit);
+//        skolem_assign_constant_value(s, decision_lit, s->empty_dependencies, NULL);
     }
 }
 

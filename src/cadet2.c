@@ -203,7 +203,8 @@ void c2_initial_propagation(C2* c2) {
         for (unsigned i = 0; i < int_vector_count(c2->qcnf->universals_constraints_from_aiger_encoding); i++) {
             unsigned var_id = (unsigned) int_vector_get(c2->qcnf->universals_constraints_from_aiger_encoding, i);
             abortif( ! skolem_is_deterministic(c2->skolem, var_id), "Constraint variable is not determinsitic. This should be a constraint purely over the universals.");
-            skolem_assume_constant_value(c2->skolem, (Lit) var_id);
+            
+            skolem_assume_constant_value(c2->skolem, c2->skolem->empty_dependencies, (Lit) var_id);
         }
         
         skolem_propagate(c2->skolem); // initial propagation may be extended after assuming constants for constraints
@@ -674,6 +675,8 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
             } else { // take a decision
                 assert(!skolem_is_conflicted(c2->skolem));
                 
+                abortif(c2->qcnf->problem_type != QCNF_2QBF && decision_var->scope_id > 0, "Decision on scope_id > 0");
+                
                 int phase = 1;
                 if (c2->restarts >= c2->magic.num_restarts_before_Jeroslow_Wang) {
                     float pos_JW_weight = c2_Jeroslow_Wang_log_weight(&decision_var->pos_occs);
@@ -742,14 +745,14 @@ cadet_res c2_sat(C2* c2) {
     }
     
     ////// THIS RESTRICTS US TO 2QBF or 3QBF
-    if (c2->qcnf->problem_type != QCNF_3QBF) {
-        V0("Is not 3QBF. Currently not supported.\n");
-        return CADET_RESULT_UNKNOWN;
-    }
-//    if (c2->qcnf->problem_type > QCNF_2QBF) {
-//        V0("Is not in 2QBF. Currently not supported.\n");
+//    if (c2->qcnf->problem_type != QCNF_3QBF) {
+//        V0("Is not 3QBF. Currently not supported.\n");
 //        return CADET_RESULT_UNKNOWN;
 //    }
+    if (c2->qcnf->problem_type > QCNF_2QBF) {
+        V0("Is not in 2QBF. Currently not supported.\n");
+        return CADET_RESULT_UNKNOWN;
+    }
     //////
     
     if (c2->qcnf->problem_type >= QCNF_3QBF) {

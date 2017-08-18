@@ -141,8 +141,8 @@ Clause* skolem_get_reason_for_conflict_analysis(void* skolem, Lit lit, bool seco
 
 // INTERACTION WITH CADET2
 void skolem_new_clause(Skolem*,Clause*);
-void skolem_assign_constant_value(Skolem*,Lit,union Dependencies, Clause* reason); // reason may be NULL
-void skolem_assume_constant_value(Skolem*,Lit);
+void skolem_assign_constant_value(Skolem*, Lit, union Dependencies, Clause* reason); // reason may be NULL
+void skolem_assume_constant_value(Skolem*, union Dependencies, Lit);
 int skolem_get_constant_value(Skolem*, Lit);
 bool skolem_is_initially_deterministic(Skolem* s, unsigned var_id);
 

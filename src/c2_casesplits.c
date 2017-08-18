@@ -132,7 +132,12 @@ bool c2_case_split(C2* c2) {
                 int_vector_add(c2->case_split_stack, most_notorious_literal);
                 
                 assert(skolem_is_deterministic(c2->skolem, lit_to_var(most_notorious_literal)));
-                skolem_assume_constant_value(c2->skolem, most_notorious_literal);
+
+                union Dependencies deps = skolem_get_dependencies(c2->skolem, lit_to_var(most_notorious_literal));
+                if (c2->skolem->qcnf->problem_type == QCNF_DQBF) {
+                    deps.dependencies = int_vector_copy(deps.dependencies);
+                }
+                skolem_assume_constant_value(c2->skolem, deps, most_notorious_literal);
                 
                 skolem_propagate(c2->skolem);
                 

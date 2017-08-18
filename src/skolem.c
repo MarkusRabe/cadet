@@ -454,8 +454,9 @@ bool skolem_antecedent_satisfiable(Skolem* s, Clause* c) {
 }
 void skolem_add_antecedents(Skolem* s, Lit lit, int_vector* or_lits) {
     Var* v = var_vector_get(s->qcnf->vars, lit_to_var(lit));
-    for (unsigned i = 0; i < vector_count(&v->pos_occs); i++) {
-        Clause* c = vector_get(&v->pos_occs, i);
+    vector* occs = qcnf_get_occs_of_lit(s->qcnf, lit);
+    for (unsigned i = 0; i < vector_count(occs); i++) {
+        Clause* c = vector_get(occs, i);
         if (skolem_get_unique_consequence(s, c) == lit && ! skolem_clause_satisfied(s, c)) {
             int fresh = f_fresh_var(s->f);
             int_vector_add(or_lits, fresh);
@@ -607,7 +608,7 @@ void skolem_propagate_determinicity(Skolem* s, unsigned var_id) {
         illegal_dependencies &&
         qcnf_get_scope(s->qcnf, var_id) == qcnf_get_empty_scope(s->qcnf) &&
         skolem_some_antecedent_satisfiable(s, var_id)) {
-        V3("Var %u got backpropagated.\n", var_id);
+        V3(" ... but var %u got backpropagated.\n", var_id);
         deterministic = true;
     }
     

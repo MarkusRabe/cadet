@@ -379,7 +379,7 @@ bool qcnf_is_new_constraint(QCNF* qcnf, int_vector* literals) {
 Clause* qcnf_new_clause(QCNF* qcnf, int_vector* literals) {
 
     if (! qcnf_is_new_constraint(qcnf, literals)) {
-        V3("Warning: detected duplicate clause.");
+        V3("Warning: detected duplicate clause");
         if (debug_verbosity >= 3) {
             for (unsigned i = 0; i < int_vector_count(literals); i++) {
                 V3(" %d", int_vector_get(literals, i));

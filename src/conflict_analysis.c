@@ -267,7 +267,7 @@ vector* analyze_assignment_conflict(C2* c2,
         conflict_analysis_follow_implication_graph(ca, 0);
         
         Clause* learnt = conflict_analysis_to_clause(ca, 0);
-        abortif(learnt == NULL, "Learning from conflicted clause failed.");
+        abortif(learnt == NULL, "Learning from conflicted clause resulted in duplicate or tautological clause.");
         vector_add(clauses, learnt);
         
     } else {
@@ -296,25 +296,45 @@ vector* analyze_assignment_conflict(C2* c2,
         }
         
         if (var_with_complementary_literals == 0) {
-            int_vector_add_all(ca->conflicting_assignments[0], ca->conflicting_assignments[1]);
+            int_vector_add_all(ca->conflicting_assignments[0], ca->conflicting_assignments[1]); // Resolve along conflicted var
             Clause* learnt = conflict_analysis_to_clause(ca, 0);
-            abortif(learnt == NULL, "Learning from conflicted clause failed.");
+            abortif(learnt == NULL, "Learning from conflicted variable resulted in duplicate or tautological clause.");
             vector_add(clauses, learnt);
-        } else { // complementary literals, cannot join clauses
+        } else { // complementary literals, cannot resolve clauses along conflicted var; treat separately
+            assert(ca->c2->qcnf->problem_type != QCNF_DQBF); // code below may not be general enough for DQBF
+            
+            int_vector_add(ca->conflicting_assignments[0], - (Lit) ca->conflicted_var_id);
+            int_vector_add(ca->conflicting_assignments[1],   (Lit) ca->conflicted_var_id);
+            
+            assert(! skolem_may_depend_on(ca->c2->skolem, ca->conflicted_var_id, var_with_complementary_literals));
+            
             for (int copy = 0; copy < 2; copy++) {
                 if (! qcnf_is_new_constraint(ca->c2->qcnf, ca->conflicting_assignments[copy])) {
+                    // The derived clause is not new, so we didn't actually discover anything new.
+                    // It looks like we have to follow back some more implications to get a new clause. Reduce the ca-> at least one more level.
+                    unsigned maximal_dlvl = 0;
                     for (unsigned i = 0; i < int_vector_count(ca->conflicting_assignments[copy]); i++) {
                         Lit lit = int_vector_get(ca->conflicting_assignments[copy], i);
                         if (skolem_may_depend_on(ca->c2->skolem, lit_to_var(lit), var_with_complementary_literals)) {
                             worklist_push(ca->queue[copy], (void*) (int64_t) lit);
                             int_vector_remove_index(ca->conflicting_assignments[copy], i);
+                            
+                            if (ca->domain_get_decision_lvl(ca->domain, lit_to_var(lit)) > maximal_dlvl) {
+                                maximal_dlvl = ca->domain_get_decision_lvl(ca->domain, lit_to_var(lit));
+                            }
+                            
                             i--;
                         }
                     }
+                    ca->conflict_decision_lvl = maximal_dlvl;
+                    conflict_analysis_follow_implication_graph(ca, copy);
+                    assert(qcnf_is_new_constraint(ca->c2->qcnf, ca->conflicting_assignments[copy]));
+                    
+                    Clause* learnt = conflict_analysis_to_clause(ca, copy);
+                    abortif(learnt == NULL, "Learning from backpropagation conflict resulted in duplicate or tautological clause.");
+                    vector_add(clauses, learnt);
                 }
             }
-            abortif(true, "Trolololo TODO");
-            // TODO: add clauses
         }
     }
     

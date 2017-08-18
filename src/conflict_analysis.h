@@ -11,7 +11,7 @@
 
 #include "cadet2.h"
 
-int_vector* analyze_assignment_conflict(C2* c2,
+vector* analyze_assignment_conflict(C2* c2,
                                         unsigned conflict_var,
                                         Clause* conflicted_clause,
                                         void* domain,

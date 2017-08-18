@@ -119,7 +119,7 @@ bool qcnf_contains_literal(Clause*,Lit); // 0 if not contained, return lit if it
 int qcnf_contains_variable(Clause*,Var*); // 0 if not contained, otherwise return lit.
 //int qcnf_maximal_qlvl(QCNF*,Clause*);
 //int qcnf_minimal_qlvl(QCNF*,Clause*);
-bool qcnf_is_duplicate(QCNF*,Clause*);
+bool qcnf_is_new_constraint(QCNF* qcnf, int_vector* literals);
 bool qcnf_is_resolvent_tautological(Clause*, Clause*, unsigned var_id);
 bool qcnf_antecedent_subsubsumed(QCNF*, Clause* c1, Clause* c2, unsigned var_id); // does c1 subsume c2 excluding occurrences of var_id?
 

@@ -27,6 +27,7 @@ typedef struct {
     // Computational enginge
     bool cegar;
     bool cegar_only;
+    unsigned max_cegar_iterations_per_learnt_clause;
     bool use_qbf_engine_also_for_propositional_problems;
     unsigned examples_max_num;
     unsigned initial_examples;

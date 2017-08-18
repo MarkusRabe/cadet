@@ -787,8 +787,6 @@ unsigned skolem_global_conflict_check(Skolem* s, unsigned var_id) {
     
     f_encode_conflictedness(s, var_id);
     
-//    f_encode_consistency(s, var_id);
-    
     //        satsolver_set_default_phase_lit(s->f, skolem_get_satlit(s,   (Lit) potentially_contflicted), 1);
     //        satsolver_set_default_phase_lit(s->f, skolem_get_satlit(s, - (Lit) potentially_contflicted), 1);
     

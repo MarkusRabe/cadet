@@ -82,7 +82,7 @@ unsigned int_vector_find(int_vector* v, int value) {
     return VECTOR_NOT_FOUND;
 }
 
-// returns absolute position, and returns -1 in case the element is not contained
+// returns absolute position, and returns VECTOR_NOT_FOUND (which is (unsigned) -1) in case the element is not contained
 unsigned int_vector_find_sorted(int_vector* v, int value) {
     if (v->count != 0) {
         long long imin = 0, imax = v->count - 1;

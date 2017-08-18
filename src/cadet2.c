@@ -325,7 +325,7 @@ void c2_backtrack_to_decision_lvl(C2 *c2, unsigned backtracking_lvl) {
     }
 }
 
-unsigned c2_are_decisions_involved(C2* c2, int_vector* conflict) {
+bool c2_are_decisions_involved(C2* c2, vector* conflict_clauses) {
     unsigned largest_decision_level_involved = c2->restart_base_decision_lvl;
     unsigned max_decision_lvl;
     if (c2->state == C2_SKOLEM_CONFLICT) {
@@ -336,34 +336,37 @@ unsigned c2_are_decisions_involved(C2* c2, int_vector* conflict) {
         max_decision_lvl = pa->decision_lvl;
     }
     
-    for (unsigned i = 0; i < int_vector_count(conflict); i++) {
-        Lit lit = int_vector_get(conflict, i);
-        unsigned dlvl;
-        if (c2->state == C2_SKOLEM_CONFLICT) {
-            dlvl = skolem_get_decision_lvl(c2->skolem,lit_to_var(lit));
-        } else {
-            assert(c2->state == C2_EXAMPLES_CONFLICT);
-            PartialAssignment* pa = examples_get_conflicted_assignment(c2->examples);
-            dlvl = partial_assignment_get_decision_lvl(pa, lit_to_var(lit));
-        }
-        
-        if (dlvl > largest_decision_level_involved) {
-            largest_decision_level_involved = dlvl;
-        }
-        assert(largest_decision_level_involved <= max_decision_lvl);
-        if (largest_decision_level_involved == max_decision_lvl) {
-            break;
+    for (unsigned j = 0; j < vector_count(conflict_clauses); j++) {
+        Clause* c = vector_get(conflict_clauses, j);
+        for (unsigned i = 0; i < c->size; i++) {
+            Lit lit = c->occs[i];
+            unsigned dlvl;
+            if (c2->state == C2_SKOLEM_CONFLICT) {
+                dlvl = skolem_get_decision_lvl(c2->skolem,lit_to_var(lit));
+            } else {
+                assert(c2->state == C2_EXAMPLES_CONFLICT);
+                PartialAssignment* pa = examples_get_conflicted_assignment(c2->examples);
+                dlvl = partial_assignment_get_decision_lvl(pa, lit_to_var(lit));
+            }
+            
+            if (dlvl > largest_decision_level_involved) {
+                largest_decision_level_involved = dlvl;
+            }
+            assert(largest_decision_level_involved <= max_decision_lvl);
+            if (largest_decision_level_involved == max_decision_lvl) {
+                break;
+            }
         }
     }
     return largest_decision_level_involved > c2->restart_base_decision_lvl;
 }
 
 // Returns the second largest decision level that occurs in the conflict. If no second largest decision level exists, returns 0. 
-unsigned c2_determine_backtracking_lvl(C2* c2, int_vector* conflict) {
+unsigned c2_determine_backtracking_lvl_of_clause(C2* c2, Clause* conflict) {
     int_vector* dlvls = int_vector_init();
     V2("Decision lvls in conflicted domain:");
-    for (unsigned i = 0; i < int_vector_count(conflict); i++) {
-        Lit lit = int_vector_get(conflict, i);
+    for (unsigned i = 0; i < conflict->size; i++) {
+        Lit lit = conflict->occs[i];
         unsigned var_id = lit_to_var(lit);
         unsigned dlvl;
         if (c2->state == C2_SKOLEM_CONFLICT) {
@@ -392,7 +395,24 @@ unsigned c2_determine_backtracking_lvl(C2* c2, int_vector* conflict) {
         second_largest = (unsigned) int_vector_get(dlvls, int_vector_count(dlvls) - 2);
     }
     second_largest = second_largest < c2->restart_base_decision_lvl ? c2->restart_base_decision_lvl : second_largest;
+    int_vector_free(dlvls);
     return second_largest;
+}
+
+unsigned c2_determine_backtracking_lvl(C2* c2, vector* conflict_clauses) {
+    unsigned minimum = UINT_MAX;
+    for (unsigned i = 0; i < vector_count(conflict_clauses); i++) {
+        Clause* c = vector_get(conflict_clauses, i);
+        unsigned val = c2_determine_backtracking_lvl_of_clause(c2, c);
+        if (val < minimum) {
+            minimum = val;
+        }
+        if (minimum == 0) {
+            break;
+        }
+    }
+    assert(minimum < UINT_MAX);
+    return minimum;
 }
 
 void c2_decay_activity(C2* c2) {
@@ -444,7 +464,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
         assert(c2->qcnf->stack->push_count >= c2->skolem->stack->push_count);
         assert(c2->skolem->stack->push_count >= c2->skolem->decision_lvl - c2->restart_base_decision_lvl);
         
-        int_vector* conflict = NULL;
+        vector* conflict_clauses = NULL;
         unsigned conflicted_var_id = 0;
         
         examples_propagate(c2->examples);
@@ -452,7 +472,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
             assert(c2->state == C2_READY);
             c2->state = C2_EXAMPLES_CONFLICT;
             PartialAssignment* pa = examples_get_conflicted_assignment(c2->examples);
-            conflict = analyze_assignment_conflict(c2,
+            conflict_clauses = analyze_assignment_conflict(c2,
                                                    pa->conflicted_var,
                                                    pa->conflicted_clause,
                                                    pa,
@@ -467,7 +487,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
             if (skolem_is_conflicted(c2->skolem)) {
                 assert(c2->state == C2_READY);
                 c2->state = C2_SKOLEM_CONFLICT;
-                conflict = analyze_assignment_conflict(c2,
+                conflict_clauses = analyze_assignment_conflict(c2,
                                                        c2->skolem->conflict_var_id,
                                                        c2->skolem->conflicted_clause,
                                                        c2->skolem,
@@ -478,17 +498,23 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                 conflicted_var_id = c2->skolem->conflict_var_id;
             }
         }
-        if (conflict != NULL) {
+        if (conflict_clauses != NULL) {
+            
+            abortif(vector_count(conflict_clauses) == 0, "No conflict clauses found after conflict analysis. Conflict counter: %zu", c2->statistics.conflicts);
             
             c2_print_variable_states(c2);
             
             remaining_conflicts -= 1;
             c2->statistics.conflicts += 1;
-            float conflict_success_rating = (float) 1.0 / (((float) int_vector_count(conflict)) * ((float) c2->decisions_since_last_conflict) + (float) 1.0);
+            
+
+            Clause* first_clause = vector_get(conflict_clauses, 0);
+            float conflict_success_rating = (float) 1.0 / (((float) first_clause->size) * ((float) c2->decisions_since_last_conflict) + (float) 1.0);
             c2->skolem_success_recent_average = (float) (c2->skolem_success_recent_average * c2->magic.skolem_success_horizon + conflict_success_rating * (1.0 - c2->magic.skolem_success_horizon));
             c2->decisions_since_last_conflict = 0;
             
-            if (c2_are_decisions_involved(c2,conflict)) { // any decisions involved?
+            
+            if (c2_are_decisions_involved(c2, conflict_clauses)) { // any decisions involved?
                 abortif(c2->statistics.decisions == 0, "Huh?");
                 
                 // Update Examples database
@@ -506,19 +532,19 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                 // Update CEGAR abstraction
                 if (c2->options->cegar && (c2->skolem->state == SKOLEM_STATE_SKOLEM_CONFLICT || c2->skolem->state == SKOLEM_STATE_BACKPROPAGATION_CONFLICT)) {
                     sat_res res = SATSOLVER_SATISFIABLE;
-                    for (unsigned i = 0; i < 100; i++) {
+                    for (unsigned i = 0; i < c2->options->max_cegar_iterations_per_learnt_clause; i++) {
                         switch (cegar_build_abstraction_for_assignment(c2)) {
                             case CADET_RESULT_SAT:
                                 skolem_recover_from_conflict(c2->skolem);
-                                int_vector_free(conflict);
+                                vector_free(conflict_clauses);
                                 c2->state = C2_READY;
                                 c2->result = CADET_RESULT_SAT;
-                                return c2->result;
+                                goto return_other;
                             case CADET_RESULT_UNSAT:
-                                int_vector_free(conflict);
+                                vector_free(conflict_clauses);
                                 c2->state = C2_CEGAR_CONFLICT;
                                 c2->result = CADET_RESULT_UNSAT;
-                                return c2->result;
+                                goto return_other;
                             case CADET_RESULT_UNKNOWN:
                                 break;
                         }
@@ -526,91 +552,89 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                             // be opportunistic and do more cegar, because it works well
                             res = f_sat(c2->skolem->f);
                             if (res == SATSOLVER_UNSATISFIABLE) {
-                                skolem_recover_from_conflict(c2->skolem);
-                                int_vector_free(conflict);
-                                c2->state = C2_READY;
+//                                skolem_recover_from_conflict(c2->skolem);
+//                                vector_free(conflict_clauses);
+//                                c2->state = C2_READY;
                                 break;
                             }
                         } else {
                             break;
                         }
                     }
-                    if (!skolem_is_conflicted(c2->skolem)) {
-                        continue; // skip usual conflict analysis; continue with propagation
-                    }
+                    assert(skolem_is_conflicted(c2->skolem));
+//                    if (!skolem_is_conflicted(c2->skolem)) {
+//                        continue; // skip usual conflict analysis; continue with propagation
+//                    }
                 }
                 
                 skolem_recover_from_conflict(c2->skolem);
 
-                unsigned backtracking_lvl = c2_determine_backtracking_lvl(c2, conflict); // was equal to largest_decision_lvl_involved (-1?)
-                unsigned old_dlvl = c2->skolem->decision_lvl;
+                unsigned backtracking_lvl = c2_determine_backtracking_lvl(c2, conflict_clauses); // was equal to largest_decision_lvl_involved (-1?)
+                V1("Backtracking %u lvls to lvl %u\n", c2->skolem->decision_lvl - backtracking_lvl, backtracking_lvl);
+                c2->statistics.lvls_backtracked += c2->skolem->decision_lvl - backtracking_lvl;
                 c2_backtrack_to_decision_lvl(c2, backtracking_lvl);
                 
                 if (c2->conflicts_between_case_splits_countdown > 0)
                     c2->conflicts_between_case_splits_countdown--;
                 
-                
-                for (unsigned i = 0; i < int_vector_count(conflict); i++) {
-                    int lit = int_vector_get(conflict, i);
-                    c2_add_lit(c2, - lit);
+                for (unsigned i = 0; i < vector_count(conflict_clauses); i++) {
+                    Clause* learnt_clause = vector_get(conflict_clauses, i);
+                    assert(skolem_get_unique_consequence(c2->skolem, learnt_clause) == 0);
+                    
+                    if (new_example) {
+                        examples_redo(c2->examples, c2->skolem, new_example);
+                    }
+                    examples_new_clause(c2->examples, learnt_clause);
+                    
+                    if (skolem_get_unique_consequence(c2->skolem, learnt_clause) != 0) {
+                        skolem_bump_conflict_potential(c2->skolem, lit_to_var(skolem_get_unique_consequence(c2->skolem, learnt_clause)));
+                    }
+                    
+                    if (debug_verbosity >= VERBOSITY_MEDIUM || c2->options->trace_learnt_clauses) {
+                        c2_log_clause(c2, learnt_clause);
+                    }
+                    c2_new_clause(c2, learnt_clause);
+                    
+                    c2_conflict_heuristics(c2, learnt_clause, conflicted_var_id);
+                    
+                    V1("Learnt clause has length %u.\n", learnt_clause->size);
                 }
-                Clause* learnt_clause = qcnf_close_clause(c2->qcnf);
                 
-                abortif(learnt_clause == NULL, "Conflict clause could not be created. Conflict counter: %zu", c2->statistics.conflicts);
                 
-                learnt_clause->original = false;
-                learnt_clause->consistent_with_originals = true;
-                assert(skolem_get_unique_consequence(c2->skolem, learnt_clause) == 0);
-                
-                if (new_example) {
-                    examples_redo(c2->examples, c2->skolem, new_example);
-                }
-                examples_new_clause(c2->examples, learnt_clause);
-                
-                if (skolem_get_unique_consequence(c2->skolem, learnt_clause) != 0) {
-                    skolem_bump_conflict_potential(c2->skolem, lit_to_var(skolem_get_unique_consequence(c2->skolem, learnt_clause)));
-                }
-                
-                if (debug_verbosity >= VERBOSITY_MEDIUM || c2->options->trace_learnt_clauses) {
-                    c2_log_clause(c2, learnt_clause);
-                }
-                c2_new_clause(c2, learnt_clause);
-                
-                c2_conflict_heuristics(c2, learnt_clause, conflicted_var_id);
-                
-                V1("Learnt clause has length %u. Backtracking %u lvls to lvl %u\n", learnt_clause->size, old_dlvl - c2->skolem->decision_lvl, c2->skolem->decision_lvl);
-                c2->statistics.lvls_backtracked += old_dlvl - c2->skolem->decision_lvl;
 #ifdef DEBUG
                 c2_validate_unique_consequences(c2);
 #endif
                 c2_trace_for_profiling(c2);
                 
-                int_vector_free(conflict);
+                vector_free(conflict_clauses);
                 c2->state = C2_READY;
                 
             } else { // actual conflict
-                if (c2->options->functional_synthesis && int_vector_count(conflict) > 0) {
+                if (c2->options->functional_synthesis) {
                     
                     c2_backtrack_to_decision_lvl(c2, c2->restart_base_decision_lvl);
                     c2->state = C2_READY;
                     
                     // Negate the conflict!
-                    V2("Functional synthesis exludes cube:");
-                    for (unsigned i = 0; i < int_vector_count(conflict); i++) {
-                        int lit = int_vector_get(conflict, i);
-                        int_vector_set(conflict, i, - lit);
-                        V2("%d", - lit);
+                    for (unsigned i = 0; i < vector_count(conflict_clauses); i++) {
+                        Clause* conflict = vector_get(conflict_clauses, i);
+                        V2("Functional synthesis exludes cube:");
+                        int_vector* cube = int_vector_init();
+                        for (unsigned j = 0; j < conflict->size; j++) {
+                            int_vector_add(cube, conflict->occs[j]);
+                            V2("%d", conflict->occs[j]);
+                        }
+                        V2("\n");
+                        cegar_new_cube(c2->cegar, cube);
+                        
+                        V1("Functional synthesis detected a cube of length %u that is over dlvl0 only. We exclude it from future conflict checks.\n", conflict->size);
                     }
-                    V2("\n");
-                    cegar_new_cube(c2->cegar, conflict);
-
-                    V1("Functional synthesis detected a cube of length %u that is over dlvl0 only. We exclude it from future conflict checks.\n", int_vector_count(conflict));
                     continue;
                 }
                 
                 assert(c2->result == CADET_RESULT_UNKNOWN);
                 c2->result = CADET_RESULT_UNSAT;
-                return c2->result;
+                goto return_other;
             }
             
         } else { // conflict == NULL
@@ -630,7 +654,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                 ) {
                 bool progress_through_case_split = c2_case_split(c2);
                 if (c2->result != CADET_RESULT_UNKNOWN) { // either the above if statement or c2_case_split may result in SAT/UNSAT
-                    return c2->result;
+                    goto return_other;
                 }
                 if (progress_through_case_split) {
                     assert(c2->conflicts_between_case_splits_countdown > 0);
@@ -681,10 +705,14 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
             
         }
     }
-    
+
+return_unknown:
     abortif(c2->result != CADET_RESULT_UNKNOWN, "Expected going into restart but result is not unknown.");
     c2_backtrack_to_decision_lvl(c2, c2->restart_base_decision_lvl);
-    return c2->result; // results in a restart
+    return CADET_RESULT_UNKNOWN; // results in a restart
+    
+return_other:
+    return c2->result;
 }
 
 cadet_res c2_check_propositional(QCNF* qcnf) {
@@ -714,10 +742,7 @@ cadet_res c2_sat(C2* c2) {
     }
     
     ////// THIS RESTRICTS US TO 2QBF or 3QBF
-//    if (c2->qcnf->problem_type != QCNF_3QBF) {
-//        V0("Is not in 3QBF. Currently not supported.\n");
-//        return CADET_RESULT_UNKNOWN;
-//    }
+
     if (c2->qcnf->problem_type > QCNF_2QBF) {
         V0("Is not in 2QBF. Currently not supported.\n");
         return CADET_RESULT_UNKNOWN;

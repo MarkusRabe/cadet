@@ -47,30 +47,6 @@ int qcnf_contains_variable(Clause* clause, Var* var) { // 0 if not contained, ot
     return 0;
 }
 
-bool qcnf_is_duplicate(QCNF* qcnf, Clause* c) {
-    if (c->size == 0) {
-        return qcnf->empty_clause != NULL;
-    }
-    Lit first = c->occs[0];
-    Var* v = var_vector_get(qcnf->vars, lit_to_var(first));
-    vector* occs = first > 0 ? &v->pos_occs : &v->neg_occs;
-    for (unsigned i = 0; i < vector_count(occs); i++) {
-        Clause* other = vector_get(occs, i);
-        if (c != other && c->size == other->size) {
-            bool all_equal = true;
-            for (unsigned j = 0; j < c->size; j++) {
-                all_equal = all_equal && (c->occs[j] == other->occs[j]);
-            }
-            if (all_equal) {
-                return true;
-            }
-        }
-        
-    }
-    return false;
-}
-
-
 // VARIABLES
 
 bool qcnf_is_existential(QCNF* qcnf, unsigned var_id) {
@@ -368,9 +344,58 @@ unsigned qcnf_get_smallest_free_clause_id(QCNF* qcnf) {
     return res;
 }
 
+// Tests whether the new potential clause is subsumed by an existing clause
+// Changes order of literas!
+bool qcnf_is_new_constraint(QCNF* qcnf, int_vector* literals) {
+    if (int_vector_count(literals) == 0) {
+        return qcnf->empty_clause == NULL;
+    }
+    
+    int_vector_sort(literals, compare_integers_natural_order);
+    int_vector_remove_duplicates(literals);
+    assert(int_vector_is_strictly_sorted(literals));
+    
+    Lit first = int_vector_get(literals, 0);
+    Var* v = var_vector_get(qcnf->vars, lit_to_var(first));
+    vector* v_occs = first > 0 ? &v->pos_occs : &v->neg_occs;
+    for (unsigned i = 0; i < vector_count(v_occs); i++) {
+        Clause* other = vector_get(v_occs, i);
+        if (int_vector_count(literals) >= other->size) {
+            bool contained = true;
+            for (unsigned j = 0; j < other->size; j++) {
+                if (! int_vector_contains_sorted(literals, other->occs[j])) {
+                    contained = false;
+                    break;
+                }
+            }
+            if (contained) {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 Clause* qcnf_new_clause(QCNF* qcnf, int_vector* literals) {
 
-    int_vector_sort(literals, qcnf_compare_literal_pointers_by_var_id);
+    if (! qcnf_is_new_constraint(qcnf, literals)) {
+        V3("Warning: detected duplicate clause.");
+        if (debug_verbosity >= 3) {
+            for (unsigned i = 0; i < int_vector_count(literals); i++) {
+                V3(" %d", int_vector_get(literals, i));
+            }
+            V3(" \n");
+        }
+        return NULL;
+    }
+    
+    abortif(static_qcnf_variable_for_sorting != NULL,
+            "Memory curruption or concurrent usage of static variable static_qcnf_variable_for_sorting.");
+    static_qcnf_variable_for_sorting = qcnf; // sorry for this hack; need to reference qcnf from within the sorting procedure
+    //    qsort(c->occs, c->size, sizeof(int), qcnf_compare_occurrence_by_qtype_then_scope_size_then_var_id__static_qcnf);
+    int_vector_sort(literals, qcnf_compare_occurrence_by_qtype_then_scope_size_then_var_id__static_qcnf);
+    static_qcnf_variable_for_sorting = NULL;
+    
     for (unsigned i = 0; i+1 < int_vector_count(literals); i++) {
         // find pairs of positive/negative literals of the same variable
         if (int_vector_get(literals, i) == int_vector_get(literals, i+1)) {
@@ -401,22 +426,7 @@ Clause* qcnf_new_clause(QCNF* qcnf, int_vector* literals) {
         }
     }
     
-    abortif(static_qcnf_variable_for_sorting != NULL, "Memory curruption or concurrent usage of static variable static_qcnf_variable_for_sorting.");
-    
-    static_qcnf_variable_for_sorting = qcnf; // sorry for this hack; need to reference qcnf from within the sorting procedure
-    qsort(c->occs, c->size, sizeof(int), qcnf_compare_occurrence_by_qtype_then_scope_size_then_var_id__static_qcnf);
-    static_qcnf_variable_for_sorting = NULL;
-    
     qcnf_universal_reduction(qcnf, c);
-
-    if (qcnf_is_duplicate(qcnf,c)) {
-        V3("Warning: detected duplicate clause. ");
-        if (debug_verbosity >= 3) {
-            qcnf_print_clause(c, stdout);
-        }
-        return NULL;
-    }
-    
     
     // Update the occurrence lists
     for (int i = 0; i < c->size; i++) {

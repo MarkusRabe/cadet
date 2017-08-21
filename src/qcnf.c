@@ -346,7 +346,7 @@ unsigned qcnf_get_smallest_free_clause_id(QCNF* qcnf) {
 
 // Tests whether the new potential clause is subsumed by an existing clause
 // Changes order of literas!
-bool qcnf_is_new_constraint(QCNF* qcnf, int_vector* literals) {
+bool qcnf_is_new_constraint(QCNF* qcnf, int_vector* literals, bool negated) {
     if (int_vector_count(literals) == 0) {
         return qcnf->empty_clause == NULL;
     }
@@ -355,15 +355,15 @@ bool qcnf_is_new_constraint(QCNF* qcnf, int_vector* literals) {
     int_vector_remove_duplicates(literals);
     assert(int_vector_is_strictly_sorted(literals));
     
-    Lit first = int_vector_get(literals, 0);
-    Var* v = var_vector_get(qcnf->vars, lit_to_var(first));
-    vector* v_occs = first > 0 ? &v->pos_occs : &v->neg_occs;
+    int polarity = negated ? -1 : 1;
+    Lit first = polarity * int_vector_get(literals, 0);
+    vector* v_occs = qcnf_get_occs_of_lit(qcnf, first);
     for (unsigned i = 0; i < vector_count(v_occs); i++) {
         Clause* other = vector_get(v_occs, i);
         if (int_vector_count(literals) >= other->size) {
             bool contained = true;
             for (unsigned j = 0; j < other->size; j++) {
-                if (! int_vector_contains_sorted(literals, other->occs[j])) {
+                if (! int_vector_contains_sorted(literals, polarity * other->occs[j])) {
                     contained = false;
                     break;
                 }
@@ -378,7 +378,7 @@ bool qcnf_is_new_constraint(QCNF* qcnf, int_vector* literals) {
 
 Clause* qcnf_new_clause(QCNF* qcnf, int_vector* literals) {
 
-    if (! qcnf_is_new_constraint(qcnf, literals)) {
+    if (! qcnf_is_new_constraint(qcnf, literals, false)) {
         V3("Warning: detected duplicate clause");
         if (debug_verbosity >= 3) {
             for (unsigned i = 0; i < int_vector_count(literals); i++) {

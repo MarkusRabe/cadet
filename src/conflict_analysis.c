@@ -207,6 +207,43 @@ Clause* conflict_analysis_to_clause(conflict_analysis* ca, int copy) {
     return qcnf_close_clause(ca->c2->qcnf);
 }
 
+// If the clause is not new, go back additional decision levels in the maximal dependency set in this clause.
+void conflict_analysis_ensure_constraint_is_new(conflict_analysis* ca, int copy) {
+    if (! qcnf_is_new_constraint(ca->c2->qcnf, ca->conflicting_assignments[copy], true)) {
+        // The derived clause is not new, so we didn't actually discover anything new.
+        // It looks like we have to follow back some more implications to get a new clause. Reduce the ca-> at least one more level.
+        unsigned maximal_dlvl = 0;
+        unsigned maximal_scope_id = 0;   assert(ca->c2->qcnf->problem_type != QCNF_DQBF);
+        
+        for (unsigned i = 0; i < int_vector_count(ca->conflicting_assignments[copy]); i++) {
+            Lit lit = int_vector_get(ca->conflicting_assignments[copy], i);
+            
+            if (qcnf_get_scope(ca->c2->qcnf, lit_to_var(lit)) > maximal_scope_id) {
+                maximal_scope_id = qcnf_get_scope(ca->c2->qcnf, lit_to_var(lit));
+                maximal_dlvl = 0;
+            }
+            if (qcnf_get_scope(ca->c2->qcnf, lit_to_var(lit)) == maximal_scope_id) {
+                if (ca->domain_get_decision_lvl(ca->domain, lit_to_var(lit)) > maximal_dlvl) {
+                    maximal_dlvl = ca->domain_get_decision_lvl(ca->domain, lit_to_var(lit));
+                }
+            }
+        }
+        for (unsigned i = 0; i < int_vector_count(ca->conflicting_assignments[copy]); i++) {
+            Lit lit = int_vector_get(ca->conflicting_assignments[copy], i);
+            if (qcnf_get_scope(ca->c2->qcnf, lit_to_var(lit)) >= maximal_scope_id &&
+                ca->domain_get_decision_lvl(ca->domain, lit_to_var(lit)) >= maximal_dlvl) {
+                worklist_push(ca->queue[copy], (void*) (int64_t) lit);
+                int_vector_remove_index(ca->conflicting_assignments[copy], i);
+                i--;
+            }
+        }
+        
+        ca->conflict_decision_lvl = maximal_dlvl;
+        conflict_analysis_follow_implication_graph(ca, copy);
+        abortif(! qcnf_is_new_constraint(ca->c2->qcnf, ca->conflicting_assignments[copy], true), "Constraint is still not new");
+    }
+}
+
 
 vector* analyze_assignment_conflict(C2* c2,
                                         unsigned conflicted_var,
@@ -297,6 +334,7 @@ vector* analyze_assignment_conflict(C2* c2,
         
         if (var_with_complementary_literals == 0) {
             int_vector_add_all(ca->conflicting_assignments[0], ca->conflicting_assignments[1]); // Resolve along conflicted var
+            conflict_analysis_ensure_constraint_is_new(ca, 0);
             Clause* learnt = conflict_analysis_to_clause(ca, 0);
             abortif(learnt == NULL, "Learning from conflicted variable resulted in duplicate or tautological clause.");
             vector_add(clauses, learnt);
@@ -309,31 +347,11 @@ vector* analyze_assignment_conflict(C2* c2,
             assert(! skolem_may_depend_on(ca->c2->skolem, ca->conflicted_var_id, var_with_complementary_literals));
             
             for (int copy = 0; copy < 2; copy++) {
-                if (! qcnf_is_new_constraint(ca->c2->qcnf, ca->conflicting_assignments[copy])) {
-                    // The derived clause is not new, so we didn't actually discover anything new.
-                    // It looks like we have to follow back some more implications to get a new clause. Reduce the ca-> at least one more level.
-                    unsigned maximal_dlvl = 0;
-                    for (unsigned i = 0; i < int_vector_count(ca->conflicting_assignments[copy]); i++) {
-                        Lit lit = int_vector_get(ca->conflicting_assignments[copy], i);
-                        if (skolem_may_depend_on(ca->c2->skolem, lit_to_var(lit), var_with_complementary_literals)) {
-                            worklist_push(ca->queue[copy], (void*) (int64_t) lit);
-                            int_vector_remove_index(ca->conflicting_assignments[copy], i);
-                            
-                            if (ca->domain_get_decision_lvl(ca->domain, lit_to_var(lit)) > maximal_dlvl) {
-                                maximal_dlvl = ca->domain_get_decision_lvl(ca->domain, lit_to_var(lit));
-                            }
-                            
-                            i--;
-                        }
-                    }
-                    ca->conflict_decision_lvl = maximal_dlvl;
-                    conflict_analysis_follow_implication_graph(ca, copy);
-                    assert(qcnf_is_new_constraint(ca->c2->qcnf, ca->conflicting_assignments[copy]));
-                    
-                    Clause* learnt = conflict_analysis_to_clause(ca, copy);
-                    abortif(learnt == NULL, "Learning from backpropagation conflict resulted in duplicate or tautological clause.");
-                    vector_add(clauses, learnt);
-                }
+                conflict_analysis_ensure_constraint_is_new(ca, copy);
+                
+                Clause* learnt = conflict_analysis_to_clause(ca, copy);
+                abortif(learnt == NULL, "Learning from backpropagation conflict resulted in duplicate or tautological clause.");
+                vector_add(clauses, learnt);
             }
         }
     }

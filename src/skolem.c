@@ -453,7 +453,6 @@ bool skolem_antecedent_satisfiable(Skolem* s, Clause* c) {
     return f_sat(s->f) == SATSOLVER_SATISFIABLE;
 }
 void skolem_add_antecedents(Skolem* s, Lit lit, int_vector* or_lits) {
-    Var* v = var_vector_get(s->qcnf->vars, lit_to_var(lit));
     vector* occs = qcnf_get_occs_of_lit(s->qcnf, lit);
     for (unsigned i = 0; i < vector_count(occs); i++) {
         Clause* c = vector_get(occs, i);
@@ -594,8 +593,9 @@ void skolem_propagate_determinicity(Skolem* s, unsigned var_id) {
     V4("Propagating determinicity for var %u\n", var_id);
     
     bool deterministic = skolem_check_for_local_determinicity(s, var_id);
-    
     bool illegal_dependencies = false;
+    bool outer_existential = ( qcnf_get_scope(s->qcnf, var_id) == qcnf_get_empty_scope(s->qcnf) );
+    int backpropagation_polarity = 0;
     
     if (! qcnf_var_has_unique_maximal_dependency(s->qcnf, var_id) &&
         (   skolem_occs_contain_illegal_dependence(s,   (Lit) var_id) ||
@@ -606,10 +606,12 @@ void skolem_propagate_determinicity(Skolem* s, unsigned var_id) {
     // Test for constants, intermediate variables in general QBF still only relies on local determinicity
     if (! deterministic &&
         illegal_dependencies &&
-        qcnf_get_scope(s->qcnf, var_id) == qcnf_get_empty_scope(s->qcnf) &&
-        skolem_some_antecedent_satisfiable(s, var_id)) {
-        V3(" ... but var %u got backpropagated.\n", var_id);
-        deterministic = true;
+        outer_existential) {
+        backpropagation_polarity = skolem_some_antecedent_satisfiable(s, var_id);
+        if (backpropagation_polarity != 0) {
+            V3(" ... but var %u got backpropagated.\n", var_id);
+            deterministic = true;
+        }
     }
     
     if (deterministic) {
@@ -623,9 +625,9 @@ void skolem_propagate_determinicity(Skolem* s, unsigned var_id) {
             f_encode_unique_antecedents_for_lits(s, (Lit)   (int) var_id, false);
             f_encode_unique_antecedents_for_lits(s, (Lit) - (int) var_id, false);
             
-        } else {
-            // this is just a performance optimization; introduces fewer satlits
-            // still need to test if that's actually significant
+        } else if (! outer_existential) {
+            // this is just a performance optimization compared to the case above;
+            // introduces fewer satlits ... still need to test if that's actually significant
             f_encode_give_fresh_satlit(s, var_id);
             
             // Now add clauses using the GIVEN satlits.
@@ -651,7 +653,12 @@ void skolem_propagate_determinicity(Skolem* s, unsigned var_id) {
             }
         }
         
-        f_encode_consistency(s, var_id);
+        if (outer_existential) {
+            assert(backpropagation_polarity != 0);
+            skolem_assume_constant_value(s, s->empty_dependencies, backpropagation_polarity * (Lit) var_id);
+        } else {
+            f_encode_consistency(s, var_id);
+        }
         
     } else {
         pqueue_push(s->pure_var_queue,

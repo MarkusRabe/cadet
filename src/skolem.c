@@ -462,7 +462,7 @@ void skolem_add_antecedents(Skolem* s, Lit lit, int_vector* or_lits) {
             for (unsigned j = 0; j < c->size; j++) {
                 if (c->occs[j] != lit) {
                     f_add_internal(s->f, - fresh);
-                    f_add_internal(s->f, - skolem_get_satlit(s, c->occs[j]).x[0]);
+                    f_add_internal(s->f, skolem_get_satlit(s, - c->occs[j]).x[0]);
                     f_clause_finished_internal(s->f);
                 }
             }
@@ -476,12 +476,11 @@ Clause* skolem_some_antecedent_satisfiable(Skolem* s, unsigned var_id) {
     f_push(s->f);
     int_vector* or_lits_pos = int_vector_init();
     skolem_add_antecedents(s,   (Lit) var_id, or_lits_pos);
+    int_vector* or_lits_neg = int_vector_init();
+    skolem_add_antecedents(s, - (Lit) var_id, or_lits_neg);
     for (unsigned i = 0; i < int_vector_count(or_lits_pos); i++) {
         f_add_internal(s->f, int_vector_get(or_lits_pos, i));
     }
-    
-    int_vector* or_lits_neg = int_vector_init();
-    skolem_add_antecedents(s, - (Lit) var_id, or_lits_neg);
     for (unsigned i = 0; i < int_vector_count(or_lits_neg); i++) {
         f_add_internal(s->f, int_vector_get(or_lits_neg, i));
     }
@@ -496,6 +495,14 @@ Clause* skolem_some_antecedent_satisfiable(Skolem* s, unsigned var_id) {
                 break;
             }
         }
+//        for (unsigned i = 0; i < int_vector_count(or_lits_pos); i++) {
+//            if (f_value(s->f, int_vector_get(or_lits_pos, i)) == 1) {
+//                assert(polarity == 0);
+//                polarity = 1;
+//                break;
+//            }
+//        }
+//        assert(polarity);
         if (!polarity) {
             polarity = 1;
         }
@@ -503,19 +510,41 @@ Clause* skolem_some_antecedent_satisfiable(Skolem* s, unsigned var_id) {
         bool found_reason = false;
         for (unsigned i = 0; i < vector_count(occs); i++) {
             Clause* c = vector_get(occs, i);
-            for (unsigned j = 0; j < c->size; j++) {
-                found_reason = true;
-                if (c->occs[j] != polarity * (Lit) var_id &&
-                    f_value(s->f, skolem_get_satlit(s, - c->occs[j]).x[0]) != 1) {
-                    found_reason = false;
+            if (skolem_get_unique_consequence(s, c) == polarity * (Lit) var_id && ! skolem_clause_satisfied(s, c)) {
+                for (unsigned j = 0; j < c->size; j++) {
+                    found_reason = true;
+                    if (c->occs[j] != polarity * (Lit) var_id &&
+                        f_value(s->f, skolem_get_satlit(s, - c->occs[j]).x[0]) != 1) {
+                        found_reason = false;
+                        break;
+                    }
+                }
+                if (found_reason) {
+                    satisfiable_antecedent = c;
                     break;
                 }
             }
-            if (found_reason) {
-                satisfiable_antecedent = c;
-                break;
-            }
         }
+//        if (!found_reason) {
+//            occs = qcnf_get_occs_of_lit(s->qcnf, - polarity * (Lit) var_id);
+//            for (unsigned i = 0; i < vector_count(occs); i++) {
+//                Clause* c = vector_get(occs, i);
+//                if (skolem_get_unique_consequence(s, c) == - polarity * (Lit) var_id && ! skolem_clause_satisfied(s, c)) {
+//                    for (unsigned j = 0; j < c->size; j++) {
+//                        found_reason = true;
+//                        if (c->occs[j] != - polarity * (Lit) var_id &&
+//                            f_value(s->f, skolem_get_satlit(s, - c->occs[j]).x[0]) != 1) {
+//                            found_reason = false;
+//                            break;
+//                        }
+//                    }
+//                    if (found_reason) {
+//                        satisfiable_antecedent = c;
+//                        break;
+//                    }
+//                }
+//            }
+//        }
         assert(found_reason);
         assert(satisfiable_antecedent);
     }

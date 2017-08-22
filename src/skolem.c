@@ -469,18 +469,60 @@ void skolem_add_antecedents(Skolem* s, Lit lit, int_vector* or_lits) {
         }
     }
 }
-bool skolem_some_antecedent_satisfiable(Skolem* s, unsigned var_id) {
+
+// Returns the clause that causes the backpropagation polarity of the literal of var_id that can be backpropagated.
+Clause* skolem_some_antecedent_satisfiable(Skolem* s, unsigned var_id) {
+    Clause* satisfiable_antecedent = 0;
     f_push(s->f);
-    int_vector* or_lits = int_vector_init();
-    skolem_add_antecedents(s,   (Lit) var_id, or_lits);
-    skolem_add_antecedents(s, - (Lit) var_id, or_lits);
-    for (unsigned i = 0; i < int_vector_count(or_lits); i++) {
-        f_add_internal(s->f, int_vector_get(or_lits, i));
+    int_vector* or_lits_pos = int_vector_init();
+    skolem_add_antecedents(s,   (Lit) var_id, or_lits_pos);
+    for (unsigned i = 0; i < int_vector_count(or_lits_pos); i++) {
+        f_add_internal(s->f, int_vector_get(or_lits_pos, i));
+    }
+    
+    int_vector* or_lits_neg = int_vector_init();
+    skolem_add_antecedents(s, - (Lit) var_id, or_lits_neg);
+    for (unsigned i = 0; i < int_vector_count(or_lits_neg); i++) {
+        f_add_internal(s->f, int_vector_get(or_lits_neg, i));
     }
     f_clause_finished_internal(s->f);
     sat_res res = f_sat(s->f);
+    
+    if (res == SATSOLVER_SATISFIABLE) {
+        int polarity = 0;
+        for (unsigned i = 0; i < int_vector_count(or_lits_neg); i++) {
+            if (f_value(s->f, int_vector_get(or_lits_neg, i)) == 1) {
+                polarity = -1;
+                break;
+            }
+        }
+        if (!polarity) {
+            polarity = 1;
+        }
+        vector* occs = qcnf_get_occs_of_lit(s->qcnf, polarity * (Lit) var_id);
+        bool found_reason = false;
+        for (unsigned i = 0; i < vector_count(occs); i++) {
+            Clause* c = vector_get(occs, i);
+            for (unsigned j = 0; j < c->size; j++) {
+                found_reason = true;
+                if (c->occs[j] != polarity * (Lit) var_id &&
+                    f_value(s->f, skolem_get_satlit(s, - c->occs[j]).x[0]) != 1) {
+                    found_reason = false;
+                    break;
+                }
+            }
+            if (found_reason) {
+                satisfiable_antecedent = c;
+                break;
+            }
+        }
+        assert(found_reason);
+        assert(satisfiable_antecedent);
+    }
+    int_vector_free(or_lits_neg);
+    int_vector_free(or_lits_pos);
     f_pop(s->f);
-    return res == SATSOLVER_SATISFIABLE;
+    return satisfiable_antecedent;
 }
 
 //bool skolem_backpropagation_conflict_check(Skolem* s, unsigned var_id) {
@@ -596,6 +638,7 @@ void skolem_propagate_determinicity(Skolem* s, unsigned var_id) {
     bool illegal_dependencies = false;
     bool outer_existential = ( qcnf_get_scope(s->qcnf, var_id) == qcnf_get_empty_scope(s->qcnf) );
     int backpropagation_polarity = 0;
+    Clause* backpropagation_clause = NULL;
     
     if (! qcnf_var_has_unique_maximal_dependency(s->qcnf, var_id) &&
         (   skolem_occs_contain_illegal_dependence(s,   (Lit) var_id) ||
@@ -607,8 +650,9 @@ void skolem_propagate_determinicity(Skolem* s, unsigned var_id) {
     if (! deterministic &&
         illegal_dependencies &&
         outer_existential) {
-        backpropagation_polarity = skolem_some_antecedent_satisfiable(s, var_id);
-        if (backpropagation_polarity != 0) {
+        backpropagation_clause = skolem_some_antecedent_satisfiable(s, var_id);
+        if (backpropagation_clause) {
+            backpropagation_polarity = skolem_get_unique_consequence(s, backpropagation_clause) > 0 ? 1 : -1;
             V3(" ... but var %u got backpropagated.\n", var_id);
             deterministic = true;
         }
@@ -655,7 +699,8 @@ void skolem_propagate_determinicity(Skolem* s, unsigned var_id) {
         
         if (outer_existential) {
             assert(backpropagation_polarity != 0);
-            skolem_assume_constant_value(s, s->empty_dependencies, backpropagation_polarity * (Lit) var_id);
+            skolem_assign_constant_value(s, backpropagation_polarity * (Lit) var_id, s->empty_dependencies, backpropagation_clause);
+//            skolem_assume_constant_value(s, s->empty_dependencies, backpropagation_polarity * (Lit) var_id);
         } else {
             f_encode_consistency(s, var_id);
         }

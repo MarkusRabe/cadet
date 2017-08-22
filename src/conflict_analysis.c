@@ -34,7 +34,7 @@ void conflict_analysis_schedule_causing_vars_in_work_queue(conflict_analysis* ca
     assert(consequence != 0);
     assert(lit_to_var(consequence) < var_vector_count(ca->c2->qcnf->vars));
     assert(ca->c2->skolem->conflict_var_id == lit_to_var(consequence)
-           || ca->domain_get_value(ca->domain, consequence, 0) == 1);
+           || ca->domain_get_value(ca->domain, consequence, copy) == 1);
     assert(ca->domain != ca->c2->skolem || skolem_get_unique_consequence(ca->c2->skolem, reason) == consequence || skolem_get_constant_value(ca->c2->skolem, consequence) == 1); // a bit hacky
     
     for (unsigned i = 0; i < reason->size; i++) {

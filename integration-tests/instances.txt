@@ -106,6 +106,7 @@ integration-tests/fuzz2828.qdimacs | 10
 integration-tests/backpropagation_conflict.qdimacs | 20
 integration-tests/backpropagation_resolution_problem.qdimacs | 10
 integration-tests/fuzz6818.qdimacs | 20
+integration-tests/fuzz7314.qdimacs | 20
 
 
 [new-tests]

@@ -146,17 +146,7 @@ void conflict_analysis_follow_implication_graph(conflict_analysis* ca, int copy)
         if (v->is_universal || d_lvl < ca->conflict_decision_lvl) {
             int_vector_add(ca->conflicting_assignments[copy], lit);
         } else {
-            
-            int reason_copy = 0;
-            // Find out which copy of the Skolem function holds the reason
-            if (ca->domain_get_value(ca->domain, lit, 0) == 1) {
-                reason_copy = 0;
-            } else {
-                assert(ca->domain_get_value(ca->domain, lit, 1) == 1);
-                reason_copy = 1;
-            }
-            
-            Clause* reason = ca->domain_get_reason(ca->domain, lit, reason_copy); // conflict_analysis_find_reason_for_value(ca, lit, &depends_on_illegals);
+            Clause* reason = ca->domain_get_reason(ca->domain, lit, copy); // conflict_analysis_find_reason_for_value(ca, lit, &depends_on_illegals);
             if (reason == NULL) {
                 abortif(ca->c2->state == C2_SKOLEM_CONFLICT
                         && ca->c2->skolem->state != SKOLEM_STATE_BACKPROPAGATION_CONFLICT
@@ -168,12 +158,12 @@ void conflict_analysis_follow_implication_graph(conflict_analysis* ca, int copy)
                 //            } else if (!reason->consistent_with_originals) { // decision clause!
                 //                assert(c2_is_decision_var(ca->c2, lit_to_var(lit)) || lit_to_var(lit) == ca->conflicted_var_id);
                 //                int_vector_add(ca->conflicting_assignment, lit);
-            } else if (!legal_reason(ca, lit, reason, reason_copy)) { // TODO: document why
+            } else if (!legal_reason(ca, lit, reason, copy)) { // TODO: document why
                 int_vector_add(ca->conflicting_assignments[copy], lit);
             } else {
                 assert(reason->original || reason->consistent_with_originals);
                 if (debug_verbosity >= VERBOSITY_HIGH) {
-                    V3("  Reason for %d is clause %u: ", lit, reason->clause_id);
+                    V3("  Reason for %d in copy %d is clause %u: ", lit, copy, reason->clause_id);
                     qcnf_print_clause(reason, stdout);
                 }
                 conflict_analysis_schedule_causing_vars_in_work_queue(ca, reason, lit, copy);

@@ -64,7 +64,7 @@ struct Skolem_Statistics {
     size_t explicit_propagations;
     size_t explicit_propagation_conflicts;
     
-    size_t decisions;
+    size_t constant_assignments;
     
     Stats* global_conflict_checks_sat;
     Stats* global_conflict_checks_unsat;

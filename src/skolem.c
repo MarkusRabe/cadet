@@ -76,6 +76,8 @@ Skolem* skolem_init(QCNF* qcnf, Options* o,
     s->statistics.global_conflict_checks_sat = statistics_init(10000);
     s->statistics.global_conflict_checks_unsat = statistics_init(10000);
     
+    s->statistics.constant_assignments = 0;
+    
     // Magic constants
     s->magic.initial_conflict_potential = 0.3f; // [0..1]
     s->magic.conflict_potential_change_factor = 0.81f; // (0..1]
@@ -155,7 +157,7 @@ void skolem_recover_from_conflict(Skolem* s) {
 void skolem_new_clause(Skolem* s, Clause* c) {
     abortif(c == NULL, "Clause pointer is NULL in skolem_new_clause.\n");
     skolem_check_for_unique_consequence(s, c);
-    if (s->statistics.propagations != 0 || s->statistics.decisions != 0  || c->size == 1) { // odd condition: essentially checking if we are still reading the original formula. If so, then only clauses of size 1 need to be added to the worklist.
+    if (s->statistics.propagations != 0 || s->statistics.constant_assignments != 0 || c->size == 1) { // odd condition: essentially checking if we are still reading the original formula. If so, then only clauses of size 1 need to be added to the worklist.
         worklist_push(s->clauses_to_check, c);
     }
 }
@@ -1084,6 +1086,7 @@ void skolem_assign_constant_value(Skolem* s, Lit lit, union Dependencies propaga
     abortif(skolem_get_satlit(s, -lit).x[0] == f_get_true(s->f), "Propagation ended in inconsistent state.\n");
     
     V3("Skolem: Assign value %d.\n",lit);
+    s->statistics.constant_assignments += 1;
     skolem_update_clause_worklist(s, lit);
     skolem_update_reason_for_constant(s, var_id, reason ? reason->clause_id : INT_MAX, s->decision_lvl);
     

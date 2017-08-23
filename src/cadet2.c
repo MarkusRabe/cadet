@@ -534,8 +534,6 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                 // Update CEGAR abstraction
                 if (c2->options->cegar && (c2->skolem->state == SKOLEM_STATE_SKOLEM_CONFLICT || c2->skolem->state == SKOLEM_STATE_BACKPROPAGATION_CONFLICT)) {
                     
-                    abort(); // revise: make sure we handle the conflict through conflict analysis even when CEGAR succeeds and exhausts the current conflict check. Do it by moving CEGAR after the normal learnt-clause handling. 
-                    
                     sat_res res = SATSOLVER_SATISFIABLE;
                     for (unsigned i = 0; i < c2->options->max_cegar_iterations_per_learnt_clause; i++) {
                         switch (cegar_build_abstraction_for_assignment(c2)) {

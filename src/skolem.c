@@ -657,15 +657,6 @@ void skolem_propagate_determinicity(Skolem* s, unsigned var_id) {
         s->statistics.propagations += 1;
         
         skolem_update_decision_lvl(s, var_id, s->decision_lvl);
-        skolem_update_deterministic(s, var_id, 1);
-        
-        /* Update depencendies and propagation queues before global conflict check,
-         * because even when the conflict check is successful, opportunistic
-         * CEGAR might handle the conflict, and we then continue propagating.
-         */
-        skolem_update_dependencies(s, var_id, skolem_compute_dependencies(s,var_id));
-        skolem_check_occs_for_unique_consequences(s,   (Lit) var_id);
-        skolem_check_occs_for_unique_consequences(s, - (Lit) var_id);
         
         if (skolem_is_locally_conflicted(s, var_id)) {
             skolem_global_conflict_check(s, var_id);
@@ -673,16 +664,20 @@ void skolem_propagate_determinicity(Skolem* s, unsigned var_id) {
                 return;
             }
         }
+        
+        skolem_update_deterministic(s, var_id, 1);
+        skolem_update_dependencies(s, var_id, skolem_compute_dependencies(s,var_id));
+        skolem_check_occs_for_unique_consequences(s,   (Lit) var_id);
+        skolem_check_occs_for_unique_consequences(s, - (Lit) var_id);
+        
         if (outer_existential) {
             assert(backpropagation_polarity != 0);
             skolem_assign_constant_value(s, backpropagation_polarity * (Lit) var_id, s->empty_dependencies, backpropagation_clause);
             //            skolem_assume_constant_value(s, s->empty_dependencies, backpropagation_polarity * (Lit) var_id);
         } else {
-            // this is just a performance optimization compared to the case above;
-            // introduces fewer satlits ... still need to test if that's actually significant
             f_encode_give_fresh_satlit(s, var_id);
             
-            // Now add clauses using the GIVEN satlits.
+            // Now add clauses using the GIVEN satlit.
             f_add_clauses(s, var_id, &v->pos_occs);
             f_add_clauses(s, var_id, &v->neg_occs);
             
@@ -720,14 +715,14 @@ void skolem_propagate_pure_variable(Skolem* s, unsigned var_id) {
         s->statistics.pure_vars += 1;
         skolem_update_decision_lvl(s, var_id, s->decision_lvl);
         
-        skolem_update_deterministic(s, var_id, 1);
-        
         if (skolem_is_locally_conflicted(s, var_id)) {
             skolem_global_conflict_check(s, var_id);
             if (skolem_is_conflicted(s)) {
                 return;
             }
         }
+        
+        skolem_update_deterministic(s, var_id, 1);
         
 #ifdef DEBUG
         Lit lit = pure_polarity * (Lit) var_id;

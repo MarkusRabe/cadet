@@ -462,7 +462,8 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
         assert(c2->state == C2_READY);
         assert(c2->skolem->decision_lvl >= c2->restart_base_decision_lvl);
         assert(c2->skolem->decision_lvl <= c2->stack->push_count);
-        assert(c2->qcnf->stack->push_count >= c2->skolem->stack->push_count);
+        assert(! skolem_is_conflicted(c2->skolem) || c2->qcnf->stack->push_count + 1 >= c2->skolem->stack->push_count);
+        assert(  skolem_is_conflicted(c2->skolem) || c2->qcnf->stack->push_count >= c2->skolem->stack->push_count);
         assert(c2->skolem->stack->push_count >= c2->skolem->decision_lvl - c2->restart_base_decision_lvl);
         
         vector* conflict_clauses = NULL;
@@ -532,6 +533,9 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                 
                 // Update CEGAR abstraction
                 if (c2->options->cegar && (c2->skolem->state == SKOLEM_STATE_SKOLEM_CONFLICT || c2->skolem->state == SKOLEM_STATE_BACKPROPAGATION_CONFLICT)) {
+                    
+                    abort(); // revise: make sure we handle the conflict through conflict analysis even when CEGAR succeeds and exhausts the current conflict check. Do it by moving CEGAR after the normal learnt-clause handling. 
+                    
                     sat_res res = SATSOLVER_SATISFIABLE;
                     for (unsigned i = 0; i < c2->options->max_cegar_iterations_per_learnt_clause; i++) {
                         switch (cegar_build_abstraction_for_assignment(c2)) {
@@ -745,14 +749,14 @@ cadet_res c2_sat(C2* c2) {
     }
     
     ////// THIS RESTRICTS US TO 2QBF or 3QBF
-    if (c2->qcnf->problem_type != QCNF_3QBF) {
-        V0("Is not 3QBF. Currently not supported.\n");
-        return CADET_RESULT_UNKNOWN;
-    }
-//    if (c2->qcnf->problem_type > QCNF_2QBF) {
-//        V0("Is not in 2QBF. Currently not supported.\n");
+//    if (c2->qcnf->problem_type != QCNF_3QBF) {
+//        V0("Is not 3QBF. Currently not supported.\n");
 //        return CADET_RESULT_UNKNOWN;
 //    }
+    if (c2->qcnf->problem_type > QCNF_2QBF) {
+        V0("Is not in 2QBF. Currently not supported.\n");
+        return CADET_RESULT_UNKNOWN;
+    }
     //////
     
     if (c2->qcnf->problem_type >= QCNF_3QBF) {

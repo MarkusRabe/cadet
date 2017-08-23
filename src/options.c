@@ -15,7 +15,7 @@ Options* default_options() {
     o->easy_debugging_mode_c2 = false;
 
     // Computational enginges
-    o->cegar = true;
+    o->cegar = false;
     o->cegar_only = false;
     o->max_cegar_iterations_per_learnt_clause = 100;
     o->use_qbf_engine_also_for_propositional_problems = false;

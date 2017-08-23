@@ -102,13 +102,21 @@ void skolem_free(Skolem* s) {
     free(s);
 }
 
-void skolem_push(Skolem* s) {
-    
+void skolem_push_internal(Skolem* s) {
     stack_push(s->stack);
     f_push(s->f);
+}
+
+void skolem_push(Skolem* s) {
+    
+    skolem_push_internal(s);
     abortif(pqueue_count(s->determinicity_queue) != 0, "s->determinicity_queue nonempty upon push. Serious because the remaining elements might be forgotten to be tracked upon a pop.");
     abortif(pqueue_count(s->pure_var_queue), "s->pure_var_queue nonempty on push. Serious because the remaining elements might be forgotten to be tracked upon a pop.");
     abortif(worklist_count(s->clauses_to_check) != 0, "s->clauses_to_check nonempty upon push. Serious because the remaining elements might be forgotten to be tracked upon a pop.");
+}
+void skolem_pop_internal(Skolem* s) {
+    stack_pop(s->stack, s);
+    f_pop(s->f);
 }
 void skolem_pop(Skolem* s) {
     assert(!skolem_is_conflicted(s));
@@ -122,8 +130,7 @@ void skolem_pop(Skolem* s) {
         pqueue_reset(s->pure_var_queue);
     }
     
-    stack_pop(s->stack, s);
-    f_pop(s->f);
+    skolem_pop_internal(s);
 }
 void skolem_recover_from_conflict(Skolem* s) {
     abortif(!skolem_is_conflicted(s), "Skolem domain expected to be in conflicted state.");
@@ -131,7 +138,7 @@ void skolem_recover_from_conflict(Skolem* s) {
         case SKOLEM_STATE_SKOLEM_CONFLICT:
             assert(s->conflict_var_id != 0);
             assert(s->conflicted_clause == NULL);
-            f_pop(s->f); // to compensate the push before the SAT call
+            skolem_pop_internal(s); // to compensate the push before the SAT call
             s->state = SKOLEM_STATE_READY;
             s->conflict_var_id = 0;
             break;
@@ -605,51 +612,6 @@ Clause* skolem_propagate_determinicity_for_propositionals_for_occs(Skolem* s, Li
     return NULL;
 }
 
-void skolem_propagate_determinicity_for_propositionals(Skolem* s, unsigned var_id) {
-    assert(var_id != 0);
-    V3("Checking backpropagation for var %u\n", var_id);
-    assert(skolem_get_constant_value(s, (Lit) var_id) == 0);
-    
-//    if (skolem_backpropagation_conflict_check(s, var_id)) {
-//        <#statements#>
-//    }
-    
-    Clause* reason_pos = skolem_propagate_determinicity_for_propositionals_for_occs(s, (Lit) var_id);
-    Clause* reason_neg = skolem_propagate_determinicity_for_propositionals_for_occs(s, - (Lit) var_id);
-    
-    if (reason_pos && reason_neg) {
-        V3("Backpropagation conflict\n");
-        s->statistics.backpropagation_conflicts += 1;
-        
-        abortif(s->conflict_var_id != 0, "Conflicted var should not be set here.");
-        s->conflict_var_id = var_id;
-        skolem_update_decision_lvl(s, var_id, s->decision_lvl);
-        skolem_bump_conflict_potential(s, var_id);
-        
-        abortif(s->conflicted_clause != NULL, "Conflicted clause should not be set here.");
-        s->conflicted_clause = reason_neg; // the clause that corresponds to the assignment currently in the SAT solver.
-        
-        abortif(s->state != SKOLEM_STATE_READY, "Skolem domain should be in ready state.");
-        s->state = SKOLEM_STATE_BACKPROPAGATION_CONFLICT;
-        
-    } else if (reason_pos || reason_neg) {
-        s->statistics.backpropagations += 1;
-        int val = 0;
-        if (reason_pos) {
-            val = (Lit) var_id;
-        } else{
-            val = - (Lit) var_id;
-        }
-        V1("Backpropagation of val %d\n", val);
-        skolem_assign_constant_value(s, val, s->empty_dependencies, (Clause*) ((uintptr_t) reason_pos | (uintptr_t) reason_neg));
-    } else {
-        Var* v = var_vector_get(s->qcnf->vars, var_id);
-        pqueue_push(s->pure_var_queue,
-                    (int)(vector_count(&v->pos_occs) + vector_count(&v->neg_occs)),
-                    (void*) (size_t) var_id);
-    }
-}
-
 void skolem_propagate_determinicity(Skolem* s, unsigned var_id) {
     assert(!skolem_is_conflicted(s));
     if (qcnf_is_universal(s->qcnf, var_id)) {
@@ -694,22 +656,6 @@ void skolem_propagate_determinicity(Skolem* s, unsigned var_id) {
         V3("Var %u is deterministic.\n", var_id);
         s->statistics.propagations += 1;
         
-        bool locally_conflicted = skolem_is_locally_conflicted(s, var_id);
-        if (locally_conflicted) {
-            // Add unique consequences using new satlits
-            f_encode_unique_antecedents_for_lits(s, (Lit)   (int) var_id, false);
-            f_encode_unique_antecedents_for_lits(s, (Lit) - (int) var_id, false);
-            
-        } else if (! outer_existential) {
-            // this is just a performance optimization compared to the case above;
-            // introduces fewer satlits ... still need to test if that's actually significant
-            f_encode_give_fresh_satlit(s, var_id);
-            
-            // Now add clauses using the GIVEN satlits.
-            f_add_clauses(s, var_id, &v->pos_occs);
-            f_add_clauses(s, var_id, &v->neg_occs);
-        }
-        
         skolem_update_decision_lvl(s, var_id, s->decision_lvl);
         skolem_update_deterministic(s, var_id, 1);
         
@@ -721,21 +667,27 @@ void skolem_propagate_determinicity(Skolem* s, unsigned var_id) {
         skolem_check_occs_for_unique_consequences(s,   (Lit) var_id);
         skolem_check_occs_for_unique_consequences(s, - (Lit) var_id);
         
-        if (locally_conflicted) {
+        if (skolem_is_locally_conflicted(s, var_id)) {
             skolem_global_conflict_check(s, var_id);
             if (skolem_is_conflicted(s)) {
                 return;
             }
         }
-        
         if (outer_existential) {
             assert(backpropagation_polarity != 0);
             skolem_assign_constant_value(s, backpropagation_polarity * (Lit) var_id, s->empty_dependencies, backpropagation_clause);
-//            skolem_assume_constant_value(s, s->empty_dependencies, backpropagation_polarity * (Lit) var_id);
+            //            skolem_assume_constant_value(s, s->empty_dependencies, backpropagation_polarity * (Lit) var_id);
         } else {
+            // this is just a performance optimization compared to the case above;
+            // introduces fewer satlits ... still need to test if that's actually significant
+            f_encode_give_fresh_satlit(s, var_id);
+            
+            // Now add clauses using the GIVEN satlits.
+            f_add_clauses(s, var_id, &v->pos_occs);
+            f_add_clauses(s, var_id, &v->neg_occs);
+            
             f_encode_consistency(s, var_id);
         }
-        
     } else {
         pqueue_push(s->pure_var_queue,
                     (int)(vector_count(&v->pos_occs) + vector_count(&v->neg_occs)),
@@ -767,74 +719,60 @@ void skolem_propagate_pure_variable(Skolem* s, unsigned var_id) {
         s->statistics.propagations += 1;
         s->statistics.pure_vars += 1;
         skolem_update_decision_lvl(s, var_id, s->decision_lvl);
-        bool locally_conflicted = skolem_is_locally_conflicted(s, var_id);
-        if ( ! locally_conflicted) {
-            bool pure_case_exists = f_encode_unique_antecedents_for_lits(s, pure_polarity * (Lit) var_id, true);
-            skolem_var si = skolem_get_info(s, var_id);
-            
-            // also triggers checks for new unique consequences
-            if (pure_polarity > 0) {
-                assert(vector_count(&v->pos_occs) == 0 || si.pos_lit.x[0] != -f_get_true(s->f) || ! pure_case_exists);
-                skolem_update_satlit(s, - (Lit) var_id, satlit_negate(si.pos_lit));
-                skolem_update_deterministic(s, var_id, 1);
-                skolem_update_pure_pos(s, var_id, 1);
-            } else {
-                assert(vector_count(&v->neg_occs) == 0 || si.neg_lit.x[0] != -f_get_true(s->f) || ! pure_case_exists);
-                skolem_update_satlit(s, (Lit) var_id, satlit_negate(si.neg_lit));
-                skolem_update_deterministic(s, var_id, 1);
-                skolem_update_pure_neg(s, var_id, 1);
-            }
-        } else {
-            // pure and locally conflicted
-            f_encode_unique_antecedents_for_lits(s,   pure_polarity * (Lit) var_id, true);
-            f_encode_unique_antecedents_for_lits(s, - pure_polarity * (Lit) var_id, false); // note that the other side is not defined both sided
-
-            
-            satlit new_opposite_sat_lit = f_add_OR(s->f, satlit_negate(skolem_get_satlit(s,   pure_polarity * (Lit) var_id)),
-                                                                       skolem_get_satlit(s, - pure_polarity * (Lit) var_id));
-            skolem_update_satlit(s, - pure_polarity * (Lit) var_id, new_opposite_sat_lit);
-            
-            skolem_update_deterministic(s, var_id, 1);
-            skolem_update_pure_neg(s, var_id, 1);
-            
-        }
         
-        assert(skolem_is_deterministic(s, var_id));
+        skolem_update_deterministic(s, var_id, 1);
         
-        /* Update depencendies and propagation queues before global conflict check,
-         * because even when the conflict check is successful, opportunistic
-         * CEGAR might handle the conflict, and we then continue propagating.
-         */
-        skolem_update_dependencies(s, var_id, skolem_compute_dependencies(s,var_id));
-        
-        // If this pure variable turned out to be constant, update the worklist for constant propagation
-        int val = skolem_get_constant_value(s, (Lit) var_id);
-        if (val != 0) {
-            V3("Pure variable %u gets constant value.\n", var_id);
-            s->statistics.pure_constants++;
-            skolem_assign_constant_value(s, val * (Lit) var_id, skolem_create_fresh_empty_dep(s), NULL);
-        } else {
-            // Which clauses may be affected?
-            if (s->options->enhanced_pure_literals) {
-                skolem_check_occs_for_unique_consequences(s,   (Lit) var_id);
-                skolem_check_occs_for_unique_consequences(s, - (Lit) var_id);
-            } else {
-                if (pure_polarity > 0) {
-                    skolem_check_occs_for_unique_consequences(s, - (Lit) var_id);
-                } else {
-                    skolem_check_occs_for_unique_consequences(s,   (Lit) var_id);
-                }
-            }
-        }
-        
-        if (locally_conflicted) {
+        if (skolem_is_locally_conflicted(s, var_id)) {
             skolem_global_conflict_check(s, var_id);
             if (skolem_is_conflicted(s)) {
                 return;
             }
         }
         
-        f_encode_consistency(s, var_id);
+#ifdef DEBUG
+        Lit lit = pure_polarity * (Lit) var_id;
+        skolem_var* sv = skolem_var_vector_get(s->infos, lit_to_var(lit));
+        assert((lit > 0 ? sv->pos_lit.x[0] : sv->neg_lit.x[0]) == - f_get_true(s->f)); // not necessary, but currently given
+        assert((lit > 0 ? sv->pos_lit.x[1] : sv->neg_lit.x[1]) == - f_get_true(s->f)); // not necessary, but currently given
+#endif
+        skolem_update_dependencies(s, var_id, skolem_compute_dependencies(s,var_id));
+        
+        if (pure_polarity > 0) {
+            skolem_update_pure_pos(s, var_id, 1);
+        } else {
+            skolem_update_pure_neg(s, var_id, 1);
+        }
+        
+        // Which clauses may be affected? Must be checked before potential global conflict
+        // check, as opportunistic CEGAR may handle the conflict and proceed instead of
+        // backtrack.
+        if (s->options->enhanced_pure_literals) {
+            skolem_check_occs_for_unique_consequences(s,   (Lit) var_id);
+            skolem_check_occs_for_unique_consequences(s, - (Lit) var_id);
+        } else {
+            skolem_check_occs_for_unique_consequences(s, - pure_polarity * (Lit) var_id);
+        }
+        
+        bool pure_case_exists = f_encode_unique_antecedents_for_lits(s, pure_polarity * (Lit) var_id, true);
+        skolem_var si = skolem_get_info(s, var_id);
+        if (pure_polarity > 0) {
+            assert(vector_count(&v->pos_occs) == 0 || si.pos_lit.x[0] != -f_get_true(s->f) || ! pure_case_exists);
+            skolem_update_satlit(s, - (Lit) var_id, satlit_negate(si.pos_lit));
+        } else {
+            assert(vector_count(&v->neg_occs) == 0 || si.neg_lit.x[0] != -f_get_true(s->f) || ! pure_case_exists);
+            skolem_update_satlit(s, (Lit) var_id, satlit_negate(si.neg_lit));
+        }
+        
+        // If this pure variable turned out to be constant, update the worklist for constant propagation
+        int val = skolem_get_constant_value(s, (Lit) var_id);
+        if (val != 0) {
+            V3("Pure variable %u gets constant value.\n", var_id);
+            s->statistics.pure_constants++;
+            skolem_assume_constant_value(s, skolem_create_fresh_empty_dep(s), val * (Lit) var_id);
+            assert(!skolem_is_conflicted(s));
+        } else {
+            f_encode_consistency(s, var_id);
+        }
         
     } else {
         V4("Var %d not pure\n", var_id);
@@ -842,20 +780,21 @@ void skolem_propagate_pure_variable(Skolem* s, unsigned var_id) {
 }
 
 unsigned skolem_global_conflict_check(Skolem* s, unsigned var_id) {
-    
-    if (skolem_is_conflicted(s)) {
-        return s->conflict_var_id;
-    }
+    abortif(skolem_is_conflicted(s), "Shouldn't call global conflict check when skolem domain is conflicted already. Problem is just to manage the push-pop thing.");
     
     if (s->mode == SKOLEM_MODE_RECORD_POTENTIAL_CONFLICTS) {
         return 0;
     }
     
+    skolem_push_internal(s);
+    
+    // Add unique consequences using new satlits
+    f_encode_unique_antecedents_for_lits(s, (Lit)   (int) var_id, false);
+    f_encode_unique_antecedents_for_lits(s, (Lit) - (int) var_id, false);
+    
     V3("Global conflit check for var %u.\n", var_id);
     
     double time_stamp_start = get_seconds();
-    
-    f_push(s->f);
     
     if (s->options->functional_synthesis) {
         assert(s->qcnf->problem_type == QCNF_2QBF);
@@ -873,12 +812,6 @@ unsigned skolem_global_conflict_check(Skolem* s, unsigned var_id) {
 #endif
     
     f_encode_conflictedness(s, var_id);
-    
-    //        satsolver_set_default_phase_lit(s->f, skolem_get_satlit(s,   (Lit) potentially_contflicted), 1);
-    //        satsolver_set_default_phase_lit(s->f, skolem_get_satlit(s, - (Lit) potentially_contflicted), 1);
-    
-    // One of the literals must be true, because the variable is deterministic. Needed for delay-conflict checks. Otherwise we may miss observing some of the conflicts.
-    assert(skolem_is_deterministic(s, var_id));
     
     s->statistics.global_conflict_checks++;
     sat_res result = f_sat_with_consistency(s->f, qcnf_get_scope(s->qcnf, var_id));
@@ -898,24 +831,20 @@ unsigned skolem_global_conflict_check(Skolem* s, unsigned var_id) {
         double time_stamp_end = get_seconds();
         statistic_add_value(s->statistics.global_conflict_checks_unsat, time_stamp_end - time_stamp_start);
         
-        f_pop(s->f);
+        skolem_pop_internal(s);
         
         skolem_slash_conflict_potential(s, var_id);
         
-        f_add_satlit(s->f, skolem_get_satlit(s,   (Lit) var_id));
-        f_add_satlit(s->f, skolem_get_satlit(s, - (Lit) var_id));
-        f_clause_finished(s->f);
-        
-        f_add_satlit(s->f, satlit_negate(skolem_get_satlit(s,   (Lit) var_id)));
-        f_add_satlit(s->f, satlit_negate(skolem_get_satlit(s, - (Lit) var_id)));
-        f_clause_finished(s->f);
+//        f_add_satlit(s->f, skolem_get_satlit(s,   (Lit) var_id));
+//        f_add_satlit(s->f, skolem_get_satlit(s, - (Lit) var_id));
+//        f_clause_finished(s->f);
+//        
+//        f_add_satlit(s->f, satlit_negate(skolem_get_satlit(s,   (Lit) var_id)));
+//        f_add_satlit(s->f, satlit_negate(skolem_get_satlit(s, - (Lit) var_id)));
+//        f_clause_finished(s->f);
         
         assert(!s->conflict_var_id);
     }
-    
-//        f_set_default_phase_lit(s->f, skolem_get_satlit(s,   (Lit) potentially_contflicted), 2);
-//        f_set_default_phase_lit(s->f, skolem_get_satlit(s, - (Lit) potentially_contflicted), 2);
-    
     return s->conflict_var_id;
 }
 
@@ -1064,8 +993,11 @@ void skolem_assume_constant_value(Skolem* s, union Dependencies propagation_deps
     unsigned var_id = lit_to_var(lit);
     assert(skolem_is_deterministic(s, var_id));
     
-    f_add_satlit(s->f, skolem_get_satlit(s, lit));
-    f_clause_finished(s->f);
+    if (skolem_get_satlit(s, lit).x[0] != f_get_true_satlit(s->f).x[0] ||
+        skolem_get_satlit(s, lit).x[1] != f_get_true_satlit(s->f).x[1]) {
+        f_add_satlit(s->f, skolem_get_satlit(s, lit));
+        f_clause_finished(s->f);
+    }
     
     assert(s->mode == SKOLEM_MODE_STANDARD);
     s->mode = SKOLEM_MODE_CONSTANT_PROPAGATIONS_TO_DETERMINISTICS;
@@ -1080,6 +1012,7 @@ void skolem_assign_constant_value(Skolem* s, Lit lit, union Dependencies propaga
     // Propagation of constant may be in conflict with existing definitions
     //        assert(!skolem_is_deterministic(s, lit_to_var(lit)));
     assert(lit != 0);
+    assert(!skolem_is_conflicted(s));
     unsigned var_id = lit_to_var(lit);
     assert(!skolem_is_conflicted(s));
 //    assert(skolem_get_satlit(s, lit) != f_get_true(s->f)); // not constant already, not a big problem, but why should this happen?
@@ -1098,9 +1031,18 @@ void skolem_assign_constant_value(Skolem* s, Lit lit, union Dependencies propaga
     bool was_deterministic_already = skolem_is_deterministic(s, var_id);
     
     if (! skolem_is_deterministic(s, lit_to_var(lit))) {
+        // Update all backtrackable data structures in case the global conflict
+        // check succeeds, but opportunistic CEGAR handles the conflict and
+        // avoids backtracking.
         skolem_update_decision_lvl(s, var_id, s->decision_lvl);
+        skolem_update_deterministic(s, var_id, 1);
+        skolem_check_occs_for_unique_consequences(s,   (Lit) var_id);
+        skolem_check_occs_for_unique_consequences(s, - (Lit) var_id);
     }
 
+    skolem_update_dependencies(s, var_id, propagation_deps);
+    
+    // Can compute local conflictedness more efficiently when one side is constant:
     bool locally_conflicted = false;
     if (s->mode == SKOLEM_MODE_STANDARD) {
         vector* occs = qcnf_get_occs_of_lit(s->qcnf, -lit);
@@ -1114,38 +1056,14 @@ void skolem_assign_constant_value(Skolem* s, Lit lit, union Dependencies propaga
         }
     }
     
-    if (locally_conflicted) { // we could alternatively check whether there are clauses with unique consequences for the opposite side.
-        V2("Variable %u is assigned a constant but is locally conflicted in the skolem domain.\n", var_id);
-        
-        if ( ! skolem_is_deterministic(s, lit_to_var(lit))) {
-            // We know the variable is deterministic now; it is in fact constant. But we have to add the opposite side of the clauses to be able to do the conflict check
-            f_encode_unique_antecedents_for_lits(s, (lit > 0 ? -1 : 1) * (Lit) var_id, false);
-        }
-        
-        skolem_update_satlit(s, lit, f_get_true_satlit(s->f));
-        
-        skolem_update_deterministic(s, var_id, 1);
-    } else {
-        skolem_update_satlit(s,   lit,               f_get_true_satlit(s->f));
-        skolem_update_satlit(s, - lit, satlit_negate(f_get_true_satlit(s->f)));
-    }
+    skolem_update_satlit(s, lit, f_get_true_satlit(s->f));
     
-    skolem_update_dependencies(s, var_id, propagation_deps);
-    
-    if ( ! was_deterministic_already) {
-        skolem_update_deterministic(s, var_id, 1);
-        skolem_check_occs_for_unique_consequences(s,   (Lit) var_id);
-        skolem_check_occs_for_unique_consequences(s, - (Lit) var_id);
-    }
-    
-    /* Checking for conflicts after updating unique consequences for the case that opportunistic CEGAR catches this case.
-     *
-     */
     if (locally_conflicted) {
+        V2("Variable %u is assigned a constant but is locally conflicted in the skolem domain.\n", var_id);
         skolem_global_conflict_check(s, var_id);
-        if (!skolem_is_conflicted(s)) {
-            skolem_update_satlit(s, - lit, satlit_negate(f_get_true_satlit(s->f)));
-        }
+    }
+    if (!skolem_is_conflicted(s)) {
+        skolem_update_satlit(s, - lit, satlit_negate(f_get_true_satlit(s->f)));
     }
 }
 
@@ -1220,18 +1138,28 @@ void skolem_decision(Skolem* s, Lit decision_lit) {
     assert(!skolem_is_deterministic(s, decision_var_id));
     assert(skolem_get_constant_value(s, decision_lit) == 0);
     
+    // First make sure the decision variable is not conflicted
+    
+    /* For variables in the outer existential quantifier there cannot be a
+     * decision conflict, because this was already checked during backpropagation.
+     */
+    bool outer_existential = skolem_var_has_empty_maximal_dependencies(s->qcnf, decision_var_id);
+    if (! outer_existential && skolem_is_locally_conflicted(s, decision_var_id)) {
+        skolem_global_conflict_check(s, decision_var_id);
+        if (skolem_is_conflicted(s)) {
+            skolem_update_decision_lvl(s, decision_var_id, s->decision_lvl);
+            V2("Decision variable %d is conflicted, going into conflict analysis instead.\n", decision_var_id);
+            return;
+        }
+    }
+    
     // Increase decision level, set
     skolem_increase_decision_lvl(s);
     skolem_update_decision_lvl(s, decision_var_id, s->decision_lvl);
     
-    
     satlit new_val_satlit = f_get_true_satlit(s->f); // to be updated if it turns out not to be a constant decision
     bool opposite_case_exists = false; // will stay false for outer_existential variables; guaranteed by eager backpropagation
     
-    /* For variables in the outer existential quantifier we cannot fix a function and there 
-     * cannot be a decision conflict, because this was already checked during backpropagation.
-     */
-    bool outer_existential = skolem_var_has_empty_maximal_dependencies(s->qcnf, decision_var_id);
     if (!outer_existential) {
         /* Tricky bug: In case the decision var is conflicted and both lits are true, the definitions below
          * allowed the decision var to be set only to one value. For a conflict check over the decision var
@@ -1279,15 +1207,6 @@ void skolem_decision(Skolem* s, Lit decision_lit) {
     assert(opposite_case_exists || skolem_get_satlit(s, decision_lit).x[0] == f_get_true(s->f));
     skolem_check_occs_for_unique_consequences(s,   (Lit) decision_var_id);
     skolem_check_occs_for_unique_consequences(s, - (Lit) decision_var_id);
-    
-    // Decision variable needs to be deterministic before we can do conflict checks. Also this is why we have to check exactly here.
-    if (! outer_existential && skolem_is_locally_conflicted(s, decision_var_id)) {
-        skolem_global_conflict_check(s, decision_var_id);
-        if (skolem_is_conflicted(s)) {
-            V2("Decision variable %d is conflicted, going into conflict analysis instead.\n", decision_var_id);
-            return;
-        }
-    }
     
     f_encode_consistency(s, decision_var_id);
     

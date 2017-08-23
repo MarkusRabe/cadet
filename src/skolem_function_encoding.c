@@ -127,11 +127,10 @@ bool f_encode_unique_antecedents_for_lits(Skolem* s, Lit lit, bool define_both_s
     unsigned var_id = lit_to_var(lit);
     assert(var_id != 0);
 
-#ifdef DEBUG
-    skolem_var* sv = skolem_var_vector_get(s->infos, lit_to_var(lit));
-    assert((lit > 0 ? sv->pos_lit.x[0] : sv->neg_lit.x[0]) == - f_get_true(s->f)); // not necessary, but currently given
-    assert((lit > 0 ? sv->pos_lit.x[1] : sv->neg_lit.x[1]) == - f_get_true(s->f)); // not necessary, but currently given
-#endif
+    if (skolem_get_constant_value(s, lit) == 1) {
+        // Cannot strengthen this case
+        return true;
+    }
     
     vector* lit_occs = qcnf_get_occs_of_lit(s->qcnf, lit);
     bool case_exists = false;

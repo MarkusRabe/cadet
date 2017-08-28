@@ -16,7 +16,7 @@ typedef struct {
     C2* c2;
     worklist* queue[2]; // a pair of queues for the two values of the conflicted variable; contains literals
     
-    int_vector* conflicting_assignments[12]; // a pair int_vector*. Represents clauses derived for conflicted variable being true and false
+    int_vector* conflicting_assignments[2]; // a pair int_vector*. Represents clauses derived for conflicted variable being true and false
 //    int_vector* conflicting_assignment;
     
     void* domain;
@@ -187,11 +187,9 @@ void ca_free(conflict_analysis* ca) {
 }
 
 
-Clause* conflict_analysis_to_clause(conflict_analysis* ca, int copy) {
-    assert(copy == 0 || copy == 1);
-    
-    for (unsigned i = 0; i < int_vector_count(ca->conflicting_assignments[copy]); i++) {
-        int lit = int_vector_get(ca->conflicting_assignments[copy], i);
+Clause* conflict_analysis_assignment_to_clause(conflict_analysis* ca, int_vector* assignment) {
+    for (unsigned i = 0; i < int_vector_count(assignment); i++) {
+        int lit = int_vector_get(assignment, i);
         qcnf_add_lit(ca->c2->qcnf, - lit);
     }
     return qcnf_close_clause(ca->c2->qcnf);
@@ -200,6 +198,7 @@ Clause* conflict_analysis_to_clause(conflict_analysis* ca, int copy) {
 // If the clause is not new, go back additional decision levels in the maximal dependency set in this clause.
 void conflict_analysis_ensure_constraint_is_new(conflict_analysis* ca, int copy) {
     if (! qcnf_is_new_constraint(ca->c2->qcnf, ca->conflicting_assignments[copy], true)) {
+        V1("      ... one more deeper (current length is %d).\n", int_vector_count(ca->conflicting_assignments[copy]));
         // The derived clause is not new, so we didn't actually discover anything new.
         // It looks like we have to follow back some more implications to get a new clause. Reduce the ca-> at least one more level.
         unsigned maximal_dlvl = 0;
@@ -234,6 +233,38 @@ void conflict_analysis_ensure_constraint_is_new(conflict_analysis* ca, int copy)
     }
 }
 
+int_vector* conflict_analysis_resolve_copies(conflict_analysis* ca) {
+    
+    unsigned var_with_complementary_literals = 0;
+    if (ca->c2->qcnf->problem_type != QCNF_2QBF) { // cannot/shouldn't happen in 2QBF
+        for (unsigned i = 0 ; i < int_vector_count(ca->conflicting_assignments[0]); i++) {
+            Lit l = int_vector_get(ca->conflicting_assignments[0], i);
+            if (lit_to_var(l) != ca->conflicted_var_id && int_vector_contains(ca->conflicting_assignments[1], - l)) {
+                var_with_complementary_literals = lit_to_var(l);
+                break;
+            }
+        }
+    }
+    
+    if (var_with_complementary_literals) {
+        return NULL;
+    }
+    // Resolve along conflicted var
+    int_vector* resolvent = int_vector_init();
+    for (unsigned i = 0 ; i < int_vector_count(ca->conflicting_assignments[0]); i++) {
+        Lit l = int_vector_get(ca->conflicting_assignments[0], i);
+        if (lit_to_var(l) != ca->conflicted_var_id) {
+            int_vector_add(resolvent, l);
+        }
+    }
+    for (unsigned i = 0 ; i < int_vector_count(ca->conflicting_assignments[1]); i++) {
+        Lit l = int_vector_get(ca->conflicting_assignments[1], i);
+        if (lit_to_var(l) != ca->conflicted_var_id) {
+            int_vector_add(resolvent, l);
+        }
+    }
+    return resolvent;
+}
 
 vector* analyze_assignment_conflict(C2* c2,
                                         unsigned conflicted_var,
@@ -293,7 +324,7 @@ vector* analyze_assignment_conflict(C2* c2,
         }
         conflict_analysis_follow_implication_graph(ca, 0);
         
-        Clause* learnt = conflict_analysis_to_clause(ca, 0);
+        Clause* learnt = conflict_analysis_assignment_to_clause(ca, ca->conflicting_assignments[0]);
         abortif(learnt == NULL, "Learning from conflicted clause resulted in duplicate or tautological clause.");
         vector_add(clauses, learnt);
         
@@ -312,34 +343,34 @@ vector* analyze_assignment_conflict(C2* c2,
         conflict_analysis_follow_implication_graph(ca, 1);
         
         
-        unsigned var_with_complementary_literals = 0;
-        if (ca->c2->qcnf->problem_type != QCNF_2QBF) { // cannot/shouldn't happen in 2QBF
-            for (unsigned i = 0 ; i < int_vector_count(ca->conflicting_assignments[0]); i++) {
-                Lit l = int_vector_get(ca->conflicting_assignments[0], i);
-                if (int_vector_contains(ca->conflicting_assignments[1], - l)) {
-                    var_with_complementary_literals = lit_to_var(l);
-                }
+        // Add the complementary literals to make both copies proper conflicting assignments
+        int_vector_add(ca->conflicting_assignments[0], - (Lit) ca->conflicted_var_id);
+        int_vector_add(ca->conflicting_assignments[1],   (Lit) ca->conflicted_var_id);
+        
+        int_vector* combined_assignment = NULL;// conflict_analysis_resolve_copies(ca);
+        
+        int next_copy_to_backtrack = 0;
+        while (true) {
+            combined_assignment = conflict_analysis_resolve_copies(ca);
+            if (combined_assignment == NULL || qcnf_is_new_constraint(ca->c2->qcnf, combined_assignment, true)) {
+                break;
             }
+            conflict_analysis_ensure_constraint_is_new(ca, next_copy_to_backtrack);
+            next_copy_to_backtrack = 1 - next_copy_to_backtrack; // next time use the other copy
         }
         
-        if (var_with_complementary_literals == 0) {
-            int_vector_add_all(ca->conflicting_assignments[0], ca->conflicting_assignments[1]); // Resolve along conflicted var
-            conflict_analysis_ensure_constraint_is_new(ca, 0);
-            Clause* learnt = conflict_analysis_to_clause(ca, 0);
+        if (combined_assignment) {
+            assert(qcnf_is_new_constraint(ca->c2->qcnf, combined_assignment, true));
+            Clause* learnt = conflict_analysis_assignment_to_clause(ca, combined_assignment);
             abortif(learnt == NULL, "Learning from conflicted variable resulted in duplicate or tautological clause.");
             vector_add(clauses, learnt);
         } else { // complementary literals, cannot resolve clauses along conflicted var; treat separately
             assert(ca->c2->qcnf->problem_type != QCNF_DQBF); // code below may not be general enough for DQBF
             
-            int_vector_add(ca->conflicting_assignments[0], - (Lit) ca->conflicted_var_id);
-            int_vector_add(ca->conflicting_assignments[1],   (Lit) ca->conflicted_var_id);
-            
-            assert(! skolem_may_depend_on(ca->c2->skolem, ca->conflicted_var_id, var_with_complementary_literals));
-            
             for (int copy = 0; copy < 2; copy++) {
                 conflict_analysis_ensure_constraint_is_new(ca, copy);
                 
-                Clause* learnt = conflict_analysis_to_clause(ca, copy);
+                Clause* learnt = conflict_analysis_assignment_to_clause(ca, ca->conflicting_assignments[copy]);
                 abortif(learnt == NULL, "Learning from backpropagation conflict resulted in duplicate or tautological clause.");
                 vector_add(clauses, learnt);
             }

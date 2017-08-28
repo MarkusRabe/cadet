@@ -677,7 +677,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
             } else { // take a decision
                 assert(!skolem_is_conflicted(c2->skolem));
                 
-//                abortif(c2->qcnf->problem_type != QCNF_2QBF && decision_var->scope_id > 0, "Decision on scope_id > 0");
+                abortif(c2->qcnf->problem_type != QCNF_2QBF && decision_var->scope_id > 0, "Decision on scope_id > 0");
                 
                 int phase = 1;
                 if (c2->restarts >= c2->magic.num_restarts_before_Jeroslow_Wang) {

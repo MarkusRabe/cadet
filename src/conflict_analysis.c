@@ -350,13 +350,16 @@ vector* analyze_assignment_conflict(C2* c2,
         int_vector* combined_assignment = NULL;// conflict_analysis_resolve_copies(ca);
         
         int next_copy_to_backtrack = 0;
+        int itercount = 0;
         while (true) {
+            itercount += 1;
             combined_assignment = conflict_analysis_resolve_copies(ca);
             if (combined_assignment == NULL || qcnf_is_new_constraint(ca->c2->qcnf, combined_assignment, true)) {
                 break;
             }
             conflict_analysis_ensure_constraint_is_new(ca, next_copy_to_backtrack);
             next_copy_to_backtrack = 1 - next_copy_to_backtrack; // next time use the other copy
+            abortif(itercount > 2, "Couldn't resolve this conflict by a new constraint");
         }
         
         if (combined_assignment) {

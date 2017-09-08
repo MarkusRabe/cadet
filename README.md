@@ -1,19 +1,16 @@
 # CADET
-CADET is a solver for 2QBF formulas written and maintained by [Markus N. Rabe](https://people.eecs.berkeley.edu/~rabe/). The solver is based on the algorithm _Incremental Determinization_ published in SAT 2016. 
+CADET is a solver for 2QBF formulas written and maintained by [Markus N. Rabe](https://people.eecs.berkeley.edu/~rabe/). The solver is based on the _Incremental Determinization_ algorithm published in SAT 2016. 
 
 As of 2017, CADET is one of the fastest and most reliable solvers for 2QBF formulas. It won second price in the 2QBF track of [QBFEval](http://www.qbflib.org/qbfeval17.php). 
 
 See below for an overview on installation and usage of CADET. Detailed information can be found in doc/user_guide.pdf. 
 
 
-## Requirements
+## Requirements and Compilation
 
 CADET comes with no requirements but those included in the package. 
 Any modern C compiler (clang or gcc) should be able to build CADET. 
 The testing scripts require Python 2.7. 
-
-
-## Compilation
 
 To compile the solver type:
 
@@ -35,6 +32,10 @@ You can also pipe a QDIMACS file in the solver:
 
 > cat file.qdimacs | ./cadet
 
+### Input Formats
+
+CADET reads files in both QDIMACS and AIGER format. Files can be zipped with gzip, but must then end with the file ending gz or gzip. Details on the interpretation of AIGER files as 2QBF can be found in doc/user_guide.pdf
+
 ### Certification
 
 With the command line option `-c [file]` CADET is able to produce certificates for true 2QBF (false 2QBF are certified internally by default). You can either specify a file name to which the certificate should be written (ending in `.aag` or `.aig`) or you can specify `sdtout` to let CADET print the certificate on the terminal. These certificates represent the Skolem function that prove the given formula to be true. For example, type:
@@ -48,8 +49,4 @@ As soon as you work with certificates you may want to install the [AIGER tool se
 By default CADET produces certificates that can be checked by Certcheck, which was written by Leander Tentrup. Certcheck comes with the distribution of [CAQE](https://www.react.uni-saarland.de/tools/caqe/). To produce certificates that are compatible with [QBFcert](\url{http://fmv.jku.at/qbfcert/}) add `--qbfcert` option to the command line. 
 
 Note that QBFcert standard is only compatible with the ASCII format of the AIGER standard, so be sure that the certificate file name ends with `.aag`. Also, be aware that QBFcert certificates cannot be minimized by ABC. 
-
-### Input Formats
-
-CADET reads files in both QDIMACS and AIGER format. Files can be zipped with gzip, but must then end with the file ending gz or gzip. Details on the interpretation of AIGER files as 2QBF can be found in doc/user_guide.pdf
 

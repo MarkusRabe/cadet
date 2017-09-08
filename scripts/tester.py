@@ -359,7 +359,7 @@ def run_testcase(testcase):
     
     # BLOQQER += ' --bce=1 --ble=0 --eq=0 --ve=0 --exp=1 --cce=0 --hbce=0 --hble=0'
     
-    if testcase.endswith('gz'):
+    if testcase.endswith('.gz'):
         if sys.platform == "linux" or sys.platform == "linux2":
             # linux
             file_reader = 'zcat'
@@ -464,12 +464,12 @@ def getTestCases():
             detected_files = 0
             for filename in filenames:
                 if filename.endswith('qdimacs.gz') or filename.endswith('aag') or filename.endswith('aig') or filename.endswith('qdimacs'):
-                    value = (os.path.join(ARGS.directory,filename),30)
+                    value = (os.path.join(dirpath,filename),30)
                     test_cases['directory'].append(value)
                     detected_files += 1
                 else:
                     omitted_files += 1
-            print("Detected {} files in directory {}".format(detected_files,ARGS.directory))
+            print("Detected {} files in directory {}".format(detected_files,dirpath))
             if omitted_files > 0:
                 print("Omitted {} files".format(omitted_files))
         return test_cases

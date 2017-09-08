@@ -1,9 +1,7 @@
 # CADET
-CADET is a solver for 2QBF formulas written and maintained by [Markus N. Rabe](https://people.eecs.berkeley.edu/~rabe/). The solver is based on the _Incremental Determinization_ algorithm published in SAT 2016. 
+CADET is a solver for _quantified Boolean formulas_ with one quantifier alternation (2QBF) written and maintained by [Markus N. Rabe](https://people.eecs.berkeley.edu/~rabe/). The solver is based on the _Incremental Determinization_ algorithm published in SAT 2016. 
 
-As of 2017, CADET is one of the fastest and most reliable solvers for 2QBF formulas. It won second price in the 2QBF track of [QBFEval](http://www.qbflib.org/qbfeval17.php). 
-
-See below for an overview on installation and usage of CADET. Detailed information can be found in doc/user_guide.pdf. 
+As of 2017, CADET is one of the fastest and most reliable solvers for 2QBF formulas. It won second price in the 2QBF track of [QBFEval](http://www.qbflib.org/qbfeval17.php). See below for an overview on installation and usage of CADET. Detailed information can be found in doc/user_guide.pdf. 
 
 
 ## Requirements and Compilation

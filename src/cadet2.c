@@ -51,6 +51,8 @@ C2* c2_init_qcnf(QCNF* qcnf, Options* options) {
     c2->activity_factor = (float) 1.0;
 
     c2->stack = stack_init(c2_undo);
+    
+    c2->current_conflict = NULL;
 
     // DOMAINS
     c2->skolem = skolem_init(c2->qcnf, options, vector_count(qcnf->scopes) + 1, 0);
@@ -112,6 +114,9 @@ void c2_free(C2* c2) {
     stack_free(c2->stack);
     int_vector_free(c2->case_split_stack);
     qcnf_free(c2->qcnf);
+    if (c2->current_conflict) {
+        int_vector_free(c2->current_conflict);
+    }
     free(c2);
 }
 
@@ -192,95 +197,6 @@ void c2_rescale_activity_values(C2* c2) {
         if (v->var_id != 0) {
             c2_scale_activity(c2, i, rescale_factor);
         }
-    }
-}
-
-void c2_initial_propagation(C2* c2) {
-
-    skolem_propagate(c2->skolem); // initial propagation for dlvl 0
-    skolem_global_conflict_check(c2->skolem, false); // force conflict checks
-
-    if (!skolem_is_conflicted(c2->skolem)) {
-        // Restrict the universals to always satisfy the constraints (derived from AIGER circuits)
-        for (unsigned i = 0; i < int_vector_count(c2->qcnf->universals_constraints); i++) {
-            unsigned var_id = (unsigned) int_vector_get(c2->qcnf->universals_constraints, i);
-            abortif( ! skolem_is_deterministic(c2->skolem, var_id), "Constraint variable is not determinsitic. This should be a constraint purely over the universals.");
-            satsolver_add(c2->skolem->skolem, skolem_get_satsolver_lit(c2->skolem, (Lit) var_id));
-            satsolver_clause_finished(c2->skolem->skolem);
-            skolem_assume_constant_value(c2->skolem, (Lit) var_id);
-        }
-
-        skolem_propagate(c2->skolem); // initial propagation may be extended after assuming constants for constraints
-        skolem_global_conflict_check(c2->skolem, false); // force conflict checks
-    }
-}
-
-void c2_replenish_skolem_satsolver(C2* c2) {
-    V1("Replenishing satsolver\n");
-
-    // To be sure we did mess up we remember the skolem data structure's decision level and stack height
-    assert(c2->skolem->decision_lvl == c2->restart_base_decision_lvl);
-    unsigned old_skolem_dlvl = c2->skolem->decision_lvl;
-    unsigned old_skolem_stack_height = c2->skolem->stack->push_count;
-
-    Skolem* old_skolem = c2->skolem;
-
-    c2->skolem = skolem_init(c2->qcnf,c2->options,vector_count(c2->qcnf->scopes),0);
-    c2_init_clauses_and_variables(c2);
-    c2_initial_propagation(c2);
-    abortif(skolem_is_conflicted(c2->skolem), "Skolem domain was conflicted after replenishing.");
-
-    cegar_update_interface(c2->skolem);
-
-    assert(vector_count(old_skolem->cegar->solved_cubes) == 0 || c2->options->cegar || c2->options->case_splits);
-
-    // Now, we re-introduce the cubes that we have solved already.
-    for (unsigned i = 0; i < vector_count(c2->skolem->cegar->solved_cubes); i++) {
-        int_vector* cube = (int_vector*) vector_get(c2->skolem->cegar->solved_cubes, i);
-        for (unsigned j = 0; j < int_vector_count(cube); j++) {
-            Lit lit = int_vector_get(cube, j);
-            assert(skolem_is_deterministic(c2->skolem, lit_to_var(lit)));
-            int satlit = skolem_get_satsolver_lit(c2->skolem, lit);
-            satsolver_add(c2->skolem->skolem, satlit);
-        }
-        satsolver_clause_finished_for_context(c2->skolem->skolem, 0);
-    }
-
-    skolem_free(old_skolem);
-
-    // make sure the skolem stack is on the right level
-    while (c2->skolem->decision_lvl < c2->restart_base_decision_lvl) {
-        skolem_push(c2->skolem);
-        c2->skolem->decision_lvl += 1;
-    }
-    assert(old_skolem_dlvl == c2->skolem->decision_lvl);
-    assert(old_skolem_stack_height == c2->skolem->stack->push_count);
-}
-
-void c2_restart_heuristics(C2* c2) {
-    c2->next_restart = (unsigned) (c2->next_restart * c2->magic.restart_factor) + 1;
-
-    // Major or minor restart?
-    if (c2->restarts % c2->magic.major_restart_frequency == c2->magic.major_restart_frequency - 1) {
-        V1("Major restart. Resetting all activity values to 0 and some random ones to 1.\n");
-        for (unsigned i = 0; i < var_vector_count(c2->qcnf->vars); i++) {
-            c2_set_activity(c2, i, 0.0f);
-        }
-        c2->activity_factor = 1.0f;
-        // bump the activities of some random vars
-        for (unsigned i = 1; i <= 100 && i < var_vector_count(c2->qcnf->vars); i++) {
-            unsigned random_var_id = (unsigned) (1 + (rand() % ((int)var_vector_count(c2->qcnf->vars) - 1)));
-            assert(random_var_id > 0 && random_var_id <= var_vector_count(c2->qcnf->vars));
-            if (qcnf_var_exists(c2->qcnf, random_var_id)) {
-                c2_increase_activity(c2, random_var_id, 1.0f/(float) i);
-            }
-        }
-
-#if (USE_SOLVER == SOLVER_PICOSAT_ASSUMPTIONS) // This is a workaround for an annoying bug in picosat
-        c2_replenish_skolem_satsolver(c2);
-#endif
-    } else { // Minor restart
-        c2_rescale_activity_values(c2);
     }
 }
 
@@ -402,14 +318,14 @@ void c2_decay_activity(C2* c2) {
     }
 }
 
-void c2_conflict_heuristics(C2* c2, Clause* conflict, unsigned conflicted_var_id) {
+void c2_conflict_heuristics(C2* c2, Clause* conflict) {
     c2_decay_activity(c2);
     for (int i = 0; i < conflict->size; i++) {
         unsigned var_id = lit_to_var(conflict->occs[i]);
         c2_increase_activity(c2, var_id, c2->magic.conflict_clause_weight);
     }
-    if (conflicted_var_id != 0) {
-        c2_increase_activity(c2, conflicted_var_id, c2->magic.conflict_var_weight);
+    if (c2->skolem->conflict_var_id != 0) {
+        c2_increase_activity(c2, c2->skolem->conflict_var_id, c2->magic.conflict_var_weight);
     }
 }
 
@@ -427,6 +343,68 @@ float c2_Jeroslow_Wang_log_weight(vector* clauses) {
     return weight;
 }
 
+bool c2_is_in_conflcit(C2* c2) {
+    bool res =    c2->state == C2_CEGAR_CONFLICT
+               || c2->state == C2_EXAMPLES_CONFLICT
+               || c2->state == C2_EMPTY_CLAUSE_CONFLICT
+               || c2->state == C2_SKOLEM_CONFLICT;
+    assert(! res ||   c2->current_conflict);
+    assert(  res || ! c2->current_conflict);
+    return res;
+}
+
+void c2_propagate(C2* c2) {
+    
+    examples_propagate(c2->examples);
+    if (examples_is_conflicted(c2->examples)) {
+        assert(c2->state == C2_READY);
+        c2->state = C2_EXAMPLES_CONFLICT;
+        PartialAssignment* pa = examples_get_conflicted_assignment(c2->examples);
+        c2->current_conflict = analyze_assignment_conflict(c2,
+                                               pa->conflicted_var,
+                                               pa->conflicted_clause,
+                                               pa,
+                                               partial_assignment_get_value_for_conflict_analysis,
+                                               partial_assignment_is_relevant_clause,
+                                               partial_assignment_is_legal_dependence,
+                                               partial_assignment_get_decision_lvl);
+        assert(c2_is_in_conflcit(c2));
+        return;
+    }
+    
+    skolem_propagate(c2->skolem);
+    if (skolem_is_conflicted(c2->skolem)) {
+        assert(c2->state == C2_READY);
+        c2->state = C2_SKOLEM_CONFLICT;
+        c2->current_conflict = analyze_assignment_conflict(c2,
+                                           c2->skolem->conflict_var_id,
+                                           c2->skolem->conflicted_clause,
+                                           c2->skolem,
+                                           skolem_get_value_for_conflict_analysis,
+                                           skolem_is_relevant_clause,
+                                           skolem_is_legal_dependence_for_conflict_analysis,
+                                           skolem_get_decision_lvl_for_conflict_analysis);
+        assert(c2_is_in_conflcit(c2));
+        return;
+    }
+}
+
+void c2_initial_propagation(C2* c2) {
+    
+    c2_propagate(c2); // initial propagation for dlvl 0
+    if (! c2_is_in_conflcit(c2)) {
+        // Restrict the universals to always satisfy the constraints (derived from AIGER circuits)
+        for (unsigned i = 0; i < int_vector_count(c2->qcnf->universals_constraints); i++) {
+            unsigned var_id = (unsigned) int_vector_get(c2->qcnf->universals_constraints, i);
+            abortif( ! skolem_is_deterministic(c2->skolem, var_id), "Constraint variable is not determinsitic. This should be a constraint purely over the universals.");
+            satsolver_add(c2->skolem->skolem, skolem_get_satsolver_lit(c2->skolem, (Lit) var_id));
+            satsolver_clause_finished(c2->skolem->skolem);
+            skolem_assume_constant_value(c2->skolem, (Lit) var_id);
+        }
+        c2_propagate(c2); // initial propagation may be extended after assuming constants for constraints
+    }
+}
+
 // MAIN LOOPS
 cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
 
@@ -439,51 +417,19 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
         assert(c2->qcnf->stack->push_count >= c2->skolem->stack->push_count);
         assert(c2->skolem->stack->push_count >= c2->skolem->decision_lvl - c2->restart_base_decision_lvl);
 
-        int_vector* conflict = NULL;
-        unsigned conflicted_var_id = 0;
-
-        examples_propagate(c2->examples);
-        if (examples_is_conflicted(c2->examples)) {
-            assert(c2->state == C2_READY);
-            c2->state = C2_EXAMPLES_CONFLICT;
-            PartialAssignment* pa = examples_get_conflicted_assignment(c2->examples);
-            conflict = analyze_assignment_conflict(c2,
-                                                   pa->conflicted_var,
-                                                   pa->conflicted_clause,
-                                                   pa,
-                                                   partial_assignment_get_value_for_conflict_analysis,
-                                                   partial_assignment_is_relevant_clause,
-                                                   partial_assignment_is_legal_dependence,
-                                                   partial_assignment_get_decision_lvl);
-            conflicted_var_id = 0;
-        } else {
-            skolem_propagate(c2->skolem);
-
-            if (skolem_is_conflicted(c2->skolem)) {
-                assert(c2->state == C2_READY);
-                c2->state = C2_SKOLEM_CONFLICT;
-                conflict = analyze_assignment_conflict(c2,
-                                                       c2->skolem->conflict_var_id,
-                                                       c2->skolem->conflicted_clause,
-                                                       c2->skolem,
-                                                       skolem_get_value_for_conflict_analysis,
-                                                       skolem_is_relevant_clause,
-                                                       skolem_is_legal_dependence_for_conflict_analysis,
-                                                       skolem_get_decision_lvl_for_conflict_analysis);
-                conflicted_var_id = c2->skolem->conflict_var_id;
-            }
-        }
-        if (conflict != NULL) {
-
+        c2_propagate(c2);
+        
+        if (c2_is_in_conflcit(c2)) {
+            
             c2_print_variable_states(c2);
 
             remaining_conflicts -= 1;
             c2->statistics.conflicts += 1;
-            float conflict_success_rating = (float) 1.0 / (((float) int_vector_count(conflict)) * ((float) c2->decisions_since_last_conflict) + (float) 1.0);
+            float conflict_success_rating = (float) 1.0 / (((float) int_vector_count(c2->current_conflict)) * ((float) c2->decisions_since_last_conflict) + (float) 1.0);
             c2->skolem_success_recent_average = (float) (c2->skolem_success_recent_average * c2->magic.skolem_success_horizon + conflict_success_rating * (1.0 - c2->magic.skolem_success_horizon));
             c2->decisions_since_last_conflict = 0;
 
-            if (c2_are_decisions_involved(c2,conflict)) { // any decisions involved?
+            if (c2_are_decisions_involved(c2, c2->current_conflict)) { // any decisions involved?
                 abortif(c2->statistics.decisions == 0, "Huh?");
 
                 // Update Examples database
@@ -506,7 +452,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                     }
                 }
 
-                unsigned backtracking_lvl = c2_determine_backtracking_lvl(c2, conflict); // was equal to largest_decision_lvl_involved (-1?)
+                unsigned backtracking_lvl = c2_determine_backtracking_lvl(c2, c2->current_conflict); // was equal to largest_decision_lvl_involved (-1?)
                 unsigned old_dlvl = c2->skolem->decision_lvl;
                 c2_backtrack_to_decision_lvl(c2, backtracking_lvl);
 
@@ -514,8 +460,8 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                     c2->conflicts_between_case_splits_countdown--;
 
 
-                for (unsigned i = 0; i < int_vector_count(conflict); i++) {
-                    int lit = int_vector_get(conflict, i);
+                for (unsigned i = 0; i < int_vector_count(c2->current_conflict); i++) {
+                    int lit = int_vector_get(c2->current_conflict, i);
                     c2_add_lit(c2, - lit);
                 }
                 Clause* learnt_clause = qcnf_close_clause(c2->qcnf);
@@ -540,7 +486,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                 }
                 c2_new_clause(c2, learnt_clause);
 
-                c2_conflict_heuristics(c2, learnt_clause, conflicted_var_id);
+                c2_conflict_heuristics(c2, learnt_clause);
 
                 V1("Learnt clause has length %u. Backtracking %u lvls to lvl %u\n", learnt_clause->size, old_dlvl - c2->skolem->decision_lvl, c2->skolem->decision_lvl);
                 c2->statistics.lvls_backtracked += old_dlvl - c2->skolem->decision_lvl;
@@ -549,27 +495,28 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
 #endif
                 c2_trace_for_profiling(c2);
 
-                int_vector_free(conflict);
+                int_vector_free(c2->current_conflict);
+                c2->current_conflict = NULL;
 
                 c2->state = C2_READY;
 
             } else { // actual conflict
-                if (c2->options->functional_synthesis && int_vector_count(conflict) > 0) {
+                if (c2->options->functional_synthesis && int_vector_count(c2->current_conflict) > 0) {
 
                     c2_backtrack_to_decision_lvl(c2, c2->restart_base_decision_lvl);
                     c2->state = C2_READY;
 
                     V2("Functional synthesis exludes cube:");
-                    for (unsigned i = 0; i < int_vector_count(conflict); i++) {
-                        int lit = int_vector_get(conflict, i);
+                    for (unsigned i = 0; i < int_vector_count(c2->current_conflict); i++) {
+                        int lit = int_vector_get(c2->current_conflict, i);
                         satsolver_add(c2->skolem->skolem, skolem_get_satsolver_lit(c2->skolem, - lit));
                         V2("%d", - lit);
                     }
                     V2("\n");
 //                    satsolver_clause_finished(c2->skolem->skolem);
                     satsolver_clause_finished_for_context(c2->skolem->skolem, 0);
-                    vector_add(c2->skolem->cegar->solved_cubes, conflict);
-                    V1("Functional synthesis detected a cube of length %u that is over dlvl0 only. We exclude it from future conflict checks.\n", int_vector_count(conflict));
+                    vector_add(c2->skolem->cegar->solved_cubes, c2->current_conflict);
+                    V1("Functional synthesis detected a cube of length %u that is over dlvl0 only. We exclude it from future conflict checks.\n", int_vector_count(c2->current_conflict));
                     continue;
                 }
 
@@ -692,6 +639,76 @@ cadet_res c2_check_propositional(QCNF* qcnf) {
 }
 
 
+void c2_replenish_skolem_satsolver(C2* c2) {
+    V1("Replenishing satsolver\n");
+    
+    // To be sure we did mess up we remember the skolem data structure's decision level and stack height
+    assert(c2->skolem->decision_lvl == c2->restart_base_decision_lvl);
+    unsigned old_skolem_dlvl = c2->skolem->decision_lvl;
+    unsigned old_skolem_stack_height = c2->skolem->stack->push_count;
+    
+    Skolem* old_skolem = c2->skolem;
+    
+    c2->skolem = skolem_init(c2->qcnf,c2->options,vector_count(c2->qcnf->scopes),0);
+    c2_init_clauses_and_variables(c2);
+    c2_initial_propagation(c2);
+    abortif(c2->state != C2_READY, "Conflicted after replenishing.");
+    
+    cegar_update_interface(c2->skolem);
+    
+    assert(vector_count(old_skolem->cegar->solved_cubes) == 0 || c2->options->cegar || c2->options->case_splits);
+    
+    // Now, we re-introduce the cubes that we have solved already.
+    for (unsigned i = 0; i < vector_count(c2->skolem->cegar->solved_cubes); i++) {
+        int_vector* cube = (int_vector*) vector_get(c2->skolem->cegar->solved_cubes, i);
+        for (unsigned j = 0; j < int_vector_count(cube); j++) {
+            Lit lit = int_vector_get(cube, j);
+            assert(skolem_is_deterministic(c2->skolem, lit_to_var(lit)));
+            int satlit = skolem_get_satsolver_lit(c2->skolem, lit);
+            satsolver_add(c2->skolem->skolem, satlit);
+        }
+        satsolver_clause_finished_for_context(c2->skolem->skolem, 0);
+    }
+    
+    skolem_free(old_skolem);
+    
+    // make sure the skolem stack is on the right level
+    while (c2->skolem->decision_lvl < c2->restart_base_decision_lvl) {
+        skolem_push(c2->skolem);
+        c2->skolem->decision_lvl += 1;
+    }
+    assert(old_skolem_dlvl == c2->skolem->decision_lvl);
+    assert(old_skolem_stack_height == c2->skolem->stack->push_count);
+}
+
+
+void c2_restart_heuristics(C2* c2) {
+    c2->next_restart = (unsigned) (c2->next_restart * c2->magic.restart_factor) + 1;
+    
+    // Major or minor restart?
+    if (c2->restarts % c2->magic.major_restart_frequency == c2->magic.major_restart_frequency - 1) {
+        V1("Major restart. Resetting all activity values to 0 and some random ones to 1.\n");
+        for (unsigned i = 0; i < var_vector_count(c2->qcnf->vars); i++) {
+            c2_set_activity(c2, i, 0.0f);
+        }
+        c2->activity_factor = 1.0f;
+        // bump the activities of some random vars
+        for (unsigned i = 1; i <= 100 && i < var_vector_count(c2->qcnf->vars); i++) {
+            unsigned random_var_id = (unsigned) (1 + (rand() % ((int)var_vector_count(c2->qcnf->vars) - 1)));
+            assert(random_var_id > 0 && random_var_id <= var_vector_count(c2->qcnf->vars));
+            if (qcnf_var_exists(c2->qcnf, random_var_id)) {
+                c2_increase_activity(c2, random_var_id, 1.0f/(float) i);
+            }
+        }
+        
+#if (USE_SOLVER == SOLVER_PICOSAT_ASSUMPTIONS) // This is a workaround for an annoying bug in picosat
+        c2_replenish_skolem_satsolver(c2);
+#endif
+    } else { // Minor restart
+        c2_rescale_activity_values(c2);
+    }
+}
+
 cadet_res c2_sat(C2* c2) {
 
     if (c2->result != CADET_RESULT_UNKNOWN) {
@@ -720,35 +737,28 @@ cadet_res c2_sat(C2* c2) {
     }
     //////
 
-    c2_initial_propagation(c2);
-
-    if (!skolem_is_conflicted(c2->skolem)) {
-        if (c2->options->miniscoping) {
-            c2_analysis_determine_number_of_partitions(c2);
-        }
-
-        cegar_update_interface(c2->skolem);
-
-        if (c2->options->cegar_only) {
-            return cegar_solve_2QBF(c2, -1);
-        }
-        if (examples_is_conflicted(c2->examples)) {
-            c2->result = CADET_RESULT_UNSAT;
-            c2->state = C2_EXAMPLES_CONFLICT;
-            return c2->result;
-        }
-    }
-
     for (unsigned i = 0; i < c2->options->initial_examples; i ++) {
         PartialAssignment* pa = examples_add_random_assignment(c2->examples);
         if (pa && partial_assignment_is_conflicted(pa)) {
             break;
         }
     }
-    if (examples_is_conflicted(c2->examples)) {
+    
+    c2_initial_propagation(c2);
+
+    if (c2_is_in_conflcit(c2)) {
         c2->result = CADET_RESULT_UNSAT;
-        c2->state = C2_EXAMPLES_CONFLICT;
         return c2->result;
+    }
+    
+    
+    if (c2->options->miniscoping) {
+        c2_analysis_determine_number_of_partitions(c2);
+    }
+    
+    cegar_update_interface(c2->skolem);
+    if (c2->options->cegar_only) {
+        return cegar_solve_2QBF(c2, -1);
     }
 
     if (debug_verbosity >= VERBOSITY_MEDIUM) {
@@ -769,17 +779,9 @@ cadet_res c2_sat(C2* c2) {
             assert(c2->skolem->decision_lvl == c2->restart_base_decision_lvl);
             c2->restarts += 1;
             c2_restart_heuristics(c2);
-
-            if (debug_verbosity >= VERBOSITY_MEDIUM) {
-                debug_print_histogram_of_activities(c2,false);
-                debug_print_histogram_of_activities(c2,true);
-            }
-
-            if (c2->options->case_splits
-//            && c2->restarts >= c2->magic.num_restarts_before_case_splits
-//            && c2->conflicts_between_case_splits_countdown == 0
-//            && c2->cases_explored == 0 // this limits the case splits to 1!!!
-            ) {
+            
+            c2_propagate(c2);
+            if (! c2_is_in_conflcit(c2)) {
                 c2_case_split(c2); //Does it serve any purpose to check this here? Was used to pass a decision in original use
             }
         }

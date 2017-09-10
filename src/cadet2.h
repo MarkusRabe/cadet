@@ -22,11 +22,9 @@ typedef struct C2 C2;
 
 typedef enum {
     C2_READY,
-    C2_PA_CONFLICT,
     C2_SKOLEM_CONFLICT,
     C2_CEGAR_CONFLICT,
     C2_EMPTY_CLAUSE_CONFLICT,
-    C2_PROPOSITIONAL_CONFLICT,
     C2_EXAMPLES_CONFLICT
 } c2_state;
 
@@ -80,6 +78,7 @@ struct C2 {
     unsigned next_restart;
     unsigned restart_base_decision_lvl; // decision_lvl used for restarts
     Stack* stack; // for backtracking
+    int_vector* current_conflict;
     
     // Reasoning domains
     Skolem* skolem;

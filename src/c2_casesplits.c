@@ -77,7 +77,7 @@ unsigned c2_assume_constant(C2* c2, Lit lit) {
     assert(!skolem_can_propagate(c2->skolem));
     statistics_start_timer(c2->statistics.failed_literals_stats);
 
-    size_t case_split_decision_metric = c2->skolem->statistics.propagations;
+    unsigned case_split_decision_metric = (unsigned) c2->skolem->statistics.propagations;
 
     skolem_push(c2->skolem);
     skolem_assume_constant_value(c2->skolem, lit);
@@ -105,7 +105,7 @@ Lit c2_case_split_pick_literal(C2* c2) {
         if (v->var_id != 0 && skolem_is_deterministic(c2->skolem, i) && skolem_get_constant_value(c2->skolem, (Lit) v->var_id) == 0) {
             current_total = c2_assume_constant(c2, (Lit) v->var_id) + c2_assume_constant(c2, -(Lit) v->var_id);
             if (current_total > max_total) {
-                lit = v->var_id;
+                lit = (Lit) v->var_id;
                 max_total = current_total;
                 if (max_total > 1024) break; // Magic number again, we found a failed literal
             }
@@ -115,6 +115,13 @@ Lit c2_case_split_pick_literal(C2* c2) {
 }
 
 bool c2_case_split(C2* c2) {
+    if (! c2->options->case_splits) {
+        //            && c2->restarts >= c2->magic.num_restarts_before_case_splits
+        //            && c2->conflicts_between_case_splits_countdown == 0
+        //            && c2->cases_explored == 0 // this limits the case splits to 1!!!
+        return false;
+    }
+    
     assert(!skolem_can_propagate(c2->skolem));
 
     bool progress = false; // indicates whether this function call changed anything.

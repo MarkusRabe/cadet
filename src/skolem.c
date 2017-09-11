@@ -1292,8 +1292,8 @@ void skolem_propagate_constants_over_clause(Skolem* s, Clause* c) {
                 break;
             case 1:
                 goto cleanup; // clause satisfied
-//            default: // cannot happen
-//                abort();
+            default: // cannot happen
+                abort();
         }
     }
     if (qcnf_is_DQBF(s->qcnf)) {

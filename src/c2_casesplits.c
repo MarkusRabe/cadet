@@ -98,7 +98,7 @@ unsigned c2_case_split_assume_constant(C2* c2, Lit lit) {
 }
 
 Lit c2_case_split_pick_literal(C2* c2) {
-    unsigned max_total = 0;
+    float max_total = 0.0;
     Lit lit = 0;
     for (unsigned i = 0; i < int_vector_count(c2->skolem->cegar->interface_vars); i++) {
 //    }
@@ -120,10 +120,11 @@ Lit c2_case_split_pick_literal(C2* c2) {
                 lit = (propagations_pos > propagations_neg ? 1 : - 1) * (Lit) v->var_id;
                 break;
             }
-            assert(propagations_pos < 1000000 && propagations_neg < 1000000); // their product is still a uint 
-            if ( (1.0 + c2_get_activity(c2, v->var_id)) * (propagations_pos * propagations_neg) > max_total) {
+            float combined_quality = ((float) 1.0 + c2_get_activity(c2, v->var_id)) * (float) (propagations_pos * propagations_neg);
+            assert(propagations_pos < 1000000 && propagations_neg < 1000000); // their product is still a uint
+            if (combined_quality > max_total) {
                 lit = (propagations_pos > propagations_neg ? 1 : - 1) * (Lit) v->var_id;
-                max_total = propagations_pos + propagations_neg;
+                max_total = combined_quality;
             }
         }
     }

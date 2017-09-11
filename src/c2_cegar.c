@@ -89,11 +89,12 @@ void cegar_update_interface(Skolem* s) {
     int_vector_sort(cegar->interface_vars, compare_integers_natural_order);
     int_vector_remove_duplicates(cegar->interface_vars);
     
-    if (debug_verbosity >= VERBOSITY_LOW) {
-        V1("Interface vars:  ");
+    
+    V1("Interface vars: (%u in total) ... ", int_vector_count(cegar->interface_vars));
+    if (debug_verbosity >= VERBOSITY_HIGH || int_vector_count(cegar->interface_vars) < 20) {
         int_vector_print(cegar->interface_vars);
-        V1("\n");
     }
+    V1("\n");
     
     // Interface should only extend; otherwise the cubes in solved_cubes may refer to non-deterministic variables
     if (debug_verbosity >= VERBOSITY_HIGH && old_interface != NULL) {

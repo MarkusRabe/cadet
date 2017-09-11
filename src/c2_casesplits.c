@@ -111,7 +111,6 @@ Lit c2_case_split_pick_literal(C2* c2) {
         assert(v->var_id == var_id);
         if (var_id != 0
             && skolem_is_deterministic(c2->skolem, var_id)
-//            && c2_get_activity(c2, v->var_id) > 1.0
             && skolem_get_constant_value(c2->skolem, (Lit) v->var_id) == 0) {
             
             unsigned propagations_pos = c2_case_split_assume_constant(c2,   (Lit) v->var_id);
@@ -206,7 +205,7 @@ bool c2_case_split(C2* c2) {
             }
 
             int_vector_add(c2->case_split_stack, most_notorious_literal);
-
+            V1("  New case split depth is %u\n", int_vector_count(c2->case_split_stack));
             assert(skolem_is_deterministic(c2->skolem, lit_to_var(most_notorious_literal)));
             skolem_assume_constant_value(c2->skolem, most_notorious_literal);
 

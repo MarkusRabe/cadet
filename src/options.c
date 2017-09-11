@@ -15,7 +15,7 @@ Options* default_options() {
     o->easy_debugging_mode_c2 = false;
 
     // Computational enginges
-    o->cegar = false;
+    o->cegar = true;
     o->cegar_only = false;
     o->delay_conflict_checks = false;
     o->use_qbf_engine_also_for_propositional_problems = false;
@@ -38,7 +38,7 @@ Options* default_options() {
     o->certificate_aiger_mode = aiger_ascii_mode;
 
     // Case splits
-    o->case_splits = true;
+    o->case_splits = false;
     o->case_splits_only_at_decision_level_0 = true;
 
     // Optimizations
@@ -49,7 +49,6 @@ Options* default_options() {
     o->delete_clauses_on_restarts = false;
     o->propagate_pure_literals = true;
     o->enhanced_pure_literals = false;
-    o->failed_literals = false;
 
     // Printing
     o->print_detailed_miniscoping_stats = false;

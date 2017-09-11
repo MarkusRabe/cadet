@@ -266,7 +266,10 @@ unsigned c2_are_decisions_involved(C2* c2, int_vector* conflict) {
             break;
         }
     }
-    return largest_decision_level_involved > c2->restart_base_decision_lvl;
+    bool res = largest_decision_level_involved > c2->restart_base_decision_lvl;
+    assert(! res || c2->skolem->decision_lvl > c2->restart_base_decision_lvl); // , "Decision involved, but no decision taken");
+    
+    return res;
 }
 
 // Returns the second largest decision level that occurs in the conflict. If no second largest decision level exists, returns 0.
@@ -318,14 +321,14 @@ void c2_decay_activity(C2* c2) {
     }
 }
 
-void c2_conflict_heuristics(C2* c2, Clause* conflict) {
+void c2_conflict_heuristics(C2* c2, Clause* conflict, unsigned conflicted_var_id) {
     c2_decay_activity(c2);
     for (int i = 0; i < conflict->size; i++) {
         unsigned var_id = lit_to_var(conflict->occs[i]);
         c2_increase_activity(c2, var_id, c2->magic.conflict_clause_weight);
     }
-    if (c2->skolem->conflict_var_id != 0) {
-        c2_increase_activity(c2, c2->skolem->conflict_var_id, c2->magic.conflict_var_weight);
+    if (conflicted_var_id != 0) {
+        c2_increase_activity(c2, conflicted_var_id, c2->magic.conflict_var_weight);
     }
 }
 
@@ -354,6 +357,7 @@ bool c2_is_in_conflcit(C2* c2) {
 }
 
 void c2_propagate(C2* c2) {
+    assert(c2->current_conflict == NULL);
     
     examples_propagate(c2->examples);
     if (examples_is_conflicted(c2->examples)) {
@@ -390,8 +394,7 @@ void c2_propagate(C2* c2) {
 }
 
 void c2_initial_propagation(C2* c2) {
-    
-    c2_propagate(c2); // initial propagation for dlvl 0
+    c2_propagate(c2);
     if (! c2_is_in_conflcit(c2)) {
         // Restrict the universals to always satisfy the constraints (derived from AIGER circuits)
         for (unsigned i = 0; i < int_vector_count(c2->qcnf->universals_constraints); i++) {
@@ -421,16 +424,20 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
         
         if (c2_is_in_conflcit(c2)) {
             
+            unsigned conflicted_var_id = c2->skolem->conflict_var_id; // yep, can be 0; should be cleaned up some time.
+            
             c2_print_variable_states(c2);
 
             remaining_conflicts -= 1;
             c2->statistics.conflicts += 1;
+            if (c2->conflicts_between_case_splits_countdown > 0)
+                c2->conflicts_between_case_splits_countdown--;
+            
             float conflict_success_rating = (float) 1.0 / (((float) int_vector_count(c2->current_conflict)) * ((float) c2->decisions_since_last_conflict) + (float) 1.0);
             c2->skolem_success_recent_average = (float) (c2->skolem_success_recent_average * c2->magic.skolem_success_horizon + conflict_success_rating * (1.0 - c2->magic.skolem_success_horizon));
             c2->decisions_since_last_conflict = 0;
 
             if (c2_are_decisions_involved(c2, c2->current_conflict)) { // any decisions involved?
-                abortif(c2->statistics.decisions == 0, "Huh?");
 
                 // Update Examples database
                 PartialAssignment* new_example = NULL;
@@ -444,7 +451,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                     }
                 }
 
-                // Update CEGAR abstraction // TODO: Move this into skolem.c in the conflict check.
+                // Update CEGAR abstraction
                 if (c2->options->cegar && c2->skolem->state == SKOLEM_STATE_SKOLEM_CONFLICT) {
                     if (cegar_build_abstraction_for_assignment(c2) != CADET_RESULT_UNKNOWN) {
                         assert(c2->result == CADET_RESULT_UNSAT);
@@ -452,13 +459,9 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                     }
                 }
 
-                unsigned backtracking_lvl = c2_determine_backtracking_lvl(c2, c2->current_conflict); // was equal to largest_decision_lvl_involved (-1?)
+                unsigned backtracking_lvl = c2_determine_backtracking_lvl(c2, c2->current_conflict);
                 unsigned old_dlvl = c2->skolem->decision_lvl;
                 c2_backtrack_to_decision_lvl(c2, backtracking_lvl);
-
-                if (c2->conflicts_between_case_splits_countdown > 0)
-                    c2->conflicts_between_case_splits_countdown--;
-
 
                 for (unsigned i = 0; i < int_vector_count(c2->current_conflict); i++) {
                     int lit = int_vector_get(c2->current_conflict, i);
@@ -486,7 +489,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                 }
                 c2_new_clause(c2, learnt_clause);
 
-                c2_conflict_heuristics(c2, learnt_clause);
+                c2_conflict_heuristics(c2, learnt_clause, conflicted_var_id);
 
                 V1("Learnt clause has length %u. Backtracking %u lvls to lvl %u\n", learnt_clause->size, old_dlvl - c2->skolem->decision_lvl, c2->skolem->decision_lvl);
                 c2->statistics.lvls_backtracked += old_dlvl - c2->skolem->decision_lvl;
@@ -518,10 +521,6 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                     vector_add(c2->skolem->cegar->solved_cubes, c2->current_conflict);
                     V1("Functional synthesis detected a cube of length %u that is over dlvl0 only. We exclude it from future conflict checks.\n", int_vector_count(c2->current_conflict));
                     continue;
-                }
-
-                if (debug_verbosity >= VERBOSITY_LOW) {
-                    c2_print_universals_assignment(c2);
                 }
 
                 assert(c2->result == CADET_RESULT_UNKNOWN);
@@ -643,7 +642,7 @@ void c2_replenish_skolem_satsolver(C2* c2) {
     
     c2->skolem = skolem_init(c2->qcnf,c2->options,vector_count(c2->qcnf->scopes),0);
     c2_init_clauses_and_variables(c2);
-    c2_initial_propagation(c2);
+    c2_initial_propagation(c2); // (re-)establishes dlvl 0
     abortif(c2->state != C2_READY, "Conflicted after replenishing.");
     
     cegar_update_interface(c2->skolem);
@@ -743,7 +742,6 @@ cadet_res c2_sat(C2* c2) {
         return c2->result;
     }
     
-    
     if (c2->options->miniscoping) {
         c2_analysis_determine_number_of_partitions(c2);
     }
@@ -753,14 +751,14 @@ cadet_res c2_sat(C2* c2) {
         return cegar_solve_2QBF(c2, -1);
     }
 
-    if (debug_verbosity >= VERBOSITY_MEDIUM) {
+    if (debug_verbosity >= VERBOSITY_HIGH) {
         V1("Deterministic vars on dlvl 0 are:");
         for (unsigned i = 0; i < var_vector_count(c2->qcnf->vars); i++) {
             if (qcnf_var_exists(c2->qcnf, i) && qcnf_is_existential(c2->qcnf, i) && skolem_is_deterministic(c2->skolem, i)) {
-                V0(" %u", i);
+                V1(" %u", i);
             }
         }
-        V0("\n");
+        V1("\n");
     }
 
     while (c2->result == CADET_RESULT_UNKNOWN) { // This loop controls the restarts

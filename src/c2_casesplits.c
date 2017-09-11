@@ -73,7 +73,7 @@ void c2_case_split_backtracking_heuristics(C2* c2) {
 }
 
 // Returns the number of propagations for this assumption
-unsigned c2_assume_constant(C2* c2, Lit lit) {
+unsigned c2_case_split_assume_constant(C2* c2, Lit lit) {
     assert(!skolem_can_propagate(c2->skolem));
     statistics_start_timer(c2->statistics.failed_literals_stats);
 
@@ -86,10 +86,10 @@ unsigned c2_assume_constant(C2* c2, Lit lit) {
     if (skolem_is_conflicted(c2->skolem)) {
         V1("Skolem conflict with assumed constant %d: %d\n", lit, c2->skolem->conflict_var_id);
         c2->statistics.failed_literals_conflicts++;
-        case_split_decision_metric += 1024; //Magic number to ensure the variable is chosen
+        case_split_decision_metric = UINT_MAX; //ensure the variable is chosen
+    } else {
+        V2("Number of propagations when assigning %d: %zu\n", lit, c2->skolem->statistics.propagations - case_split_decision_metric);
     }
-
-    V2("Number of propagations when assigning %d: %zu\n", lit, c2->skolem->statistics.propagations - case_split_decision_metric);
 
     skolem_pop(c2->skolem);
     statistics_stop_and_record_timer(c2->statistics.failed_literals_stats);
@@ -98,16 +98,32 @@ unsigned c2_assume_constant(C2* c2, Lit lit) {
 }
 
 Lit c2_case_split_pick_literal(C2* c2) {
-    unsigned current_total, max_total = 0;
+    unsigned max_total = 0;
     Lit lit = 0;
-    for (unsigned i = 1; i < var_vector_count(c2->qcnf->vars); i++) {
-        Var* v = var_vector_get(c2->qcnf->vars, i);
-        if (v->var_id != 0 && skolem_is_deterministic(c2->skolem, i) && skolem_get_constant_value(c2->skolem, (Lit) v->var_id) == 0) {
-            current_total = c2_assume_constant(c2, (Lit) v->var_id) + c2_assume_constant(c2, -(Lit) v->var_id);
-            if (current_total > max_total) {
-                lit = (Lit) v->var_id;
-                max_total = current_total;
-                if (max_total > 1024) break; // Magic number again, we found a failed literal
+    for (unsigned i = 0; i < int_vector_count(c2->skolem->cegar->interface_vars); i++) {
+//    }
+//    for (unsigned i = 1; i < var_vector_count(c2->qcnf->vars); i++) {
+        assert(int_vector_get(c2->skolem->cegar->interface_vars, i) > 0);
+        unsigned var_id = (unsigned) int_vector_get(c2->skolem->cegar->interface_vars, i);
+        Var* v = var_vector_get(c2->qcnf->vars, var_id);
+        assert(v->var_id == var_id);
+        if (var_id != 0
+            && skolem_is_deterministic(c2->skolem, var_id)
+//            && c2_get_activity(c2, v->var_id) > 1.0
+            && skolem_get_constant_value(c2->skolem, (Lit) v->var_id) == 0) {
+            
+            unsigned propagations_pos = c2_case_split_assume_constant(c2,   (Lit) v->var_id);
+            unsigned propagations_neg = c2_case_split_assume_constant(c2, - (Lit) v->var_id);
+            
+            if (propagations_pos == UINT_MAX || propagations_neg == UINT_MAX) {
+                // we found a failed literal
+                lit = (propagations_pos > propagations_neg ? 1 : - 1) * (Lit) v->var_id;
+                break;
+            }
+            assert(propagations_pos < 1000000 && propagations_neg < 1000000); // their product is still a uint 
+            if ( (1.0 + c2_get_activity(c2, v->var_id)) * (propagations_pos * propagations_neg) > max_total) {
+                lit = (propagations_pos > propagations_neg ? 1 : - 1) * (Lit) v->var_id;
+                max_total = propagations_pos + propagations_neg;
             }
         }
     }

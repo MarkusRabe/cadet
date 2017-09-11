@@ -70,6 +70,7 @@ void c2_backtrack_case_split(C2* c2) {
 
 void c2_case_split_backtracking_heuristics(C2* c2) {
     c2->next_restart = c2->magic.initial_restart;
+    
 }
 
 // Returns the number of propagations for this assumption
@@ -77,7 +78,7 @@ unsigned c2_case_split_assume_constant(C2* c2, Lit lit) {
     assert(!skolem_can_propagate(c2->skolem));
     statistics_start_timer(c2->statistics.failed_literals_stats);
 
-    unsigned case_split_decision_metric = (unsigned) c2->skolem->statistics.propagations;
+    size_t case_split_decision_metric = c2->skolem->statistics.propagations;
 
     skolem_push(c2->skolem);
     skolem_assume_constant_value(c2->skolem, lit);
@@ -89,12 +90,13 @@ unsigned c2_case_split_assume_constant(C2* c2, Lit lit) {
         case_split_decision_metric = UINT_MAX; //ensure the variable is chosen
     } else {
         V2("Number of propagations when assigning %d: %zu\n", lit, c2->skolem->statistics.propagations - case_split_decision_metric);
+        case_split_decision_metric = c2->skolem->statistics.propagations - case_split_decision_metric;
     }
 
     skolem_pop(c2->skolem);
     statistics_stop_and_record_timer(c2->statistics.failed_literals_stats);
 
-    return case_split_decision_metric;
+    return (unsigned) case_split_decision_metric;
 }
 
 Lit c2_case_split_pick_literal(C2* c2) {
@@ -120,7 +122,7 @@ Lit c2_case_split_pick_literal(C2* c2) {
                 lit = (propagations_pos > propagations_neg ? 1 : - 1) * (Lit) v->var_id;
                 break;
             }
-            float combined_quality = ((float) 1.0 + c2_get_activity(c2, v->var_id)) * (float) (propagations_pos * propagations_neg);
+            float combined_quality = ((float) 1.0 + c2_get_activity(c2, v->var_id)) * (float) (propagations_pos * propagations_neg + propagations_pos + propagations_neg);
             assert(propagations_pos < 1000000 && propagations_neg < 1000000); // their product is still a uint
             if (combined_quality > max_total) {
                 lit = (propagations_pos > propagations_neg ? 1 : - 1) * (Lit) v->var_id;
@@ -128,11 +130,19 @@ Lit c2_case_split_pick_literal(C2* c2) {
             }
         }
     }
+    if (debug_verbosity >= VERBOSITY_LOW) {
+        V1("Case split literal ");
+        options_print_literal_name(c2->options, c2_literal_color(c2, NULL, lit), lit);
+        V1(" has quality %.2f\n", max_total);
+    }
     return lit;
 }
 
 bool c2_case_split(C2* c2) {
-    if (! c2->options->case_splits) {
+    if (! c2->options->case_splits
+        || c2->restarts < c2->magic.num_restarts_before_case_splits
+        || c2->conflicts_between_case_splits_countdown > 0
+        || c2->skolem->decision_lvl != c2->restart_base_decision_lvl) {
         //            && c2->restarts >= c2->magic.num_restarts_before_case_splits
         //            && c2->conflicts_between_case_splits_countdown == 0
         //            && c2->cases_explored == 0 // this limits the case splits to 1!!!
@@ -146,12 +156,17 @@ bool c2_case_split(C2* c2) {
 //    Lit most_notorious_literal = c2_pick_most_notorious_literal(c2);
     Lit most_notorious_literal = c2_case_split_pick_literal(c2);
     if (most_notorious_literal != 0) {
-        c2->conflicts_between_case_splits_countdown = c2->conflicts_between_case_splits;
-        if (debug_verbosity >= VERBOSITY_LOW) {
-            V1("Found notorious literal");
-            options_print_literal_name(c2->options, c2_literal_color(c2, NULL, most_notorious_literal), most_notorious_literal);
-            V1(" \n");
+        unsigned penalty_factor = 1;
+        if (c2->case_split_depth_penalty == C2_CASE_SPLIT_DEPTH_PENALTY_LINEAR) {
+            penalty_factor = int_vector_count(c2->case_split_stack);
         }
+        if (c2->case_split_depth_penalty == C2_CASE_SPLIT_DEPTH_PENALTY_QUADRATIC) {
+            penalty_factor = int_vector_count(c2->case_split_stack) * int_vector_count(c2->case_split_stack);
+        }
+        if (c2->case_split_depth_penalty == C2_CASE_SPLIT_DEPTH_PENALTY_EXPONENTIAL) {
+            abort(); // not yet implemented
+        }
+        c2->conflicts_between_case_splits_countdown = c2->conflicts_between_case_splits * (penalty_factor + 1);
 
         satsolver_assume(c2->skolem->skolem, skolem_get_satsolver_lit(c2->skolem, most_notorious_literal));
 

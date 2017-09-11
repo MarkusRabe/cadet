@@ -85,7 +85,7 @@ C2* c2_init_qcnf(QCNF* qcnf, Options* options) {
     c2->magic.implication_graph_variable_activity = (float) 0.5;
     c2->magic.major_restart_frequency = 20;
     c2->magic.num_restarts_before_Jeroslow_Wang = options->easy_debugging_mode_c2 ? 0 : 3;
-    c2->magic.num_restarts_before_case_splits = 0; // options->easy_debugging_mode_c2 ? 0 : 5;
+    c2->magic.num_restarts_before_case_splits = options->easy_debugging_mode_c2 ? 0 : 10;
 
     // Magic constants for case splits
     c2->magic.skolem_success_horizon = (float) 0.9; // >0.0 && <1.0
@@ -93,7 +93,7 @@ C2* c2_init_qcnf(QCNF* qcnf, Options* options) {
     c2->magic.skolem_success_recent_average_initialization = (float) 1.0;
     c2->skolem_success_recent_average = c2->magic.skolem_success_recent_average_initialization;
     c2->case_split_depth_penalty = C2_CASE_SPLIT_DEPTH_PENALTY_QUADRATIC;
-    c2->conflicts_between_case_splits = options->easy_debugging_mode_c2 ? 0 : 10;
+    c2->conflicts_between_case_splits = options->easy_debugging_mode_c2 ? 1 : 2;
     c2->conflicts_between_case_splits_countdown = c2->conflicts_between_case_splits;
 
     c2_init_clauses_and_variables(c2);
@@ -536,23 +536,15 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                 continue; // can happen when a potentially conflicted variable is not actually conflicted
             }
 
-            if (c2->options->case_splits
-                && (! c2->options->case_splits_only_at_decision_level_0 || c2->skolem->decision_lvl == c2->restart_base_decision_lvl)
-//                && c2->decisions_since_last_conflict == 0
-//                && int_vector_count(c2->case_split_stack) == 0
-                && c2->restarts >= c2->magic.num_restarts_before_case_splits
-                && c2->conflicts_between_case_splits_countdown == 0
-//                && c2->cases_explored == 0 // this limits the case splits to 1!!!
-                ) {
-                bool progress_through_case_split = c2_case_split(c2);
-                if (c2->result != CADET_RESULT_UNKNOWN) { // either the above if statement or c2_case_split may result in SAT/UNSAT
-                    return c2->result;
-                }
-                if (progress_through_case_split) {
-                    assert(c2->conflicts_between_case_splits_countdown > 0);
-                    continue;
-                } // Else continue picking a decision variable. Avoids runnint into a loop where case distinction is tried but nothing happens.
+            // try case splits
+            bool progress_through_case_split = c2_case_split(c2);
+            if (c2->result != CADET_RESULT_UNKNOWN) { // either the above if statement or c2_case_split may result in SAT/UNSAT
+                return c2->result;
             }
+            if (progress_through_case_split) {
+                assert(c2->conflicts_between_case_splits_countdown > 0);
+                continue;
+            } // Else continue picking a decision variable. Avoids runnint into a loop where case distinction is tried but nothing happens.
 
             assert(!skolem_can_propagate(c2->skolem));
 
@@ -775,7 +767,7 @@ cadet_res c2_sat(C2* c2) {
         c2_run(c2, c2->next_restart);
 
         if (c2->result == CADET_RESULT_UNKNOWN) {
-            V2("Restart %zu\n", c2->restarts);
+            V1("Restart %zu\n", c2->restarts);
             assert(c2->skolem->decision_lvl == c2->restart_base_decision_lvl);
             c2->restarts += 1;
             c2_restart_heuristics(c2);

@@ -267,7 +267,7 @@ unsigned c2_are_decisions_involved(C2* c2, int_vector* conflict) {
         }
     }
     bool res = largest_decision_level_involved > c2->restart_base_decision_lvl;
-    assert(! res || c2->skolem->decision_lvl > c2->restart_base_decision_lvl); // , "Decision involved, but no decision taken");
+    assert(! res || c2->skolem->decision_lvl > c2->restart_base_decision_lvl); // Decision involved, but no decision taken
     
     return res;
 }

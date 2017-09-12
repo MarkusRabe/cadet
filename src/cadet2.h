@@ -93,7 +93,6 @@ struct C2 {
     size_t decisions_since_last_conflict;
     float skolem_success_recent_average;
     C2_CSDP case_split_depth_penalty;
-    size_t conflicts_between_case_splits;
     size_t conflicts_between_case_splits_countdown;
     
     struct C2_Statistics statistics;

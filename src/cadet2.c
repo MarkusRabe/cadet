@@ -93,8 +93,7 @@ C2* c2_init_qcnf(QCNF* qcnf, Options* options) {
     c2->magic.skolem_success_recent_average_initialization = (float) 1.0;
     c2->skolem_success_recent_average = c2->magic.skolem_success_recent_average_initialization;
     c2->case_split_depth_penalty = C2_CASE_SPLIT_DEPTH_PENALTY_QUADRATIC;
-    c2->conflicts_between_case_splits = options->easy_debugging_mode_c2 ? 1 : 2;
-    c2->conflicts_between_case_splits_countdown = c2->conflicts_between_case_splits;
+    c2->conflicts_between_case_splits_countdown = 1;
 
     c2_init_clauses_and_variables(c2);
 
@@ -559,7 +558,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                     } else {
                         V1("Case split successfully completed, going into other case.\n");
                         c2_backtrack_case_split(c2);
-                        c2_case_split_backtracking_heuristics(c2);
+                        return c2->result;
                     }
                     if (c2->result == CADET_RESULT_SAT) {
                         return c2->result;

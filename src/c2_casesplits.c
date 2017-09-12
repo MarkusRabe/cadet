@@ -13,6 +13,10 @@
 
 #include <math.h>
 
+void c2_case_split_backtracking_heuristics(C2* c2) {
+    c2->next_restart = c2->magic.initial_restart;
+}
+
 void c2_backtrack_case_split(C2* c2) {
     V2("Backtracking from case split.\n");
 
@@ -23,11 +27,14 @@ void c2_backtrack_case_split(C2* c2) {
     V1("\n");
 
     c2_backtrack_to_decision_lvl(c2, c2->restart_base_decision_lvl);
+    
     V3("Now popping the case split.\n");
     stack_pop(c2->stack, c2);
     c2_pop(c2);
 
-    c2->skolem->decision_lvl -=1;
+    assert(c2->skolem->decision_lvl > 0);
+    c2->skolem->decision_lvl -= 1;
+    assert(c2->restart_base_decision_lvl > 0);
     c2->restart_base_decision_lvl -= 1;
 
     assert(c2->skolem->decision_lvl == 0); // TODO: If we do case splits after dlvl 0, we should also add a real clause
@@ -65,12 +72,8 @@ void c2_backtrack_case_split(C2* c2) {
         V1("Universal assignments depleted: SAT\n");
         c2->result = CADET_RESULT_SAT;
     }
-
-}
-
-void c2_case_split_backtracking_heuristics(C2* c2) {
-    c2->next_restart = c2->magic.initial_restart;
     
+    c2_case_split_backtracking_heuristics(c2);
 }
 
 // Returns the number of propagations for this assumption
@@ -142,9 +145,6 @@ bool c2_case_split(C2* c2) {
         || c2->restarts < c2->magic.num_restarts_before_case_splits
         || c2->conflicts_between_case_splits_countdown > 0
         || c2->skolem->decision_lvl != c2->restart_base_decision_lvl) {
-        //            && c2->restarts >= c2->magic.num_restarts_before_case_splits
-        //            && c2->conflicts_between_case_splits_countdown == 0
-        //            && c2->cases_explored == 0 // this limits the case splits to 1!!!
         return false;
     }
     
@@ -155,17 +155,17 @@ bool c2_case_split(C2* c2) {
 //    Lit most_notorious_literal = c2_pick_most_notorious_literal(c2);
     Lit most_notorious_literal = c2_case_split_pick_literal(c2);
     if (most_notorious_literal != 0) {
-        unsigned penalty_factor = 1;
+        unsigned conflicts_between_case_splits = 1;
         if (c2->case_split_depth_penalty == C2_CASE_SPLIT_DEPTH_PENALTY_LINEAR) {
-            penalty_factor = int_vector_count(c2->case_split_stack);
+            conflicts_between_case_splits = int_vector_count(c2->case_split_stack);
         }
         if (c2->case_split_depth_penalty == C2_CASE_SPLIT_DEPTH_PENALTY_QUADRATIC) {
-            penalty_factor = int_vector_count(c2->case_split_stack) * int_vector_count(c2->case_split_stack);
+            conflicts_between_case_splits = int_vector_count(c2->case_split_stack) * int_vector_count(c2->case_split_stack);
         }
         if (c2->case_split_depth_penalty == C2_CASE_SPLIT_DEPTH_PENALTY_EXPONENTIAL) {
             abort(); // not yet implemented
         }
-        c2->conflicts_between_case_splits_countdown = c2->conflicts_between_case_splits * (penalty_factor + 1);
+        c2->conflicts_between_case_splits_countdown = conflicts_between_case_splits + 1;
 
         satsolver_assume(c2->skolem->skolem, skolem_get_satsolver_lit(c2->skolem, most_notorious_literal));
 
@@ -187,7 +187,6 @@ bool c2_case_split(C2* c2) {
                     abortif(! c2->options->cegar, "This case can only occur when something else fiddles with the assumptions.");
                     V1("Case split successfully completed through CEGAR-Case Split interaction.\n");
                     c2_backtrack_case_split(c2);
-                    c2_case_split_backtracking_heuristics(c2);
                 }
                 progress = true;
                 most_notorious_literal = 0; // suppresses that case split happens
@@ -196,6 +195,7 @@ bool c2_case_split(C2* c2) {
 
         if (most_notorious_literal != 0) {
             progress = true;
+            
             if (int_vector_count(c2->case_split_stack) == 0) {
                 c2->statistics.cases_explored += 1;
                 stack_push(c2->stack);
@@ -203,7 +203,7 @@ bool c2_case_split(C2* c2) {
                 c2->skolem->decision_lvl +=1;
                 c2->restart_base_decision_lvl += 1;
             }
-
+            
             int_vector_add(c2->case_split_stack, most_notorious_literal);
             V1("  New case split depth is %u\n", int_vector_count(c2->case_split_stack));
             assert(skolem_is_deterministic(c2->skolem, lit_to_var(most_notorious_literal)));

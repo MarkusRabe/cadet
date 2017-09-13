@@ -490,7 +490,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
 
                 c2_conflict_heuristics(c2, learnt_clause, conflicted_var_id);
 
-                V1("Learnt clause has length %u. Backtracking %u lvls to lvl %u\n", learnt_clause->size, old_dlvl - c2->skolem->decision_lvl, c2->skolem->decision_lvl);
+                V2("Learnt clause has length %u. Backtracking %u lvls to lvl %u\n", learnt_clause->size, old_dlvl - c2->skolem->decision_lvl, c2->skolem->decision_lvl);
                 c2->statistics.lvls_backtracked += old_dlvl - c2->skolem->decision_lvl;
 #ifdef DEBUG
                 c2_validate_unique_consequences(c2);
@@ -669,7 +669,9 @@ void c2_replenish_skolem_satsolver(C2* c2) {
     
     for (unsigned i = 0; i < int_vector_count(c2->case_split_stack); i++) {
         Lit lit = int_vector_get(c2->case_split_stack, i);
-        c2_case_split_make_assumption(c2, lit);
+        if (skolem_get_constant_value(c2->skolem, lit) == 0) {
+            c2_case_split_make_assumption(c2, lit);
+        }
     }
     abortif(c2_is_in_conflcit(c2) || c2->result != CADET_RESULT_UNKNOWN, "Illegal state afte replenishing");
 }

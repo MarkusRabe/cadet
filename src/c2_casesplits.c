@@ -118,17 +118,19 @@ Lit c2_case_split_pick_literal(C2* c2) {
             unsigned propagations_pos = c2_case_split_assume_constant(c2,   (Lit) v->var_id);
             unsigned propagations_neg = c2_case_split_assume_constant(c2, - (Lit) v->var_id);
             
-            assert(propagations_pos < 1000000 && propagations_neg < 1000000); // avoid overflows
-            
             if (propagations_pos == UINT_MAX || propagations_neg == UINT_MAX) {
                 // we found a failed literal
+                max_total = 0;
                 lit = (propagations_pos > propagations_neg ? 1 : - 1) * (Lit) v->var_id;
                 break;
             }
+            
+            assert(propagations_pos < 1000000 && propagations_neg < 1000000); // avoid overflows
+            
             float factor =
                 (float) 1.0
-//                + c2_get_activity(c2, v->var_id)
-                + cegar_get_universal_activity(c2->skolem->cegar, v->var_id);
+                + (float) c2_get_activity(c2, v->var_id);
+//                + 10.0 * cegar_get_universal_activity(c2->skolem->cegar, v->var_id);
             float combined_quality = factor * (float) (propagations_pos * propagations_neg + propagations_pos + propagations_neg);
             if (combined_quality > max_total) {
                 lit = (propagations_pos > propagations_neg ? 1 : - 1) * (Lit) v->var_id;

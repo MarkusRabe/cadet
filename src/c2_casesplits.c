@@ -20,12 +20,6 @@ void c2_case_split_backtracking_heuristics(C2* c2) {
 void c2_backtrack_case_split(C2* c2) {
     V2("Backtracking from case split.\n");
 
-    V1("Finished case:");
-    for (unsigned i = 0; i < int_vector_count(c2->case_split_stack); i++) {
-        V1(" %d", int_vector_get(c2->case_split_stack, i));
-    }
-    V1("\n");
-
     c2_backtrack_to_decision_lvl(c2, c2->restart_base_decision_lvl);
     
     V3("Now popping the case split.\n");
@@ -39,16 +33,6 @@ void c2_backtrack_case_split(C2* c2) {
 
     assert(c2->skolem->decision_lvl == 0); // TODO: If we do case splits after dlvl 0, we should also add a real clause
     assert(c2->restart_base_decision_lvl == 0);
-
-    int_vector* solved_cube = int_vector_init();
-    for (unsigned i = 0; i < int_vector_count(c2->case_split_stack); i++) {
-        Lit l = int_vector_get(c2->case_split_stack, i);
-        assert(skolem_is_deterministic(c2->skolem,lit_to_var(l)));
-        assert(skolem_get_constant_value(c2->skolem, l) == 0);
-        int_vector_add(solved_cube, -l);
-    }
-    
-    cegar_new_cube(c2->skolem, solved_cube);
     
     // check learnt clauses for unique consequences ... the last backtracking may have removed the unique consequences
     for (unsigned i = vector_count(c2->qcnf->clauses); i > 0; i--) {
@@ -138,7 +122,7 @@ Lit c2_case_split_pick_literal(C2* c2) {
             }
         }
     }
-    if (debug_verbosity >= VERBOSITY_LOW) {
+    if (lit != 0 && debug_verbosity >= VERBOSITY_LOW) {
         V1("Case split literal ");
         options_print_literal_name(c2->options, c2_literal_color(c2, NULL, lit), lit);
         V1(" has quality %.2f\n", max_total);
@@ -160,7 +144,7 @@ bool c2_case_split_make_assumption(C2* c2, Lit lit) {
         satsolver_assume(c2->skolem->skolem, skolem_get_satsolver_lit(c2->skolem, lit));
         sat_res res = satsolver_sat(c2->skolem->skolem);
         assert(c2->skolem->decision_lvl == c2->restart_base_decision_lvl);
-        if (res == SATSOLVER_UNSATISFIABLE) {
+        if (res != SATSOLVER_SATISFIABLE) {
             V1("Also the SAT check of the other polarity failed. Exhausted the search space on the universal side.\n");
             assert(c2->result == CADET_RESULT_UNKNOWN);
             if (int_vector_count(c2->case_split_stack) == 0) {
@@ -168,7 +152,14 @@ bool c2_case_split_make_assumption(C2* c2, Lit lit) {
             } else {
                 abortif(! c2->options->cegar, "This case can only occur when something else fiddles with the assumptions.");
                 V1("Case split successfully completed through CEGAR-Case Split interaction.\n");
+                
+                int_vector* solved_cube = int_vector_init();
+                for (unsigned i = 0; i < int_vector_count(c2->case_split_stack); i++) {
+                    Lit l = int_vector_get(c2->case_split_stack, i);
+                    int_vector_add(solved_cube, -l);
+                }
                 c2_backtrack_case_split(c2);
+                cegar_new_cube(c2->skolem, solved_cube);
             }
             progress = true;
             lit = 0; // suppresses that case split happens
@@ -200,6 +191,8 @@ bool c2_case_split_make_assumption(C2* c2, Lit lit) {
             c2->result = CADET_RESULT_UNSAT;
             c2->state = C2_SKOLEM_CONFLICT;
         }
+    } else {
+        V1("No progress after case split.\n");
     }
     return progress;
 }

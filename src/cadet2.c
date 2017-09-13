@@ -83,7 +83,7 @@ C2* c2_init_qcnf(QCNF* qcnf, Options* options) {
     c2->magic.decision_var_activity_modifier = (float) 0.8; // [-3.0..2.0]
     c2->magic.decay_rate = (float) 0.9;
     c2->magic.implication_graph_variable_activity = (float) 0.5;
-    c2->magic.major_restart_frequency = 20;
+    c2->magic.major_restart_frequency = 50;
     c2->magic.num_restarts_before_Jeroslow_Wang = options->easy_debugging_mode_c2 ? 0 : 3;
     c2->magic.num_restarts_before_case_splits = options->easy_debugging_mode_c2 ? 0 : 10;
 
@@ -558,7 +558,13 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                         c2->result = CADET_RESULT_SAT;
                     } else {
                         V1("Case split successfully completed, going into other case.\n");
+                        int_vector* solved_cube = int_vector_init();
+                        for (unsigned i = 0; i < int_vector_count(c2->case_split_stack); i++) {
+                            Lit l = int_vector_get(c2->case_split_stack, i);
+                            int_vector_add(solved_cube, -l);
+                        }
                         c2_backtrack_case_split(c2);
+                        cegar_new_cube(c2->skolem, solved_cube);
                         return c2->result;
                     }
                     if (c2->result == CADET_RESULT_SAT) {
@@ -633,6 +639,11 @@ cadet_res c2_check_propositional(QCNF* qcnf) {
 void c2_replenish_skolem_satsolver(C2* c2) {
     V1("Replenishing satsolver\n");
     
+    int_vector* old_case_split_stack = int_vector_copy(c2->case_split_stack);
+    while(c2->restart_base_decision_lvl > 0) {
+        c2_backtrack_case_split(c2);
+    }
+    
     // To be sure we did mess up we remember the skolem data structure's decision level and stack height
     assert(c2->skolem->decision_lvl == c2->restart_base_decision_lvl);
     unsigned old_skolem_dlvl = c2->skolem->decision_lvl;
@@ -658,17 +669,11 @@ void c2_replenish_skolem_satsolver(C2* c2) {
     
     skolem_free(old_skolem);
     
-    // make sure the skolem stack is on the right level
-    assert(c2->restart_base_decision_lvl <= 1); // otherwise code below has to be redone
-    while (c2->skolem->decision_lvl < c2->restart_base_decision_lvl) {
-        skolem_push(c2->skolem);
-        c2->skolem->decision_lvl += 1;
-    }
     assert(old_skolem_dlvl == c2->skolem->decision_lvl);
     assert(old_skolem_stack_height == c2->skolem->stack->push_count);
     
-    for (unsigned i = 0; i < int_vector_count(c2->case_split_stack); i++) {
-        Lit lit = int_vector_get(c2->case_split_stack, i);
+    for (unsigned i = 0; i < int_vector_count(old_case_split_stack); i++) {
+        Lit lit = int_vector_get(old_case_split_stack, i);
         if (skolem_get_constant_value(c2->skolem, lit) == 0) {
             c2_case_split_make_assumption(c2, lit);
         }

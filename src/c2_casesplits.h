@@ -17,7 +17,7 @@ float c2_notoriousity(C2* c2, Lit lit);
 float c2_notoriousity_threshold(C2* c2);
 
 int c2_pick_most_notorious_literal(C2* c2);
-
+bool c2_case_split_make_assumption(C2* c2, Lit lit);
 int_vector* c2_determine_notorious_determinsitic_variables(C2* c2);
 
 #endif /* c2_casesplits_h */

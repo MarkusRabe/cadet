@@ -10,6 +10,7 @@
 #define c2_cegar_h
 
 #include "cadet2.h"
+#include "float_vector.h"
 
 #include <stdio.h>
 typedef struct Cegar Cegar;
@@ -22,6 +23,8 @@ struct Cegar {
     
     vector* solved_cubes;
     
+    map* interface_activities; // contains the frequencies of the interface variabes as floats; does not decay in a VSID style (for now)
+    
     // Magic values
     unsigned cegar_effectiveness_threshold;
     
@@ -29,7 +32,6 @@ struct Cegar {
     unsigned successful_minimizations;
     unsigned additional_assignments_num;
     unsigned successful_minimizations_by_additional_assignments;
-    unsigned cubes_num;
     float recent_average_cube_size;
 };
 
@@ -50,9 +52,12 @@ void cegar_free(Cegar* c);
 cadet_res cegar_build_abstraction_for_assignment(C2*);
 int cegar_get_val(void* domain, Lit lit);
 cadet_res cegar_solve_2QBF(C2* c2, int rounds_num);
+void cegar_new_cube(Skolem* s, int_vector* cube);
 void cegar_do_cegar_if_effective(C2* c2);
 bool cegar_try_to_handle_conflict(Skolem* s);
 void cegar_print_statistics(Cegar*);
+float cegar_get_universal_activity(Cegar*, unsigned var_id);
+void cegar_add_universal_activity(Cegar*, unsigned var_id, float value);
 void cegar_update_interface(Skolem*);
 bool cegar_is_initialized(Cegar*);
 

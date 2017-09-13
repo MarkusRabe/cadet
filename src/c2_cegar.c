@@ -9,6 +9,7 @@
 #include "c2_cegar.h"
 #include "log.h"
 
+#include <math.h>
 
 Cegar* cegar_init(QCNF* qcnf) {
     Cegar* cegar = malloc(sizeof(Cegar));
@@ -17,6 +18,7 @@ Cegar* cegar_init(QCNF* qcnf) {
     cegar->solved_cubes = vector_init();
     cegar->exists_solver = NULL; // no initialized yet; see cegar_update_interface
     cegar->interface_vars = NULL;
+    cegar->interface_activities = map_init();
     
     // Magic values
     cegar->cegar_effectiveness_threshold = 20;
@@ -25,9 +27,7 @@ Cegar* cegar_init(QCNF* qcnf) {
     cegar->successful_minimizations = 0;
     cegar->additional_assignments_num = 0;
     cegar->successful_minimizations_by_additional_assignments = 0;
-    cegar->cubes_num = 0;
     cegar->recent_average_cube_size = 0;
-    
     
     cegar->is_used_in_lemma = int_vector_init();
     // initialize vector of bits saying we need this variable in the blocking clause
@@ -39,7 +39,39 @@ Cegar* cegar_init(QCNF* qcnf) {
 }
 
 bool cegar_is_initialized(Cegar* cegar) {
-    return cegar->interface_vars;
+    return cegar->interface_vars != NULL;
+}
+
+
+union voidptr_or_float {
+    float f;
+    void * vp;
+};
+static inline float voidptr_to_float(void* val) {
+    union voidptr_or_float x;
+    x.vp = val;
+    return x.f;
+}
+static inline void* float_to_voidptr(float val) {
+    union voidptr_or_float x;
+    x.f = val;
+    return x.vp;
+}
+float cegar_get_universal_activity(Cegar* cegar, unsigned var_id) {
+    if (map_contains(cegar->interface_activities, (int) var_id)) {
+        return voidptr_to_float(map_get(cegar->interface_activities, (int) var_id));
+    } else {
+        return (float) 0.0;
+    }
+}
+
+void cegar_add_universal_activity(Cegar* cegar, unsigned var_id, float value) {
+    if (map_contains(cegar->interface_activities, (int) var_id)) {
+        float old = cegar_get_universal_activity(cegar, var_id);
+        map_update(cegar->interface_activities, (int) var_id, float_to_voidptr(old + value));
+    } else {
+        map_add(cegar->interface_activities, (int) var_id, float_to_voidptr(value));
+    }
 }
 
 void cegar_update_interface(Skolem* s) {
@@ -97,12 +129,14 @@ void cegar_update_interface(Skolem* s) {
     V1("\n");
     
     // Interface should only extend; otherwise the cubes in solved_cubes may refer to non-deterministic variables
-    if (debug_verbosity >= VERBOSITY_HIGH && old_interface != NULL) {
-        for (unsigned i = 0; i < int_vector_count(old_interface); i++) {
-            assert(int_vector_contains(cegar->interface_vars, int_vector_get(old_interface, i)));
+    if (old_interface != NULL) {
+        if (debug_verbosity >= VERBOSITY_HIGH) {
+            for (unsigned i = 0; i < int_vector_count(old_interface); i++) {
+                assert(int_vector_contains(cegar->interface_vars, int_vector_get(old_interface, i)));
+            }
         }
+        free(old_interface);
     }
-    free(old_interface);
 }
 
 bool cegar_var_needs_to_be_set(Cegar* cegar, unsigned var_id) {
@@ -158,10 +192,14 @@ bool cegar_var_needs_to_be_set(Cegar* cegar, unsigned var_id) {
 
 void cegar_free(Cegar* c) {
     satsolver_free(c->exists_solver);
-    int_vector_free(c->interface_vars);
+    if (c->interface_vars) {
+        int_vector_free(c->interface_vars);
+    }
+    map_free(c->interface_activities);
     int_vector_free(c->is_used_in_lemma);
     for (unsigned i = 0; i < vector_count(c->solved_cubes); i++) {
-        int_vector_free((int_vector*)vector_get(c->solved_cubes, i));
+        int_vector* cube = (int_vector*) vector_get(c->solved_cubes, i);
+        int_vector_free(cube);
     }
     vector_free(c->solved_cubes);
 }
@@ -207,6 +245,34 @@ int cegar_get_val(void* domain, Lit lit) {
     return val;
 }
 
+void cegar_new_cube(Skolem* s, int_vector* cube) {
+    V1("CEGAR adding cube (with length %u) ", int_vector_count(cube));
+    
+    vector_add(s->cegar->solved_cubes, cube);
+    
+    for (unsigned i = 0; i < int_vector_count(cube); i++) {
+        Lit lit = int_vector_get(cube, i);
+        assert(skolem_is_deterministic(s, lit_to_var(lit)));
+        V3("%d ", lit);
+        int satlit = skolem_get_satsolver_lit(s, lit);
+        satsolver_add(s->skolem, satlit);
+    }
+    satsolver_clause_finished_for_context(s->skolem, 0);
+    V1("\n");
+    
+    // TODO: we should insert a real clause here, to enable propagation among the universals. But universal reduction might collapse these clauses to empty clauses ... not good.
+    
+    if (int_vector_count(cube) < 20) { // prevent tinitiny increments, NaN-hell, etc
+        float activity_bump = (float) ((double) 1.0 / pow(2.0, (double) int_vector_count(cube)));
+        for (unsigned i = 0; i < int_vector_count(cube); i++) {
+            unsigned var_id = lit_to_var(int_vector_get(cube, i));
+            cegar_add_universal_activity(s->cegar, var_id, activity_bump);
+        }
+    }
+    
+    s->cegar->recent_average_cube_size = (float) int_vector_count(cube) * (float) 0.1 + s->cegar->recent_average_cube_size * (float) 0.9;
+}
+
 cadet_res cegar_build_abstraction_for_assignment(C2* c2) {
     assert(cegar_is_initialized(c2->skolem->cegar));
     assert(c2->result == CADET_RESULT_UNKNOWN);
@@ -235,7 +301,6 @@ cadet_res cegar_build_abstraction_for_assignment(C2* c2) {
     
     if (satsolver_sat(cegar->exists_solver) == SATSOLVER_RESULT_SAT) {
         
-        V1("CEGAR adding clause: ");
         int_vector_reset(cegar->additional_assignment);
         int_vector* cube = int_vector_init();
         
@@ -245,21 +310,12 @@ cadet_res cegar_build_abstraction_for_assignment(C2* c2) {
             
             if (cegar_var_needs_to_be_set(cegar, var_id)) {
                 Lit lit = - val * (Lit) var_id;
-                V3("%d ", lit);
                 int_vector_add(cube, lit);
-                int satlit = skolem_get_satsolver_lit(c2->skolem, lit);
-                satsolver_add(c2->skolem->skolem, satlit);
             } else {
                 int_vector_set(cegar->is_used_in_lemma, var_id, 0);
             }
         }
-        satsolver_clause_finished_for_context(c2->skolem->skolem, 0);
-        
-        V1(" ... length %u\n", int_vector_count(cube));
-        vector_add(cegar->solved_cubes, cube);
-        
-        cegar->cubes_num += 1;
-        cegar->recent_average_cube_size = (float) int_vector_count(cube) * (float) 0.1 + cegar->recent_average_cube_size * (float) 0.9;
+        cegar_new_cube(c2->skolem, cube);
     } else {
         c2->state = C2_CEGAR_CONFLICT;
         c2->result = CADET_RESULT_UNSAT;
@@ -295,10 +351,8 @@ bool cegar_try_to_handle_conflict(Skolem* s) {
     
     if (satsolver_sat(cegar->exists_solver) == SATSOLVER_RESULT_SAT) {
         
-        V1("CEGAR adding clause (inplace): ");
         int_vector_reset(cegar->additional_assignment);
         int_vector* cube = int_vector_init();
-        
 
         for (unsigned i = 0 ; i < int_vector_count(cegar->interface_vars); i++) {
             unsigned var_id = (unsigned) int_vector_get(cegar->interface_vars, i);
@@ -306,26 +360,13 @@ bool cegar_try_to_handle_conflict(Skolem* s) {
             
             if (cegar_var_needs_to_be_set(cegar, var_id)) {
                 Lit lit = - val * (Lit) var_id;
-                V3("%d ", lit);
                 int_vector_add(cube, lit);
             } else {
                 int_vector_set(cegar->is_used_in_lemma, var_id, 0);
             }
         }
         
-        V1(" ... length %u\n", int_vector_count(cube));
-        
-        vector_add(cegar->solved_cubes, cube);
-        
-        for (unsigned i = 0 ; i < int_vector_count(cube); i++) {
-            int lit = int_vector_get(cube, i);
-            int satlit = skolem_get_satsolver_lit(s, lit);
-            satsolver_add(s->skolem, satlit);
-        }
-        satsolver_clause_finished_for_context(s->skolem, 0);
-        
-        cegar->cubes_num += 1;
-        cegar->recent_average_cube_size = (float) int_vector_count(cube) * (float) 0.1 + cegar->recent_average_cube_size * (float) 0.9;
+        cegar_new_cube(s, cube);
         
         if ((float) int_vector_count(cube) < cegar->cegar_effectiveness_threshold) {
             return true;
@@ -343,7 +384,7 @@ void cegar_print_statistics(Cegar* cegar) {
     if (cegar && cegar_is_initialized(cegar)) {
         V0("Cegar statistics:\n");
         V0("  Interface size: %u\n", int_vector_count(cegar->interface_vars));
-        V0("  Number of cubes: %u\n", cegar->cubes_num);
+        V0("  Number of cubes: %u\n", vector_count(cegar->solved_cubes));
         V0("  Successful minimizations: %u\n", cegar->successful_minimizations);
         V0("  Additional assignments: %u\n", cegar->additional_assignments_num);
         V0("  Additional assignments helped: %u\n", cegar->successful_minimizations_by_additional_assignments);

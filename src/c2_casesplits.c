@@ -41,16 +41,15 @@ void c2_backtrack_case_split(C2* c2) {
     assert(c2->restart_base_decision_lvl == 0);
 
     int_vector* solved_cube = int_vector_init();
-    vector_add(c2->skolem->cegar->solved_cubes, solved_cube);
     for (unsigned i = 0; i < int_vector_count(c2->case_split_stack); i++) {
         Lit l = int_vector_get(c2->case_split_stack, i);
         assert(skolem_is_deterministic(c2->skolem,lit_to_var(l)));
         assert(skolem_get_constant_value(c2->skolem, l) == 0);
-        satsolver_add(c2->skolem->skolem, skolem_get_satsolver_lit(c2->skolem, - l));
         int_vector_add(solved_cube, -l);
     }
-    satsolver_clause_finished(c2->skolem->skolem);
-
+    
+    cegar_new_cube(c2->skolem, solved_cube);
+    
     // check learnt clauses for unique consequences ... the last backtracking may have removed the unique consequences
     for (unsigned i = vector_count(c2->qcnf->clauses); i > 0; i--) {
         Clause* c = vector_get(c2->qcnf->clauses, i-1);
@@ -106,10 +105,10 @@ Lit c2_case_split_pick_literal(C2* c2) {
     float max_total = 0.0;
     Lit lit = 0;
     for (unsigned i = 0; i < int_vector_count(c2->skolem->cegar->interface_vars); i++) {
-//    }
-//    for (unsigned i = 1; i < var_vector_count(c2->qcnf->vars); i++) {
-        assert(int_vector_get(c2->skolem->cegar->interface_vars, i) > 0);
         unsigned var_id = (unsigned) int_vector_get(c2->skolem->cegar->interface_vars, i);
+        assert(int_vector_get(c2->skolem->cegar->interface_vars, i) > 0);
+//    for (unsigned i = 1; i < var_vector_count(c2->qcnf->vars); i++) {
+//        unsigned var_id = i;
         Var* v = var_vector_get(c2->qcnf->vars, var_id);
         assert(v->var_id == var_id);
         if (var_id != 0
@@ -119,13 +118,18 @@ Lit c2_case_split_pick_literal(C2* c2) {
             unsigned propagations_pos = c2_case_split_assume_constant(c2,   (Lit) v->var_id);
             unsigned propagations_neg = c2_case_split_assume_constant(c2, - (Lit) v->var_id);
             
+            assert(propagations_pos < 1000000 && propagations_neg < 1000000); // avoid overflows
+            
             if (propagations_pos == UINT_MAX || propagations_neg == UINT_MAX) {
                 // we found a failed literal
                 lit = (propagations_pos > propagations_neg ? 1 : - 1) * (Lit) v->var_id;
                 break;
             }
-            float combined_quality = ((float) 1.0 + c2_get_activity(c2, v->var_id)) * (float) (propagations_pos * propagations_neg + propagations_pos + propagations_neg);
-            assert(propagations_pos < 1000000 && propagations_neg < 1000000); // their product is still a uint
+            float factor =
+                (float) 1.0
+//                + c2_get_activity(c2, v->var_id)
+                + cegar_get_universal_activity(c2->skolem->cegar, v->var_id);
+            float combined_quality = factor * (float) (propagations_pos * propagations_neg + propagations_pos + propagations_neg);
             if (combined_quality > max_total) {
                 lit = (propagations_pos > propagations_neg ? 1 : - 1) * (Lit) v->var_id;
                 max_total = combined_quality;
@@ -138,6 +142,64 @@ Lit c2_case_split_pick_literal(C2* c2) {
         V1(" has quality %.2f\n", max_total);
     }
     return lit;
+}
+
+bool c2_case_split_make_assumption(C2* c2, Lit lit) {
+    bool progress = false;
+    
+    satsolver_assume(c2->skolem->skolem, skolem_get_satsolver_lit(c2->skolem, lit));
+    
+    sat_res res = satsolver_sat(c2->skolem->skolem);
+    if (res != SATSOLVER_SATISFIABLE) {
+        V1("This case admits no assignments to the universals that are consistent with dlvl 0, switching polarity and assuming %d instead.\n", - lit);
+        
+        lit = - lit;
+        
+        satsolver_assume(c2->skolem->skolem, skolem_get_satsolver_lit(c2->skolem, lit));
+        sat_res res = satsolver_sat(c2->skolem->skolem);
+        assert(c2->skolem->decision_lvl == c2->restart_base_decision_lvl);
+        if (res == SATSOLVER_UNSATISFIABLE) {
+            V1("Also the SAT check of the other polarity failed. Exhausted the search space on the universal side.\n");
+            assert(c2->result == CADET_RESULT_UNKNOWN);
+            if (int_vector_count(c2->case_split_stack) == 0) {
+                c2->result = CADET_RESULT_SAT;
+            } else {
+                abortif(! c2->options->cegar, "This case can only occur when something else fiddles with the assumptions.");
+                V1("Case split successfully completed through CEGAR-Case Split interaction.\n");
+                c2_backtrack_case_split(c2);
+            }
+            progress = true;
+            lit = 0; // suppresses that case split happens
+        }
+    }
+    
+    if (lit != 0) {
+        progress = true;
+        
+        if (int_vector_count(c2->case_split_stack) == 0) {
+            c2->statistics.cases_explored += 1;
+            stack_push(c2->stack);
+            c2_push(c2);
+            c2->skolem->decision_lvl +=1;
+            c2->restart_base_decision_lvl += 1;
+        }
+        
+        int_vector_add(c2->case_split_stack, lit);
+        V1("  New case split depth is %u\n", int_vector_count(c2->case_split_stack));
+        assert(skolem_is_deterministic(c2->skolem, lit_to_var(lit)));
+        skolem_assume_constant_value(c2->skolem, lit);
+        
+        skolem_propagate(c2->skolem);
+        
+        if (skolem_is_conflicted(c2->skolem)) { // actual conflict
+            assert(c2->skolem->decision_lvl == c2->restart_base_decision_lvl); // otherwise we need to go into conflict analysis
+            V1("Case split lead to immediate conflict.\n");
+            assert(c2->result == CADET_RESULT_UNKNOWN);
+            c2->result = CADET_RESULT_UNSAT;
+            c2->state = C2_SKOLEM_CONFLICT;
+        }
+    }
+    return progress;
 }
 
 bool c2_case_split(C2* c2) {
@@ -155,7 +217,7 @@ bool c2_case_split(C2* c2) {
 //    Lit most_notorious_literal = c2_pick_most_notorious_literal(c2);
     Lit most_notorious_literal = c2_case_split_pick_literal(c2);
     if (most_notorious_literal != 0) {
-        unsigned conflicts_between_case_splits = 1;
+        unsigned conflicts_between_case_splits = 0;
         if (c2->case_split_depth_penalty == C2_CASE_SPLIT_DEPTH_PENALTY_LINEAR) {
             conflicts_between_case_splits = int_vector_count(c2->case_split_stack);
         }
@@ -166,59 +228,9 @@ bool c2_case_split(C2* c2) {
             abort(); // not yet implemented
         }
         c2->conflicts_between_case_splits_countdown = conflicts_between_case_splits + 1;
-
-        satsolver_assume(c2->skolem->skolem, skolem_get_satsolver_lit(c2->skolem, most_notorious_literal));
-
-        sat_res res = satsolver_sat(c2->skolem->skolem);
-        if (res != SATSOLVER_SATISFIABLE) {
-            V1("This case admits no assignments to the universals that are consistent with dlvl 0, switching polarity and assuming %d instead.\n", - most_notorious_literal);
-
-            most_notorious_literal = - most_notorious_literal;
-
-            satsolver_assume(c2->skolem->skolem, skolem_get_satsolver_lit(c2->skolem, most_notorious_literal));
-            sat_res res = satsolver_sat(c2->skolem->skolem);
-            assert(c2->skolem->decision_lvl == c2->restart_base_decision_lvl);
-            if (res == SATSOLVER_UNSATISFIABLE) {
-                V1("Also the SAT check of the other polarity failed. Exhausted the search space on the universal side.\n");
-                assert(c2->result == CADET_RESULT_UNKNOWN);
-                if (int_vector_count(c2->case_split_stack) == 0) {
-                    c2->result = CADET_RESULT_SAT;
-                } else {
-                    abortif(! c2->options->cegar, "This case can only occur when something else fiddles with the assumptions.");
-                    V1("Case split successfully completed through CEGAR-Case Split interaction.\n");
-                    c2_backtrack_case_split(c2);
-                }
-                progress = true;
-                most_notorious_literal = 0; // suppresses that case split happens
-            }
-        }
-
-        if (most_notorious_literal != 0) {
-            progress = true;
-            
-            if (int_vector_count(c2->case_split_stack) == 0) {
-                c2->statistics.cases_explored += 1;
-                stack_push(c2->stack);
-                c2_push(c2);
-                c2->skolem->decision_lvl +=1;
-                c2->restart_base_decision_lvl += 1;
-            }
-            
-            int_vector_add(c2->case_split_stack, most_notorious_literal);
-            V1("  New case split depth is %u\n", int_vector_count(c2->case_split_stack));
-            assert(skolem_is_deterministic(c2->skolem, lit_to_var(most_notorious_literal)));
-            skolem_assume_constant_value(c2->skolem, most_notorious_literal);
-
-            skolem_propagate(c2->skolem);
-
-            if (skolem_is_conflicted(c2->skolem)) { // actual conflict
-                assert(c2->skolem->decision_lvl == c2->restart_base_decision_lvl); // otherwise we need to go into conflict analysis
-                V1("Case split lead to immediate conflict.\n");
-                assert(c2->result == CADET_RESULT_UNKNOWN);
-                c2->result = CADET_RESULT_UNSAT;
-                c2->state = C2_SKOLEM_CONFLICT;
-            }
-        }
+        
+        progress = c2_case_split_make_assumption(c2, most_notorious_literal);
+        
     } else {
         V1("Case split not successful; no failed literals detected.\n");
     }

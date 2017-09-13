@@ -508,17 +508,18 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                     c2_backtrack_to_decision_lvl(c2, c2->restart_base_decision_lvl);
                     c2->state = C2_READY;
 
-                    V2("Functional synthesis exludes cube:");
+                    V2("Functional synthesis exluded cube.");
                     for (unsigned i = 0; i < int_vector_count(c2->current_conflict); i++) {
                         int lit = int_vector_get(c2->current_conflict, i);
-                        satsolver_add(c2->skolem->skolem, skolem_get_satsolver_lit(c2->skolem, - lit));
-                        V2("%d", - lit);
+                        int_vector_set(c2->current_conflict, i, - lit);
                     }
-                    V2("\n");
-//                    satsolver_clause_finished(c2->skolem->skolem);
-                    satsolver_clause_finished_for_context(c2->skolem->skolem, 0);
-                    vector_add(c2->skolem->cegar->solved_cubes, c2->current_conflict);
+                    
+                    cegar_new_cube(c2->skolem, c2->current_conflict);
+                    
                     V1("Functional synthesis detected a cube of length %u that is over dlvl0 only. We exclude it from future conflict checks.\n", int_vector_count(c2->current_conflict));
+                    
+                    c2->current_conflict = NULL;
+                    
                     continue;
                 }
 
@@ -649,26 +650,28 @@ void c2_replenish_skolem_satsolver(C2* c2) {
     assert(vector_count(old_skolem->cegar->solved_cubes) == 0 || c2->options->cegar || c2->options->case_splits);
     
     // Now, we re-introduce the cubes that we have solved already.
-    for (unsigned i = 0; i < vector_count(c2->skolem->cegar->solved_cubes); i++) {
-        int_vector* cube = (int_vector*) vector_get(c2->skolem->cegar->solved_cubes, i);
-        for (unsigned j = 0; j < int_vector_count(cube); j++) {
-            Lit lit = int_vector_get(cube, j);
-            assert(skolem_is_deterministic(c2->skolem, lit_to_var(lit)));
-            int satlit = skolem_get_satsolver_lit(c2->skolem, lit);
-            satsolver_add(c2->skolem->skolem, satlit);
-        }
-        satsolver_clause_finished_for_context(c2->skolem->skolem, 0);
+    for (unsigned i = 0; i < vector_count(old_skolem->cegar->solved_cubes); i++) {
+        int_vector* cube = (int_vector*) vector_get(old_skolem->cegar->solved_cubes, i);
+        int_vector* cube_copy = int_vector_copy(cube);
+        cegar_new_cube(c2->skolem, cube_copy);
     }
     
     skolem_free(old_skolem);
     
     // make sure the skolem stack is on the right level
+    assert(c2->restart_base_decision_lvl <= 1); // otherwise code below has to be redone
     while (c2->skolem->decision_lvl < c2->restart_base_decision_lvl) {
         skolem_push(c2->skolem);
         c2->skolem->decision_lvl += 1;
     }
     assert(old_skolem_dlvl == c2->skolem->decision_lvl);
     assert(old_skolem_stack_height == c2->skolem->stack->push_count);
+    
+    for (unsigned i = 0; i < int_vector_count(c2->case_split_stack); i++) {
+        Lit lit = int_vector_get(c2->case_split_stack, i);
+        c2_case_split_make_assumption(c2, lit);
+    }
+    abortif(c2_is_in_conflcit(c2) || c2->result != CADET_RESULT_UNKNOWN, "Illegal state afte replenishing");
 }
 
 

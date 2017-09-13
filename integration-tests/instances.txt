@@ -7116,7 +7116,6 @@ integration-tests/rf28rr.qdimacs | 10
 ../qbf-benchmarks/evaluations/qbfeval2017-2QBF/itc-b13-fixpoint-8.qdimacs.gz | 30
 ../qbf-benchmarks/evaluations/qbfeval2017-2QBF/itc-b13-fixpoint-9.qdimacs.gz | 30
 ../qbf-benchmarks/evaluations/qbfeval2017-2QBF/kenflashp04.qdimacs.gz | 30
-../qbf-benchmarks/evaluations/qbfeval2017-2QBF/load_2c_comp_comp7_REAL.sat.qdimacs | 30
 ../qbf-benchmarks/evaluations/qbfeval2017-2QBF/load_2c_comp_comp7_REAL.sat.qdimacs.gz | 30
 ../qbf-benchmarks/evaluations/qbfeval2017-2QBF/load_3c_comp_comp6_REAL.sat.qdimacs.gz | 30
 ../qbf-benchmarks/evaluations/qbfeval2017-2QBF/load_4c_comp_comp4_REAL.sat.qdimacs.gz | 30

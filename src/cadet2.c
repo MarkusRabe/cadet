@@ -624,16 +624,10 @@ cadet_res c2_check_propositional(QCNF* qcnf) {
 void c2_replenish_skolem_satsolver(C2* c2) {
     V1("Replenishing satsolver\n");
     
-    int_vector* old_case_split_stack = int_vector_copy(c2->case_split_stack);
-    while(c2->restart_base_decision_lvl > 0) {
-        c2_backtrack_case_split(c2);
-    }
-    
     // To be sure we did mess up we remember the skolem data structure's decision level and stack height
-    assert(c2->skolem->decision_lvl == c2->restart_base_decision_lvl);
-    unsigned old_skolem_dlvl = c2->skolem->decision_lvl;
-    unsigned old_skolem_stack_height = c2->skolem->stack->push_count;
-    
+    assert(c2->skolem->decision_lvl == 0);
+    assert(c2->restart_base_decision_lvl == 0);
+    assert(c2->skolem->decision_lvl == 0);
     Skolem* old_skolem = c2->skolem;
     
     c2->skolem = skolem_init(c2->qcnf,c2->options,vector_count(c2->qcnf->scopes),0);
@@ -645,7 +639,7 @@ void c2_replenish_skolem_satsolver(C2* c2) {
     
     assert(vector_count(old_skolem->cegar->solved_cubes) == 0 || c2->options->cegar || c2->options->case_splits);
     
-    // Now, we re-introduce the cubes that we have solved already.
+    // Copy the cubes that we have solved already.
     for (unsigned i = 0; i < vector_count(old_skolem->cegar->solved_cubes); i++) {
         int_vector* cube = (int_vector*) vector_get(old_skolem->cegar->solved_cubes, i);
         int_vector* cube_copy = int_vector_copy(cube);
@@ -654,29 +648,20 @@ void c2_replenish_skolem_satsolver(C2* c2) {
     
     skolem_free(old_skolem);
     
-    assert(old_skolem_dlvl == c2->skolem->decision_lvl);
-    assert(old_skolem_stack_height == c2->skolem->stack->push_count);
-    
-    for (unsigned i = 0; i < int_vector_count(old_case_split_stack); i++) {
-        Lit lit = int_vector_get(old_case_split_stack, i);
-        if (skolem_get_constant_value(c2->skolem, lit) == 0) {
-            c2_case_splits_make_assumption(c2, lit);
-        }
-    }
     abortif(c2_is_in_conflcit(c2) || c2->result != CADET_RESULT_UNKNOWN, "Illegal state afte replenishing");
 }
 
 
 void c2_restart_heuristics(C2* c2) {
     c2->next_restart = (unsigned) (c2->next_restart * c2->magic.restart_factor) + 1;
+    c2_rescale_activity_values(c2);
     
-    // Major or minor restart?
-    if (c2->restarts % c2->magic.major_restart_frequency == c2->magic.major_restart_frequency - 1) {
+    if (c2->next_major_restart == 0) {
         V1("Major restart. Resetting all activity values to 0 and some random ones to 1.\n");
         for (unsigned i = 0; i < var_vector_count(c2->qcnf->vars); i++) {
             c2_set_activity(c2, i, 0.0f);
         }
-        c2->activity_factor = 1.0f;
+        assert(c2->activity_factor == 1.0f);
         // bump the activities of some random vars
         for (unsigned i = 1; i <= 100 && i < var_vector_count(c2->qcnf->vars); i++) {
             unsigned random_var_id = (unsigned) (1 + (rand() % ((int)var_vector_count(c2->qcnf->vars) - 1)));
@@ -686,11 +671,23 @@ void c2_restart_heuristics(C2* c2) {
             }
         }
         
+        V1("Stepping out of case split.\n"); // Needed to simplify replenishing
+        while (int_vector_count(c2->case_split_stack) > 0) {
+            c2_backtrack_case_split(c2);
+        }
+        
 #if (USE_SOLVER == SOLVER_PICOSAT_ASSUMPTIONS) // This is a workaround for an annoying bug in picosat
         c2_replenish_skolem_satsolver(c2);
 #endif
-    } else { // Minor restart
-        c2_rescale_activity_values(c2);
+
+        c2->next_major_restart = c2->magic.major_restart_frequency + (c2->restarts / 4);
+        
+    } else {
+        c2->next_major_restart -= 1;
+    }
+    if (c2->restarts % c2->magic.major_restart_frequency == c2->magic.major_restart_frequency - 1) {
+            } else { // Minor restart
+        
     }
 }
 

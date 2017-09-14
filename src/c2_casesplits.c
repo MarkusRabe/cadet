@@ -310,6 +310,9 @@ int_vector* c2_determine_notorious_determinsitic_variables(C2* c2) {
 
 void c2_case_splits_successful_case_completion(C2* c2) {
     V1("Case split successfully completed.\n");
+    
+//    c2_case_split_certify(c2);
+    
     int_vector* solved_cube = int_vector_init();
     for (unsigned i = 0; i < int_vector_count(c2->case_split_stack); i++) {
         Lit l = int_vector_get(c2->case_split_stack, i);

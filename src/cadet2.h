@@ -77,6 +77,7 @@ struct C2 {
     cadet_res result;
     size_t restarts;
     unsigned next_restart;
+    size_t next_major_restart;
     unsigned restart_base_decision_lvl; // decision_lvl used for restarts
     Stack* stack; // for backtracking
     int_vector* current_conflict;

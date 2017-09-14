@@ -552,27 +552,9 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
 
             if (decision_var == NULL) { // no variable could be found
                 if (int_vector_count(c2->skolem->potentially_conflicted_variables) == 0) {
-                    if (int_vector_count(c2->case_split_stack) == 0) {
-                        // SAT
-                        assert(c2->result == CADET_RESULT_UNKNOWN);
-                        c2->result = CADET_RESULT_SAT;
-                    } else {
-                        V1("Case split successfully completed, going into other case.\n");
-                        int_vector* solved_cube = int_vector_init();
-                        for (unsigned i = 0; i < int_vector_count(c2->case_split_stack); i++) {
-                            Lit l = int_vector_get(c2->case_split_stack, i);
-                            int_vector_add(solved_cube, -l);
-                        }
-                        c2_backtrack_case_split(c2);
-                        cegar_new_cube(c2->skolem, solved_cube);
-                        if (int_vector_count(solved_cube) == 1) {
-                            c2_case_split_make_assumption(c2, - int_vector_get(solved_cube, 0));
-                        }
-                        return c2->result;
-                    }
-                    if (c2->result == CADET_RESULT_SAT) {
-                        return c2->result;
-                    }
+                    assert(c2->result == CADET_RESULT_UNKNOWN);
+                    c2->result = CADET_RESULT_SAT;
+                    return c2->result;
                 } else {
                     skolem_global_conflict_check(c2->skolem, false);
                 }
@@ -678,7 +660,7 @@ void c2_replenish_skolem_satsolver(C2* c2) {
     for (unsigned i = 0; i < int_vector_count(old_case_split_stack); i++) {
         Lit lit = int_vector_get(old_case_split_stack, i);
         if (skolem_get_constant_value(c2->skolem, lit) == 0) {
-            c2_case_split_make_assumption(c2, lit);
+            c2_case_splits_make_assumption(c2, lit);
         }
     }
     abortif(c2_is_in_conflcit(c2) || c2->result != CADET_RESULT_UNKNOWN, "Illegal state afte replenishing");
@@ -776,6 +758,10 @@ cadet_res c2_sat(C2* c2) {
     while (c2->result == CADET_RESULT_UNKNOWN) { // This loop controls the restarts
         c2_run(c2, c2->next_restart);
 
+        if (c2->result == CADET_RESULT_SAT && int_vector_count(c2->case_split_stack) != 0) {
+            c2_case_splits_successful_case_completion(c2);
+        }
+        
         if (c2->result == CADET_RESULT_UNKNOWN) {
             V1("Restart %zu\n", c2->restarts);
             assert(c2->skolem->decision_lvl == c2->restart_base_decision_lvl);

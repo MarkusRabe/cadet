@@ -130,7 +130,7 @@ Lit c2_case_split_pick_literal(C2* c2) {
     return lit;
 }
 
-bool c2_case_split_make_assumption(C2* c2, Lit lit) {
+bool c2_case_splits_make_assumption(C2* c2, Lit lit) {
     bool progress = false;
     
     satsolver_assume(c2->skolem->skolem, skolem_get_satsolver_lit(c2->skolem, lit));
@@ -150,16 +150,8 @@ bool c2_case_split_make_assumption(C2* c2, Lit lit) {
             if (int_vector_count(c2->case_split_stack) == 0) {
                 c2->result = CADET_RESULT_SAT;
             } else {
-                abortif(! c2->options->cegar, "This case can only occur when something else fiddles with the assumptions.");
-                V1("Case split successfully completed through CEGAR-Case Split interaction.\n");
-                
-                int_vector* solved_cube = int_vector_init();
-                for (unsigned i = 0; i < int_vector_count(c2->case_split_stack); i++) {
-                    Lit l = int_vector_get(c2->case_split_stack, i);
-                    int_vector_add(solved_cube, -l);
-                }
-                c2_backtrack_case_split(c2);
-                cegar_new_cube(c2->skolem, solved_cube);
+                abortif(! c2->options->cegar, "This case can only occur when something else added assumptions.");
+                c2_case_splits_successful_case_completion(c2);
             }
             progress = true;
             lit = 0; // suppresses that case split happens
@@ -224,7 +216,7 @@ bool c2_case_split(C2* c2) {
         }
         c2->conflicts_between_case_splits_countdown = conflicts_between_case_splits + 1;
         
-        progress = c2_case_split_make_assumption(c2, most_notorious_literal);
+        progress = c2_case_splits_make_assumption(c2, most_notorious_literal);
         
     } else {
         V1("Case split not successful; no failed literals detected.\n");
@@ -314,4 +306,24 @@ int_vector* c2_determine_notorious_determinsitic_variables(C2* c2) {
         }
     }
     return notorious_lits;
+}
+
+void c2_case_splits_successful_case_completion(C2* c2) {
+    V1("Case split successfully completed.\n");
+    int_vector* solved_cube = int_vector_init();
+    for (unsigned i = 0; i < int_vector_count(c2->case_split_stack); i++) {
+        Lit l = int_vector_get(c2->case_split_stack, i);
+        int_vector_add(solved_cube, -l);
+    }
+    c2_backtrack_case_split(c2);
+    cegar_new_cube(c2->skolem, solved_cube);
+    
+    c2->result = CADET_RESULT_UNKNOWN;
+    
+    if (int_vector_count(solved_cube) == 1) {
+        c2_case_splits_make_assumption(c2, - int_vector_get(solved_cube, 0));
+    }
+    if (satsolver_sat(c2->skolem->skolem) == SATSOLVER_RESULT_UNSAT) {
+        c2->result = CADET_RESULT_SAT;
+    }
 }

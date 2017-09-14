@@ -281,6 +281,7 @@ void cegar_new_cube(Skolem* s, int_vector* cube) {
     }
     
     s->cegar->recent_average_cube_size = (float) int_vector_count(cube) * (float) 0.1 + s->cegar->recent_average_cube_size * (float) 0.9;
+    
 }
 
 cadet_res cegar_build_abstraction_for_assignment(C2* c2) {

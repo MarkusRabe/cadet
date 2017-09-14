@@ -60,6 +60,7 @@ C2* c2_init_qcnf(QCNF* qcnf, Options* options) {
 
     // Case splits
     c2->case_split_stack = int_vector_init();
+    c2->case_split_depth = 0;
     c2->decisions_since_last_conflict = 0;
 
     // Statistics
@@ -232,7 +233,6 @@ void c2_backtrack_to_decision_lvl(C2 *c2, unsigned backtracking_lvl) {
     assert(c2->stack->push_count == c2->examples->stack->push_count);
     while (c2->stack->push_count > backtracking_lvl) {
         assert(c2->stack->push_count > 0);
-        stack_pop(c2->stack, c2);
         c2_pop(c2);
     }
 }
@@ -578,7 +578,6 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                 // Pushing before the actual decision is important to keep things
                 // clean (think of decisions on level 0). This is not a decision yet,
                 // so decision_lvl is not yet increased.
-                stack_push(c2->stack);
                 c2_push(c2);
 
                 c2->statistics.decisions += 1;
@@ -674,9 +673,8 @@ void c2_restart_heuristics(C2* c2) {
         }
         
         V1("Stepping out of case split.\n"); // Needed to simplify replenishing
-        while (int_vector_count(c2->case_split_stack) > 0) {
-            c2_backtrack_case_split(c2);
-        }
+        
+        c2_backtrack_case_split(c2);
         
 #if (USE_SOLVER == SOLVER_PICOSAT_ASSUMPTIONS) // This is a workaround for an annoying bug in picosat
         c2_replenish_skolem_satsolver(c2);
@@ -767,9 +765,9 @@ cadet_res c2_sat(C2* c2) {
             c2->restarts += 1;
             c2_restart_heuristics(c2);
             
-            c2_propagate(c2);
+            c2_propagate(c2); // clear propagation queue to avoid weird conflicts with case splits
             if (! c2_is_in_conflcit(c2)) {
-                c2_case_split(c2); //Does it serve any purpose to check this here? Was used to pass a decision in original use
+                c2_case_split(c2);
             }
         }
     }
@@ -859,11 +857,13 @@ cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
 }
 
 void c2_push(C2* c2) {
+    stack_push(c2->stack);
     skolem_push(c2->skolem);
     qcnf_push(c2->qcnf);
     examples_push(c2->examples);
 }
 void c2_pop(C2* c2) {
+    stack_pop(c2->stack, c2);
     skolem_pop(c2->skolem);
     qcnf_pop(c2->qcnf);
     examples_pop(c2->examples);
@@ -881,6 +881,11 @@ void c2_undo(void* parent, char type, void* obj) {
             val_vector_set(c2->decision_vals, var_id, old_val);
             break;
 
+        case C2_OP_UNIVERSAL_ASSUMPTION:
+            assert(true);
+            c2_case_splits_undo_assumption(c2, obj);
+            break;
+            
         default:
             V0("Unknown undo operation in cadet2.c.\n");
             NOT_IMPLEMENTED();

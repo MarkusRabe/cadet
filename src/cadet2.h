@@ -91,6 +91,7 @@ struct C2 {
     
     // Case splits
     int_vector* case_split_stack;
+    unsigned case_split_depth;
     size_t decisions_since_last_conflict;
     float skolem_success_recent_average;
     C2_CSDP case_split_depth_penalty;
@@ -122,7 +123,8 @@ void c2_print_debug_info(C2*);
 
 // PRIVATE FUNCTIONS
 typedef enum {
-    C2_OP_ASSIGN_DECISION_VAL
+    C2_OP_ASSIGN_DECISION_VAL,
+    C2_OP_UNIVERSAL_ASSUMPTION
 } C2_OPERATION;
 void c2_undo(void* parent, char type, void* obj);
 

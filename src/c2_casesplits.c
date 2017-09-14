@@ -19,19 +19,14 @@ void c2_case_split_backtracking_heuristics(C2* c2) {
 
 void c2_backtrack_case_split(C2* c2) {
     V2("Backtracking from case split.\n");
-
-    c2_backtrack_to_decision_lvl(c2, c2->restart_base_decision_lvl);
+    
+    assert(c2->skolem->decision_lvl == c2->restart_base_decision_lvl);
+//    c2_backtrack_to_decision_lvl(c2, c2->restart_base_decision_lvl);
     
     V3("Now popping the case split.\n");
-    stack_pop(c2->stack, c2);
-    c2_pop(c2);
+    c2_backtrack_to_decision_lvl(c2, 0);
 
-    assert(c2->skolem->decision_lvl > 0);
-    c2->skolem->decision_lvl -= 1;
-    assert(c2->restart_base_decision_lvl > 0);
-    c2->restart_base_decision_lvl -= 1;
-
-    assert(c2->skolem->decision_lvl == 0); // TODO: If we do case splits after dlvl 0, we should also add a real clause
+    assert(c2->skolem->decision_lvl == 0);
     assert(c2->restart_base_decision_lvl == 0);
     
     // check learnt clauses for unique consequences ... the last backtracking may have removed the unique consequences
@@ -138,15 +133,15 @@ Lit c2_case_split_pick_literal(C2* c2) {
 }
 
 bool c2_case_splits_make_assumption(C2* c2, Lit lit) {
-    bool progress = false;
     
     satsolver_assume(c2->skolem->skolem, skolem_get_satsolver_lit(c2->skolem, lit));
     
     cegar_universal_activity_decay(c2->skolem->cegar, lit_to_var(lit));
     
-    sat_res res = satsolver_sat(c2->skolem->skolem);
-    if (res != SATSOLVER_SATISFIABLE) {
-        V1("This case admits no assignments to the universals that are consistent with dlvl 0, switching polarity and assuming %d instead.\n", - lit);
+    bool assumption_vacuous = satsolver_sat(c2->skolem->skolem) != SATSOLVER_SATISFIABLE;
+    if (assumption_vacuous) {
+        V1("   Vacuous assumption: %d\n", - lit);
+        V3("This case admits no assignments to the universals that are consistent with dlvl 0, switching polarity and assuming %d instead.\n", - lit);
         
         lit = - lit;
         
@@ -162,21 +157,20 @@ bool c2_case_splits_make_assumption(C2* c2, Lit lit) {
                 abortif(! c2->options->cegar, "This case can only occur when something else added assumptions.");
                 c2_case_splits_successful_case_completion(c2);
             }
-            progress = true;
             lit = 0; // suppresses that case split happens
+            return true;
         }
     }
     
     if (lit != 0) {
-        progress = true;
         
-        if (int_vector_count(c2->case_split_stack) == 0) {
-            c2->statistics.cases_explored += 1;
-            stack_push(c2->stack);
-            c2_push(c2);
-            c2->skolem->decision_lvl +=1;
-            c2->restart_base_decision_lvl += 1;
+        c2_push(c2);
+        c2->skolem->decision_lvl +=1;
+        c2->restart_base_decision_lvl += 1;
+        if (!assumption_vacuous) {
+            c2->case_split_depth += 1;
         }
+        stack_push_op(c2->stack, C2_OP_UNIVERSAL_ASSUMPTION, (void*) (long) assumption_vacuous);
         
         int_vector_add(c2->case_split_stack, lit);
         V1("  New case split depth is %u\n", int_vector_count(c2->case_split_stack));
@@ -195,7 +189,21 @@ bool c2_case_splits_make_assumption(C2* c2, Lit lit) {
     } else {
         V1("No progress after case split.\n");
     }
-    return progress;
+    return assumption_vacuous;
+}
+
+void c2_case_splits_reset_countdown(C2* c2) {
+    unsigned conflicts_between_case_splits = 0;
+    if (c2->case_split_depth_penalty == C2_CASE_SPLIT_DEPTH_PENALTY_LINEAR) {
+        conflicts_between_case_splits = int_vector_count(c2->case_split_stack);
+    }
+    if (c2->case_split_depth_penalty == C2_CASE_SPLIT_DEPTH_PENALTY_QUADRATIC) {
+        conflicts_between_case_splits = int_vector_count(c2->case_split_stack) * int_vector_count(c2->case_split_stack);
+    }
+    if (c2->case_split_depth_penalty == C2_CASE_SPLIT_DEPTH_PENALTY_EXPONENTIAL) {
+        abort(); // not yet implemented
+    }
+    c2->conflicts_between_case_splits_countdown = conflicts_between_case_splits + 1;
 }
 
 bool c2_case_split(C2* c2) {
@@ -208,29 +216,20 @@ bool c2_case_split(C2* c2) {
     
     assert(!skolem_can_propagate(c2->skolem));
 
-    bool progress = false; // indicates whether this function call changed anything.
-
-//    Lit most_notorious_literal = c2_pick_most_notorious_literal(c2);
+    //    Lit most_notorious_literal = c2_pick_most_notorious_literal(c2);
     Lit most_notorious_literal = c2_case_split_pick_literal(c2);
     if (most_notorious_literal != 0) {
-        unsigned conflicts_between_case_splits = 0;
-        if (c2->case_split_depth_penalty == C2_CASE_SPLIT_DEPTH_PENALTY_LINEAR) {
-            conflicts_between_case_splits = int_vector_count(c2->case_split_stack);
-        }
-        if (c2->case_split_depth_penalty == C2_CASE_SPLIT_DEPTH_PENALTY_QUADRATIC) {
-            conflicts_between_case_splits = int_vector_count(c2->case_split_stack) * int_vector_count(c2->case_split_stack);
-        }
-        if (c2->case_split_depth_penalty == C2_CASE_SPLIT_DEPTH_PENALTY_EXPONENTIAL) {
-            abort(); // not yet implemented
-        }
-        c2->conflicts_between_case_splits_countdown = conflicts_between_case_splits + 1;
         
-        progress = c2_case_splits_make_assumption(c2, most_notorious_literal);
+        bool vacuous = c2_case_splits_make_assumption(c2, most_notorious_literal);
         
+//        if (! vacuous) {
+            c2_case_splits_reset_countdown(c2);
+//        }
+        return ! vacuous;
     } else {
         V1("Case split not successful; no failed literals detected.\n");
+        return false;
     }
-    return progress;
 }
 
 
@@ -320,7 +319,15 @@ int_vector* c2_determine_notorious_determinsitic_variables(C2* c2) {
 void c2_case_splits_successful_case_completion(C2* c2) {
     V1("Case split successfully completed.\n");
     
+    c2->statistics.cases_explored += 1;
+    
+    assert(c2->result == CADET_RESULT_SAT);
 //    c2_case_split_certify(c2);
+    
+    c2_backtrack_to_decision_lvl(c2, c2->restart_base_decision_lvl);
+    assert(c2->skolem->decision_lvl == c2->restart_base_decision_lvl);
+    
+    c2->result = CADET_RESULT_UNKNOWN;
     
     int_vector* solved_cube = int_vector_init();
     for (unsigned i = 0; i < int_vector_count(c2->case_split_stack); i++) {
@@ -328,14 +335,20 @@ void c2_case_splits_successful_case_completion(C2* c2) {
         int_vector_add(solved_cube, -l);
     }
     c2_backtrack_case_split(c2);
+    
     cegar_new_cube(c2->skolem, solved_cube);
     
-    c2->result = CADET_RESULT_UNKNOWN;
-    
-    if (int_vector_count(solved_cube) == 1) {
-        c2_case_splits_make_assumption(c2, - int_vector_get(solved_cube, 0));
-    }
     if (satsolver_sat(c2->skolem->skolem) == SATSOLVER_RESULT_UNSAT) {
         c2->result = CADET_RESULT_SAT;
+    }
+}
+
+void c2_case_splits_undo_assumption(C2* c2, void* obj) {
+    bool assumption_vacuous = (bool) (long) obj;
+    
+    c2->skolem->decision_lvl -=1;
+    c2->restart_base_decision_lvl -= 1;
+    if (! assumption_vacuous) {
+        c2->case_split_depth -= 1;
     }
 }

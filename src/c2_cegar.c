@@ -72,11 +72,14 @@ void cegar_add_universal_activity(Cegar* cegar, unsigned var_id, float value) {
     float old = float_vector_get(cegar->interface_activities, var_id);
     float_vector_set(cegar->interface_activities, var_id, old + value);
 }
-void cegar_universal_activity_decay(Cegar* cegar) {
-    for (unsigned i = 0; i < float_vector_count(cegar->interface_activities); i++) {
-        float old = float_vector_get(cegar->interface_activities, i);
-        float_vector_set(cegar->interface_activities, i, old * cegar->universal_activity_decay);
+void cegar_universal_activity_decay(Cegar* cegar, unsigned var_id) {
+//    for (unsigned i = 0; i < float_vector_count(cegar->interface_activities); i++) {
+    if (var_id >= float_vector_count(cegar->interface_activities)) {
+        return;
     }
+    float old = float_vector_get(cegar->interface_activities, var_id);
+    float_vector_set(cegar->interface_activities, var_id, old * cegar->universal_activity_decay);
+//    }
 }
 
 void cegar_update_interface(Skolem* s) {
@@ -266,8 +269,8 @@ void cegar_new_cube(Skolem* s, int_vector* cube) {
     // TODO: we should insert a real clause here, to enable propagation among the universals. But universal reduction might collapse these clauses to empty clauses ... not good.
     
     if (int_vector_count(cube) < 20) { // prevent tinitiny increments, NaN-hell, etc
-//        float activity_bump = (float) ((double) 1.0 / pow(2.0, (double) int_vector_count(cube)));
-        float activity_bump = (float) ((double) 1.0 / (double) (int_vector_count(cube) * int_vector_count(cube)));
+        float activity_bump = (float) ((double) 1.0 / pow(2.0, (double) int_vector_count(cube)));
+//        float activity_bump = (float) ((double) 1.0 / (double) (int_vector_count(cube) * int_vector_count(cube)));
         V1("Activity bump: %f\n", activity_bump);
         for (unsigned i = 0; i < int_vector_count(cube); i++) {
             unsigned var_id = lit_to_var(int_vector_get(cube, i));

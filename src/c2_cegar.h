@@ -64,6 +64,6 @@ bool cegar_is_initialized(Cegar*);
 
 float cegar_get_universal_activity(Cegar*, unsigned var_id);
 void cegar_add_universal_activity(Cegar*, unsigned var_id, float value);
-void cegar_universal_activity_decay(Cegar*);
+void cegar_universal_activity_decay(Cegar*, unsigned var_id);
 
 #endif /* c2_cegar_h */

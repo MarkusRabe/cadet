@@ -56,8 +56,6 @@ void c2_backtrack_case_split(C2* c2) {
         c2->result = CADET_RESULT_SAT;
     }
     
-    cegar_universal_activity_decay(c2->skolem->cegar);
-    
     c2_case_split_backtracking_heuristics(c2);
 }
 
@@ -143,6 +141,8 @@ bool c2_case_splits_make_assumption(C2* c2, Lit lit) {
     bool progress = false;
     
     satsolver_assume(c2->skolem->skolem, skolem_get_satsolver_lit(c2->skolem, lit));
+    
+    cegar_universal_activity_decay(c2->skolem->cegar, lit_to_var(lit));
     
     sat_res res = satsolver_sat(c2->skolem->skolem);
     if (res != SATSOLVER_SATISFIABLE) {

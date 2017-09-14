@@ -12,7 +12,7 @@
 Options* default_options() {
     Options* o = malloc(sizeof(Options));
 
-    o->easy_debugging_mode_c2 = true;
+    o->easy_debugging_mode_c2 = false;
 
     // Computational enginges
     o->cegar = false;

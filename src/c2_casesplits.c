@@ -60,7 +60,7 @@ void c2_backtrack_case_split(C2* c2) {
 }
 
 // Returns the number of propagations for this assumption
-unsigned c2_case_split_assume_constant(C2* c2, Lit lit) {
+unsigned c2_case_split_probe(C2* c2, Lit lit) {
     assert(!skolem_can_propagate(c2->skolem));
     statistics_start_timer(c2->statistics.failed_literals_stats);
 
@@ -99,8 +99,8 @@ Lit c2_case_split_pick_literal(C2* c2) {
             && skolem_is_deterministic(c2->skolem, var_id)
             && skolem_get_constant_value(c2->skolem, (Lit) v->var_id) == 0) {
             
-            unsigned propagations_pos = c2_case_split_assume_constant(c2,   (Lit) v->var_id);
-            unsigned propagations_neg = c2_case_split_assume_constant(c2, - (Lit) v->var_id);
+            unsigned propagations_pos = c2_case_split_probe(c2,   (Lit) v->var_id);
+            unsigned propagations_neg = c2_case_split_probe(c2, - (Lit) v->var_id);
             
             if (propagations_pos == UINT_MAX || propagations_neg == UINT_MAX) {
                 // we found a failed literal

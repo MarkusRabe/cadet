@@ -565,6 +565,9 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                         }
                         c2_backtrack_case_split(c2);
                         cegar_new_cube(c2->skolem, solved_cube);
+                        if (int_vector_count(solved_cube) == 1) {
+                            c2_case_split_make_assumption(c2, - int_vector_get(solved_cube, 0));
+                        }
                         return c2->result;
                     }
                     if (c2->result == CADET_RESULT_SAT) {

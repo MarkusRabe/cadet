@@ -75,7 +75,7 @@ C2* c2_init_qcnf(QCNF* qcnf, Options* options) {
     c2->statistics.failed_literals_conflicts = 0;
 
     // Magic constants
-    c2->magic.initial_restart = 10; // [1..100] // depends also on restart factor
+    c2->magic.initial_restart = 6; // [1..100] // depends also on restart factor
     c2->next_restart = c2->magic.initial_restart;
     c2->magic.restart_factor = (float) 1.2; // [1.01..2]
     c2->magic.conflict_var_weight = 2; // [0..5]
@@ -84,6 +84,7 @@ C2* c2_init_qcnf(QCNF* qcnf, Options* options) {
     c2->magic.decay_rate = (float) 0.9;
     c2->magic.implication_graph_variable_activity = (float) 0.5;
     c2->magic.major_restart_frequency = 50;
+    c2->next_major_restart = c2->magic.major_restart_frequency;
     c2->magic.num_restarts_before_Jeroslow_Wang = options->easy_debugging_mode_c2 ? 0 : 3;
     c2->magic.num_restarts_before_case_splits = options->easy_debugging_mode_c2 ? 0 : 10;
 
@@ -92,7 +93,8 @@ C2* c2_init_qcnf(QCNF* qcnf, Options* options) {
     c2->magic.notoriousity_threshold_factor = (float) 5.0; // > 0.0 ??
     c2->magic.skolem_success_recent_average_initialization = (float) 1.0;
     c2->skolem_success_recent_average = c2->magic.skolem_success_recent_average_initialization;
-    c2->case_split_depth_penalty = C2_CASE_SPLIT_DEPTH_PENALTY_QUADRATIC;
+//    c2->case_split_depth_penalty = C2_CASE_SPLIT_DEPTH_PENALTY_QUADRATIC;
+    c2->case_split_depth_penalty = C2_CASE_SPLIT_DEPTH_PENALTY_LINEAR;
     c2->conflicts_between_case_splits_countdown = 1;
 
     c2_init_clauses_and_variables(c2);

@@ -87,6 +87,7 @@ unsigned c2_case_split_probe(C2* c2, Lit lit) {
 
 Lit c2_case_split_pick_literal(C2* c2) {
     float max_total = 0.0;
+    float cost_factor_of_max = 0.0;
     Lit lit = 0;
     for (unsigned i = 0; i < int_vector_count(c2->skolem->cegar->interface_vars); i++) {
         unsigned var_id = (unsigned) int_vector_get(c2->skolem->cegar->interface_vars, i);
@@ -111,21 +112,26 @@ Lit c2_case_split_pick_literal(C2* c2) {
             
             assert(propagations_pos < 1000000 && propagations_neg < 1000000); // avoid overflows
             
-            float factor =
-                (float) 1.0
-                + (float) c2_get_activity(c2, v->var_id);
-//                + 10.0 * cegar_get_universal_activity(c2->skolem->cegar, v->var_id);
-            float combined_quality = factor * (float) (propagations_pos * propagations_neg + propagations_pos + propagations_neg);
+            float cost_factor = ((float) 0.01 +
+                                    cegar_get_universal_activity(c2->skolem->cegar, v->var_id)
+                                    * cegar_get_universal_activity(c2->skolem->cegar, v->var_id));
+            
+            float combined_factor =
+                ((float) 1.0
+                    + (float) c2_get_activity(c2, v->var_id))
+                * cost_factor;
+            float combined_quality = combined_factor * (float) (propagations_pos * propagations_neg + propagations_pos + propagations_neg);
             if (combined_quality > max_total) {
                 lit = (propagations_pos > propagations_neg ? 1 : - 1) * (Lit) v->var_id;
                 max_total = combined_quality;
+                cost_factor_of_max = cost_factor;
             }
         }
     }
     if (lit != 0 && debug_verbosity >= VERBOSITY_LOW) {
         V1("Case split literal ");
         options_print_literal_name(c2->options, c2_literal_color(c2, NULL, lit), lit);
-        V1(" has quality %.2f\n", max_total);
+        V1(" has quality %.2f and cost factor %.4f\n", max_total, cost_factor_of_max);
     }
     return lit;
 }

@@ -192,10 +192,8 @@ bool cegar_var_needs_to_be_set(Cegar* cegar, unsigned var_id) {
 
 void cegar_free(Cegar* c) {
     satsolver_free(c->exists_solver);
-    if (c->interface_vars) {
-        int_vector_free(c->interface_vars);
-    }
-    map_free(c->interface_activities);
+    if (c->interface_vars) {int_vector_free(c->interface_vars);}
+    if (c->interface_activities) {map_free(c->interface_activities);}
     int_vector_free(c->is_used_in_lemma);
     for (unsigned i = 0; i < vector_count(c->solved_cubes); i++) {
         int_vector* cube = (int_vector*) vector_get(c->solved_cubes, i);
@@ -263,11 +261,15 @@ void cegar_new_cube(Skolem* s, int_vector* cube) {
     // TODO: we should insert a real clause here, to enable propagation among the universals. But universal reduction might collapse these clauses to empty clauses ... not good.
     
     if (int_vector_count(cube) < 20) { // prevent tinitiny increments, NaN-hell, etc
-        float activity_bump = (float) ((double) 1.0 / pow(2.0, (double) int_vector_count(cube)));
+//        float activity_bump = (float) ((double) 1.0 / pow(2.0, (double) int_vector_count(cube)));
+        float activity_bump = (float) ((double) 1.0 / (double) (int_vector_count(cube) * int_vector_count(cube)));
+        V1("Activity bump: %f\n", activity_bump);
         for (unsigned i = 0; i < int_vector_count(cube); i++) {
             unsigned var_id = lit_to_var(int_vector_get(cube, i));
             cegar_add_universal_activity(s->cegar, var_id, activity_bump);
         }
+        unsigned last_var_id = lit_to_var(int_vector_get(cube, int_vector_count(cube) - 1));
+        cegar_add_universal_activity(s->cegar, last_var_id, activity_bump);
     }
     
     s->cegar->recent_average_cube_size = (float) int_vector_count(cube) * (float) 0.1 + s->cegar->recent_average_cube_size * (float) 0.9;

@@ -18,10 +18,11 @@ Cegar* cegar_init(QCNF* qcnf) {
     cegar->solved_cubes = vector_init();
     cegar->exists_solver = NULL; // no initialized yet; see cegar_update_interface
     cegar->interface_vars = NULL;
-    cegar->interface_activities = map_init();
+    cegar->interface_activities = float_vector_init();
     
     // Magic values
     cegar->cegar_effectiveness_threshold = 20;
+    cegar->universal_activity_decay = (float) 0.95;
     
     // Statistics
     cegar->successful_minimizations = 0;
@@ -43,34 +44,38 @@ bool cegar_is_initialized(Cegar* cegar) {
 }
 
 
-union voidptr_or_float {
-    float f;
-    void * vp;
-};
-static inline float voidptr_to_float(void* val) {
-    union voidptr_or_float x;
-    x.vp = val;
-    return x.f;
-}
-static inline void* float_to_voidptr(float val) {
-    union voidptr_or_float x;
-    x.f = val;
-    return x.vp;
-}
+//union int_or_float {
+//    float f;
+//    int i;
+//};
+//static inline float interpret_int_as_float(int val) {
+//    union int_or_float x;
+//    x.i = val;
+//    return x.f;
+//}
+//static inline int interpret_float_as_int(float val) {
+//    union int_or_float x;
+//    x.f = val;
+//    return x.i;
+//}
 float cegar_get_universal_activity(Cegar* cegar, unsigned var_id) {
-    if (map_contains(cegar->interface_activities, (int) var_id)) {
-        return voidptr_to_float(map_get(cegar->interface_activities, (int) var_id));
+    if (float_vector_count(cegar->interface_activities) > var_id) {
+        return float_vector_get(cegar->interface_activities, var_id);
     } else {
         return (float) 0.0;
     }
 }
-
 void cegar_add_universal_activity(Cegar* cegar, unsigned var_id, float value) {
-    if (map_contains(cegar->interface_activities, (int) var_id)) {
-        float old = cegar_get_universal_activity(cegar, var_id);
-        map_update(cegar->interface_activities, (int) var_id, float_to_voidptr(old + value));
-    } else {
-        map_add(cegar->interface_activities, (int) var_id, float_to_voidptr(value));
+    while (float_vector_count(cegar->interface_activities) <= var_id) {
+        float_vector_add(cegar->interface_activities, (float) 0.0);
+    }
+    float old = float_vector_get(cegar->interface_activities, var_id);
+    float_vector_set(cegar->interface_activities, var_id, old + value);
+}
+void cegar_universal_activity_decay(Cegar* cegar) {
+    for (unsigned i = 0; i < float_vector_count(cegar->interface_activities); i++) {
+        float old = float_vector_get(cegar->interface_activities, i);
+        float_vector_set(cegar->interface_activities, i, old * cegar->universal_activity_decay);
     }
 }
 
@@ -193,7 +198,7 @@ bool cegar_var_needs_to_be_set(Cegar* cegar, unsigned var_id) {
 void cegar_free(Cegar* c) {
     satsolver_free(c->exists_solver);
     if (c->interface_vars) {int_vector_free(c->interface_vars);}
-    if (c->interface_activities) {map_free(c->interface_activities);}
+    if (c->interface_activities) {float_vector_free(c->interface_activities);}
     int_vector_free(c->is_used_in_lemma);
     for (unsigned i = 0; i < vector_count(c->solved_cubes); i++) {
         int_vector* cube = (int_vector*) vector_get(c->solved_cubes, i);

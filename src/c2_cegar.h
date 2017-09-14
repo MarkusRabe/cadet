@@ -18,15 +18,15 @@ struct Cegar {
     SATSolver* exists_solver;
     QCNF* qcnf;
     int_vector* interface_vars;
+    float_vector* interface_activities; // contains the frequencies of the interface variabes as floats
     int_vector* is_used_in_lemma;
     int_vector* additional_assignment;
     
     vector* solved_cubes;
     
-    map* interface_activities; // contains the frequencies of the interface variabes as floats; does not decay in a VSID style (for now)
-    
     // Magic values
     unsigned cegar_effectiveness_threshold;
+    float universal_activity_decay;
     
     // Statistics
     unsigned successful_minimizations;
@@ -50,15 +50,20 @@ void cegar_free(Cegar* c);
  * May change the state of C2 when termination criterion is found.
  */
 cadet_res cegar_build_abstraction_for_assignment(C2*);
+bool cegar_try_to_handle_conflict(Skolem* s);
+
 int cegar_get_val(void* domain, Lit lit);
+
 cadet_res cegar_solve_2QBF(C2* c2, int rounds_num);
 void cegar_new_cube(Skolem* s, int_vector* cube);
 void cegar_do_cegar_if_effective(C2* c2);
-bool cegar_try_to_handle_conflict(Skolem* s);
+
 void cegar_print_statistics(Cegar*);
-float cegar_get_universal_activity(Cegar*, unsigned var_id);
-void cegar_add_universal_activity(Cegar*, unsigned var_id, float value);
 void cegar_update_interface(Skolem*);
 bool cegar_is_initialized(Cegar*);
+
+float cegar_get_universal_activity(Cegar*, unsigned var_id);
+void cegar_add_universal_activity(Cegar*, unsigned var_id, float value);
+void cegar_universal_activity_decay(Cegar*);
 
 #endif /* c2_cegar_h */

@@ -56,6 +56,8 @@ void c2_backtrack_case_split(C2* c2) {
         c2->result = CADET_RESULT_SAT;
     }
     
+    cegar_universal_activity_decay(c2->skolem->cegar);
+    
     c2_case_split_backtracking_heuristics(c2);
 }
 
@@ -112,9 +114,7 @@ Lit c2_case_split_pick_literal(C2* c2) {
             
             assert(propagations_pos < 1000000 && propagations_neg < 1000000); // avoid overflows
             
-            float cost_factor = ((float) 0.01 +
-                                    cegar_get_universal_activity(c2->skolem->cegar, v->var_id)
-                                    * cegar_get_universal_activity(c2->skolem->cegar, v->var_id));
+            float cost_factor = (float) 1 + (float) 20.0 * /*sqrtf*/(cegar_get_universal_activity(c2->skolem->cegar, v->var_id));
             
             float combined_factor =
                 ((float) 1.0
@@ -131,7 +131,10 @@ Lit c2_case_split_pick_literal(C2* c2) {
     if (lit != 0 && debug_verbosity >= VERBOSITY_LOW) {
         V1("Case split literal ");
         options_print_literal_name(c2->options, c2_literal_color(c2, NULL, lit), lit);
-        V1(" has quality %.2f and cost factor %.4f\n", max_total, cost_factor_of_max);
+        V1(" has quality %.2f, cost factor %.3f, and activity factor %.2f\n",
+           max_total,
+           cost_factor_of_max,
+           ((float) 1.0 + (float) c2_get_activity(c2, lit_to_var(lit))));
     }
     return lit;
 }

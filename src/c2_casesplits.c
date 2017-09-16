@@ -368,15 +368,19 @@ void c2_case_splits_successful_case_completion(C2* c2) {
     
     if (c2->result == CADET_RESULT_UNKNOWN && rand() % 10 != 0) {
         
-        // Redo all but last case assumptions
+        // Redo all but last case assumptions; stop when one turns out to be vacuous (can be in combination with earlier cases.
+        bool vacuous = false;
         for (unsigned i = 0; i < int_vector_count(solved_cube) - 1; i++) {
             Lit l = int_vector_get(solved_cube, i);
-            c2_case_splits_make_assumption(c2, - l);
+            vacuous = c2_case_splits_make_assumption(c2, - l);
+            if (vacuous || c2->result != CADET_RESULT_UNKNOWN) {
+                break;
+            }
         }
         
-        if (! last_assumption_vacuous) {
+        if (!vacuous && c2->result == CADET_RESULT_UNKNOWN && ! last_assumption_vacuous) {
             Lit last_assumption = int_vector_get(solved_cube, int_vector_count(solved_cube) - 1);
-            bool vacuous = c2_case_splits_make_assumption(c2, - last_assumption);
+            vacuous = c2_case_splits_make_assumption(c2, - last_assumption);
             assert(vacuous);
         }
     }

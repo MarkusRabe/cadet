@@ -27,8 +27,8 @@ void c2_successful_case_split_heuristics(C2* c2, int_vector* solved_cube) {
             unsigned var_id = lit_to_var(int_vector_get(solved_cube, i));
             cegar_add_universal_activity(c2->skolem->cegar, var_id, activity_bump);
         }
-        unsigned last_var_id = lit_to_var(int_vector_get(solved_cube, int_vector_count(solved_cube) - 1));
-        cegar_add_universal_activity(c2->skolem->cegar, last_var_id, activity_bump);
+//        unsigned last_var_id = lit_to_var(int_vector_get(solved_cube, int_vector_count(solved_cube) - 1));
+//        cegar_add_universal_activity(c2->skolem->cegar, last_var_id, activity_bump);
     }
 }
 
@@ -366,7 +366,7 @@ void c2_case_splits_successful_case_completion(C2* c2) {
         c2->result = CADET_RESULT_SAT;
     }
     
-    if (c2->result == CADET_RESULT_UNKNOWN) {
+    if (c2->result == CADET_RESULT_UNKNOWN && rand() % 10 != 0) {
         
         // Redo all but last case assumptions
         for (unsigned i = 0; i < int_vector_count(solved_cube) - 1; i++) {

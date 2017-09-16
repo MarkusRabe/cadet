@@ -131,7 +131,7 @@ void cegar_update_interface(Skolem* s) {
     
     
     V1("Interface vars: (%u in total) ... ", int_vector_count(cegar->interface_vars));
-    if (debug_verbosity >= VERBOSITY_HIGH || int_vector_count(cegar->interface_vars) < 20) {
+    if (debug_verbosity >= VERBOSITY_HIGH || (debug_verbosity >= VERBOSITY_LOW && int_vector_count(cegar->interface_vars) < 20)) {
         int_vector_print(cegar->interface_vars);
     }
     V1("\n");
@@ -252,10 +252,10 @@ int cegar_get_val(void* domain, Lit lit) {
 }
 
 void cegar_new_cube(Skolem* s, int_vector* cube) {
-    V1("Finished cube (with length %u) ", int_vector_count(cube));
     
     vector_add(s->cegar->solved_cubes, cube);
     
+    V1("Finished cube (with length %u) ", int_vector_count(cube));
     for (unsigned i = 0; i < int_vector_count(cube); i++) {
         Lit lit = int_vector_get(cube, i);
         assert(skolem_is_deterministic(s, lit_to_var(lit)));
@@ -267,18 +267,6 @@ void cegar_new_cube(Skolem* s, int_vector* cube) {
     V1("\n");
     
     // TODO: we should insert a real clause here, to enable propagation among the universals. But universal reduction might collapse these clauses to empty clauses ... not good.
-    
-    if (int_vector_count(cube) < 20) { // prevent tinitiny increments, NaN-hell, etc
-        float activity_bump = (float) ((double) 1.0 / pow(2.0, (double) int_vector_count(cube)));
-//        float activity_bump = (float) ((double) 1.0 / (double) (int_vector_count(cube) * int_vector_count(cube)));
-        V1("Activity bump: %f\n", activity_bump);
-        for (unsigned i = 0; i < int_vector_count(cube); i++) {
-            unsigned var_id = lit_to_var(int_vector_get(cube, i));
-            cegar_add_universal_activity(s->cegar, var_id, activity_bump);
-        }
-        unsigned last_var_id = lit_to_var(int_vector_get(cube, int_vector_count(cube) - 1));
-        cegar_add_universal_activity(s->cegar, last_var_id, activity_bump);
-    }
     
     s->cegar->recent_average_cube_size = (float) int_vector_count(cube) * (float) 0.1 + s->cegar->recent_average_cube_size * (float) 0.9;
     

@@ -76,7 +76,7 @@ C2* c2_init_qcnf(QCNF* qcnf, Options* options) {
     c2->statistics.failed_literals_conflicts = 0;
 
     // Magic constants
-    c2->magic.initial_restart = 6; // [1..100] // depends also on restart factor
+    c2->magic.initial_restart = options->easy_debugging_mode_c2 ? 10 : 6; // [1..100] // depends also on restart factor
     c2->next_restart = c2->magic.initial_restart;
     c2->magic.restart_factor = (float) 1.2; // [1.01..2]
     c2->magic.conflict_var_weight = 2; // [0..5]
@@ -97,6 +97,7 @@ C2* c2_init_qcnf(QCNF* qcnf, Options* options) {
 //    c2->case_split_depth_penalty = C2_CASE_SPLIT_DEPTH_PENALTY_QUADRATIC;
     c2->case_split_depth_penalty = C2_CASE_SPLIT_DEPTH_PENALTY_LINEAR;
     c2->conflicts_between_case_splits_countdown = 1;
+    c2->magic.case_split_linear_depth_penalty_factor = options->easy_debugging_mode_c2 ? 1 : 5;
 
     c2_init_clauses_and_variables(c2);
 
@@ -479,15 +480,12 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                 if (new_example) {
                     examples_redo(c2->examples, c2->skolem, new_example);
                 }
-                examples_new_clause(c2->examples, learnt_clause);
-
+                
                 if (skolem_get_unique_consequence(c2->skolem, learnt_clause) != 0) {
                     skolem_bump_conflict_potential(c2->skolem, lit_to_var(skolem_get_unique_consequence(c2->skolem, learnt_clause)));
                 }
 
-                if (debug_verbosity >= VERBOSITY_MEDIUM || c2->options->trace_learnt_clauses) {
-                    c2_log_clause(c2, learnt_clause);
-                }
+                c2_log_clause(c2, learnt_clause);
                 c2_new_clause(c2, learnt_clause);
 
                 c2_conflict_heuristics(c2, learnt_clause, conflicted_var_id);
@@ -504,7 +502,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
 
                 c2->state = C2_READY;
 
-            } else { // actual conflict
+            } else { // Found a refuting assignment
                 if (c2->options->functional_synthesis && int_vector_count(c2->current_conflict) > 0) {
 
                     c2_backtrack_to_decision_lvl(c2, c2->restart_base_decision_lvl);
@@ -530,8 +528,8 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                 return c2->result;
             }
 
-        } else { // conflict == NULL
-            // Not in conflict state. Now case splits and decisions are needed to make further progress.
+        } else { // No conflict
+            // Now case splits and decisions are needed to make further progress.
 
             if (skolem_can_propagate(c2->skolem)) {
                 continue; // can happen when a potentially conflicted variable is not actually conflicted
@@ -647,6 +645,9 @@ void c2_replenish_skolem_satsolver(C2* c2) {
         cegar_new_cube(c2->skolem, cube_copy);
     }
     
+    c2->skolem->cegar->interface_activities = old_skolem->cegar->interface_activities;
+    old_skolem->cegar->interface_activities = NULL;
+    
     skolem_free(old_skolem);
     
     abortif(c2_is_in_conflcit(c2) || c2->result != CADET_RESULT_UNKNOWN, "Illegal state afte replenishing");
@@ -676,7 +677,7 @@ void c2_restart_heuristics(C2* c2) {
         
         c2_backtrack_case_split(c2);
         
-#if (USE_SOLVER == SOLVER_PICOSAT_ASSUMPTIONS) // This is a workaround for an annoying bug in picosat
+#if (USE_SOLVER == SOLVER_PICOSAT_ASSUMPTIONS)
         c2_replenish_skolem_satsolver(c2);
 #endif
 
@@ -684,10 +685,6 @@ void c2_restart_heuristics(C2* c2) {
         
     } else {
         c2->next_major_restart -= 1;
-    }
-    if (c2->restarts % c2->magic.major_restart_frequency == c2->magic.major_restart_frequency - 1) {
-            } else { // Minor restart
-        
     }
 }
 
@@ -755,7 +752,7 @@ cadet_res c2_sat(C2* c2) {
     while (c2->result == CADET_RESULT_UNKNOWN) { // This loop controls the restarts
         c2_run(c2, c2->next_restart);
 
-        if (c2->result == CADET_RESULT_SAT && int_vector_count(c2->case_split_stack) != 0) {
+        while (c2->result == CADET_RESULT_SAT && int_vector_count(c2->case_split_stack) != 0) {
             c2_case_splits_successful_case_completion(c2);
         }
         
@@ -764,11 +761,6 @@ cadet_res c2_sat(C2* c2) {
             assert(c2->skolem->decision_lvl == c2->restart_base_decision_lvl);
             c2->restarts += 1;
             c2_restart_heuristics(c2);
-            
-            c2_propagate(c2); // clear propagation queue to avoid weird conflicts with case splits
-            if (! c2_is_in_conflcit(c2)) {
-                c2_case_split(c2);
-            }
         }
     }
 
@@ -933,5 +925,6 @@ void c2_new_variable(C2* c2, unsigned var_id) {
 
 void c2_new_clause(C2* c2, Clause* c) {
     c2->result = CADET_RESULT_UNKNOWN;
+    examples_new_clause(c2->examples, c);
     skolem_new_clause(c2->skolem, c);
 }

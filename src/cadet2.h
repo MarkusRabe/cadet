@@ -65,6 +65,7 @@ struct C2_Magic_Values {
     float skolem_success_horizon; // for case splits (factor describing how the receding horizon is built)
     float notoriousity_threshold_factor; // for case splits
     float skolem_success_recent_average_initialization;
+    unsigned case_split_linear_depth_penalty_factor;
 };
 
 struct C2 {

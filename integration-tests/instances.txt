@@ -98,6 +98,8 @@ integration-tests/mb3.qdimacs | 20
 integration-tests/stmt21r4.qdimacs | 10
 integration-tests/stmt7rr.qdimacs | 10
 integration-tests/stmt27rrr.qdimacs | 20
+integration-tests/tmp-47850_reduced.qdimacs | 10
+integration-tests/eerr.qdimacs | 20
 
 
 [new-tests]

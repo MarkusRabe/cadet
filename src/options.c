@@ -44,7 +44,7 @@ Options* default_options() {
     // Optimizations
     o->miniscoping = false;
     o->find_smallest_reason = true;
-    o->minimize_conflicts = false;
+    o->minimize_conflicts = true;
     o->preprocess = false;
     o->delete_clauses_on_restarts = false;
     o->propagate_pure_literals = true;

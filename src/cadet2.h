@@ -9,16 +9,17 @@
 #ifndef cadet2_h
 #define cadet2_h
 
+struct C2;
+typedef struct C2 C2;
+
 #include "skolem.h"
 #include "qcnf.h"
 #include "options.h"
 #include "examples.h"
 #include "val_vector.h"
+#include "conflict_analysis.h"
 
 #include <stdio.h>
-
-struct C2;
-typedef struct C2 C2;
 
 typedef enum {
     C2_READY,
@@ -68,6 +69,10 @@ struct C2_Magic_Values {
     unsigned case_split_linear_depth_penalty_factor;
 };
 
+
+struct conflict_analysis;
+typedef struct conflict_analysis conflict_analysis;
+
 struct C2 {
     QCNF* qcnf;
     Options* options;
@@ -86,6 +91,7 @@ struct C2 {
     // Reasoning domains
     Skolem* skolem;
     Examples* examples;
+    conflict_analysis* ca;
     
     // Data structures for heuristics
     float activity_factor;

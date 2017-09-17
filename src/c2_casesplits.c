@@ -33,16 +33,10 @@ void c2_successful_case_split_heuristics(C2* c2, int_vector* solved_cube) {
 }
 
 // Returns if last assumption was vacuous
-bool c2_backtrack_case_split(C2* c2) {
+void c2_backtrack_case_split(C2* c2) {
     V2("Backtracking from case split.\n");
     
     assert(c2->skolem->decision_lvl == c2->restart_base_decision_lvl);
-    
-    unsigned old_case_split_depth = c2->case_split_depth;
-    if (c2->restart_base_decision_lvl > 0) {
-        c2_pop(c2);
-    }
-    bool last_assumption_vacuous = c2->case_split_depth == old_case_split_depth;
     
     c2_backtrack_to_decision_lvl(c2, 0);
     
@@ -68,8 +62,6 @@ bool c2_backtrack_case_split(C2* c2) {
     abortif(skolem_is_conflicted(c2->skolem), "Conflicted after backtracking case split.");
     
     c2_case_split_backtracking_heuristics(c2);
-    
-    return last_assumption_vacuous;
 }
 
 // Returns the number of propagations for this assumption
@@ -358,7 +350,7 @@ void c2_case_splits_successful_case_completion(C2* c2) {
     
     c2_successful_case_split_heuristics(c2, solved_cube);
     
-    bool last_assumption_vacuous = c2_backtrack_case_split(c2);
+    c2_backtrack_case_split(c2);
     
     cegar_new_cube(c2->skolem, solved_cube);
     

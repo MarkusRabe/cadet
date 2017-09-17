@@ -752,7 +752,7 @@ cadet_res c2_sat(C2* c2) {
     while (c2->result == CADET_RESULT_UNKNOWN) { // This loop controls the restarts
         c2_run(c2, c2->next_restart);
 
-        while (c2->result == CADET_RESULT_SAT && int_vector_count(c2->case_split_stack) != 0) {
+        while (c2->result == CADET_RESULT_SAT && c2->case_split_depth != 0) {
             c2_case_splits_successful_case_completion(c2);
         }
         

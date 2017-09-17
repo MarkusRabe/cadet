@@ -148,9 +148,9 @@ void conflict_analysis_follow_implication_graph(conflict_analysis* ca) {
         unsigned d_lvl = ca->domain_get_decision_lvl(ca->domain, lit_to_var(lit));
         assert(d_lvl <= ca->conflict_decision_lvl);
         
-        bool is_value_decision = c2_is_decision_var(ca->c2, v->var_id) && skolem_get_constant_value(ca->c2->skolem, lit) == 1;
+//        bool is_value_decision = c2_is_decision_var(ca->c2, v->var_id) && skolem_get_constant_value(ca->c2->skolem, lit) == 1;
         
-        if (v->is_universal || d_lvl < ca->conflict_decision_lvl || is_value_decision) {
+        if (v->is_universal || d_lvl < ca->conflict_decision_lvl) {
             int_vector_add(ca->conflicting_assignment, lit);
         } else {
             bool depends_on_illegals = false;

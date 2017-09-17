@@ -253,8 +253,6 @@ void cegar_new_cube(Skolem* s, int_vector* cube) {
     
     // TODO: we should insert a real clause here, to enable propagation among the universals. But universal reduction might collapse these clauses to empty clauses ... not good.
     
-    s->cegar->recent_average_cube_size = (float) int_vector_count(cube) * (float) 0.1 + s->cegar->recent_average_cube_size * (float) 0.9;
-    
 }
 
 cadet_res cegar_build_abstraction_for_assignment(C2* c2) {
@@ -300,6 +298,7 @@ cadet_res cegar_build_abstraction_for_assignment(C2* c2) {
             }
         }
         cegar_new_cube(c2->skolem, cube);
+        c2->skolem->cegar->recent_average_cube_size = (float) int_vector_count(cube) * (float) 0.1 + c2->skolem->cegar->recent_average_cube_size * (float) 0.9;
     } else {
         c2->state = C2_CEGAR_CONFLICT;
         c2->result = CADET_RESULT_UNSAT;

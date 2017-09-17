@@ -274,7 +274,7 @@ unsigned c2_are_decisions_involved(C2* c2, int_vector* conflict) {
     return res;
 }
 
-// Returns the second largest decision level that occurs in the conflict. If no second largest decision level exists, returns 0.
+// Returns the second largest decision level -1 that occurs in the conflict. If no second largest decision level exists, returns 0.
 unsigned c2_determine_backtracking_lvl(C2* c2, int_vector* conflict) {
     int_vector* dlvls = int_vector_init();
     V2("Decision lvls in conflicted domain:");
@@ -312,6 +312,9 @@ unsigned c2_determine_backtracking_lvl(C2* c2, int_vector* conflict) {
         second_largest = (unsigned) int_vector_get(dlvls, int_vector_count(dlvls) - 2);
     }
     second_largest = second_largest < c2->restart_base_decision_lvl ? c2->restart_base_decision_lvl : second_largest;
+    if (second_largest > 0) {
+        second_largest = second_largest - 1;
+    }
     return second_largest;
 }
 

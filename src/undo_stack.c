@@ -59,7 +59,6 @@ void stack_push_op(Stack* s, char type, void* obj) {
 }
 
 void stack_pop(Stack* s, void* parent) {
-    V4("Popping milestone %d\n", s->push_count);
     assert(s->push_count > 0);
     // Don't know how to write the following loop head more elegantly. The op_count must be decreased by one, then op must be assigned the new operation, then we must check whether the operation happened to be a milestone.
     size_t i = 0;
@@ -68,7 +67,7 @@ void stack_pop(Stack* s, void* parent) {
         (s->undo)(parent, s->type_vector[s->op_count], s->obj_vector[s->op_count]);
         i++;
     }
-    V4("Popped %zu items.\n", i);
+    V4("Popped %zu items for milestone %d\n", i, s->push_count);
     s->push_count -= 1;
 }
 

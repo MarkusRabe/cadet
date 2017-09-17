@@ -15,7 +15,7 @@ Options* default_options() {
     o->easy_debugging_mode_c2 = false;
 
     // Computational enginges
-    o->cegar = false;
+    o->cegar = true;
     o->cegar_only = false;
     o->delay_conflict_checks = false;
     o->use_qbf_engine_also_for_propositional_problems = false;

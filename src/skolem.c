@@ -895,24 +895,7 @@ unsigned skolem_global_conflict_check(Skolem* s, bool can_delay) {
     satsolver_clause_finished(s->skolem);
     
     s->statistics.global_conflict_checks++;
-    sat_res result = SATSOLVER_UNKNOWN;
-    
-    unsigned max_iter = 100;
-    while (true) {
-        result = satsolver_sat(s->skolem);
-        if (result == SATSOLVER_SATISFIABLE && s->options->cegar && cegar_is_initialized(s->cegar) && s->cegar->recent_average_cube_size < s->cegar->cegar_effectiveness_threshold && max_iter-- > 0) {
-            // Added "s->cegar" to the condition to make sure that this is only called after the initial propagation.
-            
-            if (cegar_try_to_handle_conflict(s)) {
-                // solved handled this conflict with a sufficently small cube by CEGAR
-                continue;
-            } else {
-                result = satsolver_sat(s->skolem);
-            }
-        }
-        break; // standard case is that we exit the loop
-    }
-    abortif(result == SATSOLVER_UNKNOWN, "SATSOLVER returned unknown.");
+    sat_res result = satsolver_sat(s->skolem);
     
     assert(s->conflict_var_id == 0);
     if (result == SATSOLVER_SATISFIABLE) {

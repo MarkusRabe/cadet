@@ -13,6 +13,13 @@
 #include "float_vector.h"
 
 #include <stdio.h>
+
+struct Cegar_Magic_Values {
+    unsigned max_cegar_iterations_per_learnt_clause;
+    unsigned cegar_effectiveness_threshold;
+    float universal_activity_decay;
+};
+
 typedef struct Cegar Cegar;
 struct Cegar {
     SATSolver* exists_solver;
@@ -24,15 +31,13 @@ struct Cegar {
     
     vector* solved_cubes;
     
-    // Magic values
-    unsigned cegar_effectiveness_threshold;
-    float universal_activity_decay;
-    
     // Statistics
     unsigned successful_minimizations;
     unsigned additional_assignments_num;
     unsigned successful_minimizations_by_additional_assignments;
     float recent_average_cube_size;
+    
+    struct Cegar_Magic_Values magic;
 };
 
 /* Initializes a cegar object, including the SAT solver using 
@@ -50,13 +55,12 @@ void cegar_free(Cegar* c);
  * May change the state of C2 when termination criterion is found.
  */
 cadet_res cegar_build_abstraction_for_assignment(C2*);
-bool cegar_try_to_handle_conflict(Skolem* s);
 
 int cegar_get_val(void* domain, Lit lit);
 
 cadet_res cegar_solve_2QBF(C2* c2, int rounds_num);
 void cegar_new_cube(Skolem* s, int_vector* cube);
-void cegar_do_cegar_if_effective(C2* c2);
+void do_cegar_if_effective(C2* c2);
 
 void cegar_print_statistics(Cegar*);
 void cegar_update_interface(Skolem*);

@@ -20,10 +20,6 @@ Cegar* cegar_init(QCNF* qcnf) {
     cegar->interface_vars = NULL;
     cegar->interface_activities = float_vector_init();
     
-    // Magic values
-    cegar->cegar_effectiveness_threshold = 20;
-    cegar->universal_activity_decay = (float) 0.95;
-    
     // Statistics
     cegar->successful_minimizations = 0;
     cegar->additional_assignments_num = 0;
@@ -36,6 +32,10 @@ Cegar* cegar_init(QCNF* qcnf) {
         int_vector_add(cegar->is_used_in_lemma, 1);
     }
     
+    cegar->magic.max_cegar_iterations_per_learnt_clause = 100;
+    cegar->magic.cegar_effectiveness_threshold = 15;
+    cegar->magic.universal_activity_decay = (float) 0.95;
+    
     return cegar;
 }
 
@@ -43,21 +43,6 @@ bool cegar_is_initialized(Cegar* cegar) {
     return cegar->interface_vars != NULL;
 }
 
-
-//union int_or_float {
-//    float f;
-//    int i;
-//};
-//static inline float interpret_int_as_float(int val) {
-//    union int_or_float x;
-//    x.i = val;
-//    return x.f;
-//}
-//static inline int interpret_float_as_int(float val) {
-//    union int_or_float x;
-//    x.f = val;
-//    return x.i;
-//}
 float cegar_get_universal_activity(Cegar* cegar, unsigned var_id) {
     if (float_vector_count(cegar->interface_activities) > var_id) {
         return float_vector_get(cegar->interface_activities, var_id);
@@ -78,7 +63,7 @@ void cegar_universal_activity_decay(Cegar* cegar, unsigned var_id) {
         return;
     }
     float old = float_vector_get(cegar->interface_activities, var_id);
-    float_vector_set(cegar->interface_activities, var_id, old * cegar->universal_activity_decay);
+    float_vector_set(cegar->interface_activities, var_id, old * cegar->magic.universal_activity_decay);
 //    }
 }
 
@@ -225,11 +210,11 @@ cadet_res cegar_solve_2QBF(C2* c2, int rounds_num) {
     return c2->result;
 }
 
-void cegar_do_cegar_if_effective(C2* c2) {
+void do_cegar_if_effective(C2* c2) {
     assert(cegar_is_initialized(c2->skolem->cegar));
     unsigned i = 0;
     while (c2->result == CADET_RESULT_UNKNOWN &&
-           c2->skolem->cegar->recent_average_cube_size < c2->skolem->cegar->cegar_effectiveness_threshold) {
+           c2->skolem->cegar->recent_average_cube_size < c2->skolem->cegar->magic.cegar_effectiveness_threshold) {
         i++;
         cegar_solve_2QBF(c2,1);
     }
@@ -320,63 +305,6 @@ cadet_res cegar_build_abstraction_for_assignment(C2* c2) {
         c2->result = CADET_RESULT_UNSAT;
     }
     return c2->result;
-}
-
-
-bool cegar_try_to_handle_conflict(Skolem* s) {
-    assert(cegar_is_initialized(s->cegar));
-    Cegar* cegar = s->cegar;
-    
-    V3("Assuming: ");
-    for (unsigned i = 0 ; i < int_vector_count(cegar->interface_vars); i++) {
-        unsigned var_id = (unsigned) int_vector_get(cegar->interface_vars, i);
-        int_vector_set(cegar->is_used_in_lemma, var_id, 1); // reset values
-        
-        int val = cegar_get_val(s, (int) var_id);
-        satsolver_assume(cegar->exists_solver, val * (Lit) var_id);
-        V3(" %d", val * (Lit) var_id);
-    }
-    V3("\n");
-    
-#ifdef DEBUG
-    for (unsigned i = 0; i < var_vector_count(s->qcnf->vars); i++) {
-        Var* v = var_vector_get(s->qcnf->vars, i);
-        if (!v->original) {
-            continue;
-        }
-        assert(int_vector_get(cegar->is_used_in_lemma, i) == 1);
-    }
-#endif
-    
-    if (satsolver_sat(cegar->exists_solver) == SATSOLVER_RESULT_SAT) {
-        
-        int_vector_reset(cegar->additional_assignment);
-        int_vector* cube = int_vector_init();
-
-        for (unsigned i = 0 ; i < int_vector_count(cegar->interface_vars); i++) {
-            unsigned var_id = (unsigned) int_vector_get(cegar->interface_vars, i);
-            int val = satsolver_deref(cegar->exists_solver, (int) var_id);
-            
-            if (cegar_var_needs_to_be_set(cegar, var_id)) {
-                Lit lit = - val * (Lit) var_id;
-                int_vector_add(cube, lit);
-            } else {
-                int_vector_set(cegar->is_used_in_lemma, var_id, 0);
-            }
-        }
-        
-        cegar_new_cube(s, cube);
-        
-        if ((float) int_vector_count(cube) < cegar->cegar_effectiveness_threshold) {
-            return true;
-        } else {
-            return false;
-        }
-    } else {
-        // We found an actual conflict; returning false will let conflict analysis proceed, including later CEGAR check.
-        V1("Found an actual conflict, but let the outer CEGAR check discover this again.\n");
-        return false;
-    }
 }
 
 void cegar_print_statistics(Cegar* cegar) {

@@ -459,12 +459,33 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
 
                 // Update CEGAR abstraction
                 if (c2->options->cegar && c2->skolem->state == SKOLEM_STATE_SKOLEM_CONFLICT) {
-                    if (cegar_build_abstraction_for_assignment(c2) != CADET_RESULT_UNKNOWN) {
-                        assert(c2->result == CADET_RESULT_UNSAT);
-                        return c2->result;
+                    
+                    for (unsigned i = 0; i < c2->skolem->cegar->magic.max_cegar_iterations_per_learnt_clause; i++) {
+                        switch (cegar_build_abstraction_for_assignment(c2)) {
+                            case CADET_RESULT_SAT:
+                                // skolem_recover_from_conflict(c2->skolem);
+                                int_vector_free(c2->current_conflict);
+                                c2->current_conflict = NULL;
+                                c2->state = C2_READY;
+                                c2->result = CADET_RESULT_SAT;
+                                return c2->result;
+                            case CADET_RESULT_UNSAT:
+                                int_vector_free(c2->current_conflict);
+                                c2->current_conflict = NULL;
+                                c2->state = C2_CEGAR_CONFLICT;
+                                c2->result = CADET_RESULT_UNSAT;
+                                return c2->result;
+                            case CADET_RESULT_UNKNOWN:
+                                break;
+                        }
+                        if (c2->skolem->cegar->recent_average_cube_size >= c2->skolem->cegar->magic.cegar_effectiveness_threshold
+                            || satsolver_sat(c2->skolem->skolem) == SATSOLVER_UNSATISFIABLE) {
+                            break;
+                        }
                     }
+                    assert(skolem_is_conflicted(c2->skolem));
                 }
-
+                
                 unsigned backtracking_lvl = c2_determine_backtracking_lvl(c2, c2->current_conflict);
                 unsigned old_dlvl = c2->skolem->decision_lvl;
                 c2_backtrack_to_decision_lvl(c2, backtracking_lvl);

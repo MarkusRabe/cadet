@@ -312,9 +312,6 @@ unsigned c2_determine_backtracking_lvl(C2* c2, int_vector* conflict) {
         second_largest = (unsigned) int_vector_get(dlvls, int_vector_count(dlvls) - 2);
     }
     second_largest = second_largest < c2->restart_base_decision_lvl ? c2->restart_base_decision_lvl : second_largest;
-    if (second_largest > 0) {
-        second_largest = second_largest - 1;
-    }
     return second_largest;
 }
 

@@ -331,7 +331,7 @@ int_vector* c2_determine_notorious_determinsitic_variables(C2* c2) {
 void c2_case_splits_successful_case_completion(C2* c2) {
     assert(c2->result == CADET_RESULT_SAT);
     
-    V1("Case split successfully completed.\n");
+    V1("Case split of depth %u successfully completed. ", c2->case_split_depth);
     
     c2->statistics.cases_explored += 1;
     
@@ -346,7 +346,9 @@ void c2_case_splits_successful_case_completion(C2* c2) {
     for (unsigned i = 0; i < int_vector_count(c2->case_split_stack); i++) {
         Lit l = int_vector_get(c2->case_split_stack, i);
         int_vector_add(solved_cube, -l);
+        V1(" %d", l);
     }
+    V1("\n");
     
     // Adjust universal activity values
     assert(c2->case_split_depth <= int_vector_count(solved_cube));

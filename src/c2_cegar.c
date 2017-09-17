@@ -33,8 +33,8 @@ Cegar* cegar_init(QCNF* qcnf) {
         int_vector_add(cegar->is_used_in_lemma, 1);
     }
     
-    cegar->magic.max_cegar_iterations_per_learnt_clause = 2;
-    cegar->magic.cegar_effectiveness_threshold = 3;
+    cegar->magic.max_cegar_iterations_per_learnt_clause = 50;
+    cegar->magic.cegar_effectiveness_threshold = 17;
     cegar->magic.universal_activity_decay = (float) 0.95;
     
     return cegar;

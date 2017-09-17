@@ -463,6 +463,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                     for (unsigned i = 0; i < c2->skolem->cegar->magic.max_cegar_iterations_per_learnt_clause; i++) {
                         switch (cegar_build_abstraction_for_assignment(c2)) {
                             case CADET_RESULT_SAT:
+                                abortif(true, "CEGAR abstraction cannot conclude CADET_RESULT_SAT here because it is still inside the global conflict check assumptions.");
                                 // skolem_recover_from_conflict(c2->skolem);
                                 int_vector_free(c2->current_conflict);
                                 c2->current_conflict = NULL;
@@ -478,9 +479,11 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                             case CADET_RESULT_UNKNOWN:
                                 break;
                         }
+                        
                         if (c2->skolem->cegar->recent_average_cube_size >= c2->skolem->cegar->magic.cegar_effectiveness_threshold
                             || satsolver_sat(c2->skolem->skolem) == SATSOLVER_UNSATISFIABLE) {
-                            break;
+                            // simply continue; cannot conclude SAT, because check relied on assumptions in global conflict check
+                             break;
                         }
                     }
                     assert(skolem_is_conflicted(c2->skolem));
@@ -490,6 +493,8 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                 unsigned old_dlvl = c2->skolem->decision_lvl;
                 c2_backtrack_to_decision_lvl(c2, backtracking_lvl);
 
+                assert(!skolem_is_conflicted(c2->skolem));
+                
                 for (unsigned i = 0; i < int_vector_count(c2->current_conflict); i++) {
                     int lit = int_vector_get(c2->current_conflict, i);
                     c2_add_lit(c2, - lit);
@@ -505,13 +510,13 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                 if (new_example) {
                     examples_redo(c2->examples, c2->skolem, new_example);
                 }
-                
-                if (skolem_get_unique_consequence(c2->skolem, learnt_clause) != 0) {
-                    skolem_bump_conflict_potential(c2->skolem, lit_to_var(skolem_get_unique_consequence(c2->skolem, learnt_clause)));
-                }
 
                 c2_log_clause(c2, learnt_clause);
                 c2_new_clause(c2, learnt_clause);
+                
+//                if (skolem_get_unique_consequence(c2->skolem, learnt_clause) != 0) {
+//                    skolem_bump_conflict_potential(c2->skolem, lit_to_var(skolem_get_unique_consequence(c2->skolem, learnt_clause)));
+//                }
 
                 c2_conflict_heuristics(c2, learnt_clause, conflicted_var_id);
 
@@ -670,6 +675,8 @@ void c2_replenish_skolem_satsolver(C2* c2) {
         cegar_new_cube(c2->skolem, cube_copy);
     }
     
+    // Replace the new interace activities by the old ones
+    float_vector_free(c2->skolem->cegar->interface_activities);
     c2->skolem->cegar->interface_activities = old_skolem->cegar->interface_activities;
     old_skolem->cegar->interface_activities = NULL;
     

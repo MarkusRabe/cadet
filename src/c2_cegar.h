@@ -26,6 +26,7 @@ struct Cegar {
     QCNF* qcnf;
     int_vector* interface_vars;
     float_vector* interface_activities; // contains the frequencies of the interface variabes as floats
+    map* original_satlits;
     int_vector* is_used_in_lemma;
     int_vector* additional_assignment;
     

@@ -19,6 +19,7 @@ Cegar* cegar_init(QCNF* qcnf) {
     cegar->exists_solver = NULL; // no initialized yet; see cegar_update_interface
     cegar->interface_vars = NULL;
     cegar->interface_activities = float_vector_init();
+    cegar->original_satlits = map_init();
     
     // Statistics
     cegar->successful_minimizations = 0;
@@ -32,8 +33,8 @@ Cegar* cegar_init(QCNF* qcnf) {
         int_vector_add(cegar->is_used_in_lemma, 1);
     }
     
-    cegar->magic.max_cegar_iterations_per_learnt_clause = 100;
-    cegar->magic.cegar_effectiveness_threshold = 15;
+    cegar->magic.max_cegar_iterations_per_learnt_clause = 2;
+    cegar->magic.cegar_effectiveness_threshold = 3;
     cegar->magic.universal_activity_decay = (float) 0.95;
     
     return cegar;
@@ -114,6 +115,17 @@ void cegar_update_interface(Skolem* s) {
     int_vector_sort(cegar->interface_vars, compare_integers_natural_order);
     int_vector_remove_duplicates(cegar->interface_vars);
     
+    for (unsigned i = 0; i < int_vector_count(cegar->interface_vars); i++) {
+        Lit interface_lit = int_vector_get(cegar->interface_vars, i);
+        assert(interface_lit > 0); // not required for correctness, just a sanity check
+        unsigned interface_var = lit_to_var(interface_lit);
+        assert(skolem_is_deterministic(s, interface_var));
+        int satlit_pos = skolem_get_satsolver_lit(s,   interface_lit);
+        int satlit_neg = skolem_get_satsolver_lit(s, - interface_lit);
+//        assert(satlit != s->satlit_true && satlit != - s->satlit_true);
+        map_add(cegar->original_satlits,   interface_lit, (void*) (long) satlit_pos);
+        map_add(cegar->original_satlits, - interface_lit, (void*) (long) satlit_neg);
+    }
     
     V1("Interface vars: (%u in total) ... ", int_vector_count(cegar->interface_vars));
     if (debug_verbosity >= VERBOSITY_HIGH || (debug_verbosity >= VERBOSITY_LOW && int_vector_count(cegar->interface_vars) < 20)) {
@@ -187,6 +199,7 @@ void cegar_free(Cegar* c) {
     satsolver_free(c->exists_solver);
     if (c->interface_vars) {int_vector_free(c->interface_vars);}
     if (c->interface_activities) {float_vector_free(c->interface_activities);}
+    if (c->original_satlits) {map_free(c->original_satlits);}
     int_vector_free(c->is_used_in_lemma);
     for (unsigned i = 0; i < vector_count(c->solved_cubes); i++) {
         int_vector* cube = (int_vector*) vector_get(c->solved_cubes, i);
@@ -240,12 +253,17 @@ void cegar_new_cube(Skolem* s, int_vector* cube) {
     
     vector_add(s->cegar->solved_cubes, cube);
     
-    V1("Finished cube (with length %u) ", int_vector_count(cube));
+    V1("Completed cube (with length %u) ", int_vector_count(cube));
     for (unsigned i = 0; i < int_vector_count(cube); i++) {
         Lit lit = int_vector_get(cube, i);
         assert(skolem_is_deterministic(s, lit_to_var(lit)));
-        V3("%d ", lit);
-        int satlit = skolem_get_satsolver_lit(s, lit);
+        if (int_vector_count(cube) <= 10) {
+            V1("%d ", - lit);
+        } else {
+            V3("%d ", - lit);
+        }
+        int satlit = (int) (long) map_get(s->cegar->original_satlits, lit);
+//        int satlit = skolem_get_satsolver_lit(s, lit); // doesn't work, as the universal variables could be updated to be constant after case split assumptions
         satsolver_add(s->skolem, satlit);
     }
     satsolver_clause_finished_for_context(s->skolem, 0);
@@ -303,6 +321,7 @@ cadet_res cegar_build_abstraction_for_assignment(C2* c2) {
         c2->state = C2_CEGAR_CONFLICT;
         c2->result = CADET_RESULT_UNSAT;
     }
+    assert(c2->result != CADET_RESULT_SAT);
     return c2->result;
 }
 

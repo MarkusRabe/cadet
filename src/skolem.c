@@ -1305,6 +1305,17 @@ void skolem_propagate_constants_over_clause(Skolem* s, Clause* c) {
         assert(!skolem_is_conflicted(s));
         s->statistics.explicit_propagation_conflicts++;
         s->conflicted_clause = c;
+        unsigned max_dlvl_var = 0;
+        unsigned max_dlvl = 0;
+        for (unsigned i = 0; i < c->size; i++) {
+            unsigned var_id = lit_to_var(c->occs[i]);
+            unsigned dlvl = skolem_get_dlvl_for_constant(s, var_id);
+            if (dlvl >= max_dlvl) {
+                max_dlvl = dlvl;
+                max_dlvl_var = var_id;
+            }
+        }
+        abortif(max_dlvl_var == 0, "No variable in clause found.");
         s->conflict_var_id = lit_to_var(c->occs[c->size - 1]); // conflict is the last variable in the clause :/
         s->state = SKOLEM_STATE_CONSTANTS_CONLICT;
         stack_push_op(s->stack, SKOLEM_OP_PROPAGATION_CONFLICT, NULL);

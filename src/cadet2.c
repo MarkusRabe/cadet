@@ -283,7 +283,7 @@ unsigned c2_determine_backtracking_lvl(C2* c2, int_vector* conflict) {
         unsigned var_id = lit_to_var(lit);
         unsigned dlvl;
         if (c2->state == C2_SKOLEM_CONFLICT) {
-            dlvl = skolem_get_decision_lvl(c2->skolem, var_id);
+            dlvl = skolem_get_decision_lvl_for_conflict_analysis(c2->skolem, var_id);
         } else {
             assert(c2->state == C2_EXAMPLES_CONFLICT);
             PartialAssignment* pa = examples_get_conflicted_assignment(c2->examples);

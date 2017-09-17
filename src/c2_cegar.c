@@ -259,7 +259,7 @@ void cegar_new_cube(Skolem* s, int_vector* cube) {
     for (unsigned i = 0; i < int_vector_count(cube); i++) {
         Lit lit = int_vector_get(cube, i);
         assert(skolem_is_deterministic(s, lit_to_var(lit)));
-        V1("%d ", lit);
+        V3("%d ", lit);
         int satlit = skolem_get_satsolver_lit(s, lit);
         satsolver_add(s->skolem, satlit);
     }

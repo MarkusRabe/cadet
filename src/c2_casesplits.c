@@ -73,7 +73,10 @@ unsigned c2_case_split_probe(C2* c2, Lit lit) {
 
     skolem_push(c2->skolem);
     skolem_assume_constant_value(c2->skolem, lit);
+    assert(c2->skolem->mode == SKOLEM_MODE_STANDARD);
+    c2->skolem->mode = SKOLEM_MODE_CONSTANT_PROPAGATIONS_TO_DETERMINISTICS;
     skolem_propagate(c2->skolem);
+    c2->skolem->mode = SKOLEM_MODE_STANDARD;
 
     if (skolem_is_conflicted(c2->skolem)) {
         V1("Skolem conflict with assumed constant %d: %d\n", lit, c2->skolem->conflict_var_id);
@@ -232,9 +235,9 @@ bool c2_case_split(C2* c2) {
     //    Lit most_notorious_literal = c2_pick_most_notorious_literal(c2);
     Lit most_notorious_literal = c2_case_split_pick_literal(c2);
     if (most_notorious_literal != 0) {
-        bool vacuous = c2_case_splits_make_assumption(c2, most_notorious_literal);
+        c2_case_splits_make_assumption(c2, most_notorious_literal);
         c2_case_splits_reset_countdown(c2);
-        return ! vacuous;
+        return true;
     } else {
         V1("Case split not successful; no literal available for case split.\n");
         return false;
@@ -358,12 +361,17 @@ void c2_case_splits_successful_case_completion(C2* c2) {
         c2->result = CADET_RESULT_SAT;
     }
     
-    if (c2->result == CADET_RESULT_UNKNOWN && rand() % 10 != 0) {
+    if (c2->result == CADET_RESULT_UNKNOWN) {
         
         // Redo all but last case assumptions; stop when one turns out to be vacuous (can be in combination with earlier cases.
         bool vacuous = false;
         unsigned i = 0;
         while (! vacuous && c2->result == CADET_RESULT_UNKNOWN) {
+            
+            if (rand() % 10 != 0) {
+                break;
+            }
+            
             Lit l = int_vector_get(solved_cube, i);
             vacuous = c2_case_splits_make_assumption(c2, - l);
             if (i == int_vector_count(solved_cube) - 1) {

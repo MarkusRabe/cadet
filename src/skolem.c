@@ -1191,7 +1191,7 @@ void skolem_assume_constant_value(Skolem* s, Lit lit) {
     skolem_assign_constant_value(s, lit, deps, NULL);
     s->mode = SKOLEM_MODE_STANDARD;
     
-    // TODO: the assignment might cause many global conflict checks. Suppressing them for variables that are deterministic already seems brutal, but might be OK. If this leads to an inconsistent function definition, no conflicts can be produced in the global conflict check, which is fine in this case. Also, it shouldn't be possible, since we picked a notorious var that had this value already lots of times.
+    // The assignment might cause many global conflict checks. Suppressing them for variables that are deterministic already seems brutal, but might be OK. If this leads to an inconsistent function definition, no conflicts can be produced in the global conflict check, which is fine in this case. Also, it shouldn't be possible, since we picked a notorious var that had this value already lots of times.
 }
 
 // Has the same effect as propagating a singleton clause. May be expensive if called for a deterministic variable, because of required global conflict check.

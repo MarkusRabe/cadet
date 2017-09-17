@@ -76,7 +76,7 @@ C2* c2_init_qcnf(QCNF* qcnf, Options* options) {
     c2->statistics.failed_literals_conflicts = 0;
 
     // Magic constants
-    c2->magic.initial_restart = options->easy_debugging_mode_c2 ? 10 : 6; // [1..100] // depends also on restart factor
+    c2->magic.initial_restart = options->easy_debugging_mode_c2 ? 6 : 6; // [1..100] // depends also on restart factor
     c2->next_restart = c2->magic.initial_restart;
     c2->magic.restart_factor = (float) 1.2; // [1.01..2]
     c2->magic.conflict_var_weight = 2; // [0..5]
@@ -86,8 +86,8 @@ C2* c2_init_qcnf(QCNF* qcnf, Options* options) {
     c2->magic.implication_graph_variable_activity = (float) 0.5;
     c2->magic.major_restart_frequency = 50;
     c2->next_major_restart = c2->magic.major_restart_frequency;
-    c2->magic.num_restarts_before_Jeroslow_Wang = options->easy_debugging_mode_c2 ? 0 : 3;
-    c2->magic.num_restarts_before_case_splits = options->easy_debugging_mode_c2 ? 0 : 10;
+    c2->magic.num_restarts_before_Jeroslow_Wang = options->easy_debugging_mode_c2 ? 0 : 0;
+    c2->magic.num_restarts_before_case_splits = options->easy_debugging_mode_c2 ? 0 : 3;
 
     // Magic constants for case splits
     c2->magic.skolem_success_horizon = (float) 0.9; // >0.0 && <1.0
@@ -752,7 +752,7 @@ cadet_res c2_sat(C2* c2) {
     while (c2->result == CADET_RESULT_UNKNOWN) { // This loop controls the restarts
         c2_run(c2, c2->next_restart);
 
-        while (c2->result == CADET_RESULT_SAT && c2->case_split_depth != 0) {
+        while (c2->result == CADET_RESULT_SAT && int_vector_count(c2->case_split_stack) != 0) {
             c2_case_splits_successful_case_completion(c2);
         }
         

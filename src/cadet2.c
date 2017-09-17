@@ -76,7 +76,7 @@ C2* c2_init_qcnf(QCNF* qcnf, Options* options) {
     c2->statistics.failed_literals_conflicts = 0;
 
     // Magic constants
-    c2->magic.initial_restart = options->easy_debugging_mode_c2 ? 10 : 6; // [1..100] // depends also on restart factor
+    c2->magic.initial_restart = options->easy_debugging_mode_c2 ? 1 : 6; // [1..100] // depends also on restart factor
     c2->next_restart = c2->magic.initial_restart;
     c2->magic.restart_factor = (float) 1.2; // [1.01..2]
     c2->magic.conflict_var_weight = 2; // [0..5]

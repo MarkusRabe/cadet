@@ -253,12 +253,12 @@ void cegar_new_cube(Skolem* s, int_vector* cube) {
     
     vector_add(s->cegar->solved_cubes, cube);
     
-    V1("Completed cube (with length %u) ", int_vector_count(cube));
+    V2("Completed cube (with length %u) ", int_vector_count(cube));
     for (unsigned i = 0; i < int_vector_count(cube); i++) {
         Lit lit = int_vector_get(cube, i);
         assert(skolem_is_deterministic(s, lit_to_var(lit)));
         if (int_vector_count(cube) <= 10) {
-            V1("%d ", - lit);
+            V2("%d ", - lit);
         } else {
             V3("%d ", - lit);
         }
@@ -267,7 +267,7 @@ void cegar_new_cube(Skolem* s, int_vector* cube) {
         satsolver_add(s->skolem, satlit);
     }
     satsolver_clause_finished_for_context(s->skolem, 0);
-    V1("\n");
+    V2("\n");
     
     // TODO: we should insert a real clause here, to enable propagation among the universals. But universal reduction might collapse these clauses to empty clauses ... not good.
     

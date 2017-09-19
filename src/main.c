@@ -200,7 +200,7 @@ int main(int argc, const char* argv[]) {
                             V0("Functional synthesis currently incompatible with CEGAR. Deactivating CEGAR.\n");
                             options->cegar = false;
                         }
-                    } else if (strcmp(argv[i], "--minimize_conflicts") == 0) {
+                    } else if (strcmp(argv[i], "--minimize") == 0) {
                         options->minimize_conflicts = ! options->minimize_conflicts;
                     } else if (strcmp(argv[i], "--enhanced_pure_literals") == 0) {
                         options->enhanced_pure_literals = true;

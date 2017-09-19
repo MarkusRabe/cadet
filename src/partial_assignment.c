@@ -69,7 +69,7 @@ void partial_assignment_push(PartialAssignment* pa) {
     stack_push(pa->stack);
 }
 
-unsigned partial_assignment_is_conflicted(PartialAssignment* pa) {
+bool partial_assignment_is_conflicted(PartialAssignment* pa) {
     return pa->conflicted_clause != NULL;
 }
 
@@ -145,7 +145,7 @@ void partial_assignment_assign_value(PartialAssignment* pa, Lit lit) {
     unsigned var_id = lit_to_var(lit);
     
     VAL val = partial_assignment_get_val(pa, var_id);
-    assert(val == top);
+    assert(val == top);    
     union PA_UNDO_PAIR_UNION pupu;
     pupu.pup.var_id = var_id;
     pupu.pup.previous_value = partial_assignment_get_val(pa, val);

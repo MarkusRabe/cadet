@@ -223,29 +223,6 @@ bool is_implied_by(conflict_analysis* ca, Lit lit, vector* possible_implications
     return false;
 }
 
-// This probably corresponds to "local minimization", not "recursive minimization"
-/* Minimizing Learned Clauses, Niklas Sorensson and Armin Biere */
-/* Towards Understanding and Harnessing the Potential of Clause Learning, Paul Beame, Henry Kautz, and Ashish Sabharwal */
-void ca_minimization_through_self_subsumption(conflict_analysis* ca) {
-    unsigned removed_num = 0;
-    for (unsigned i = 0; i < int_vector_count(ca->conflicting_assignment); i++) {
-        Lit lit = int_vector_get(ca->conflicting_assignment, i);
-        Var* v = var_vector_get(ca->c2->qcnf->vars, (lit_to_var(lit)));
-        vector* possible_implications = lit > 0 ? &v->pos_occs : &v->neg_occs;
-        if (is_implied_by(ca, lit, possible_implications)) {
-            int_vector_remove_index(ca->conflicting_assignment, i);
-            removed_num += 1;
-            i -= 1;
-        }
-    }
-    ca->c2->statistics.successful_conflict_clause_minimizations += removed_num;
-    V2("Conflict clause minimization removed %u literals.\n", removed_num);
-}
-
-void conflict_analysis_minimize_conflicting_assignment(conflict_analysis* ca) {
-    ca_minimization_through_self_subsumption(ca);
-}
-
 unsigned dependency_size(C2 *c2, Var* v) {
     assert(! v->is_universal);
     Scope* scope = vector_get(c2->qcnf->scopes, v->scope_id);
@@ -326,14 +303,9 @@ int_vector* analyze_assignment_conflict(C2* c2,
     }
 #endif
     
-    if (c2->options->minimize_conflicts) {
-        conflict_analysis_minimize_conflicting_assignment(ca);
-    }
-    
     int_vector* conflict = ca->conflicting_assignment;
     ca->conflicting_assignment = int_vector_init();
     
     conflict_analsysis_reset(ca);
     return conflict;
 }
-

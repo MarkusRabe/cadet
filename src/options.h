@@ -47,7 +47,6 @@ typedef struct {
     
     // Case splits
     bool case_splits;
-    bool case_splits_only_at_decision_level_0;
     
     // Optimizations
     bool miniscoping;

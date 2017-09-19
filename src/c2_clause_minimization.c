@@ -18,13 +18,7 @@ void c2_remove_literals_from_clause(QCNF* qcnf, Clause* c, int_vector* literals)
     for (unsigned i = 0; i < c->size; i++) {
         Lit l = c->occs[i];
         if (int_vector_contains_sorted(literals, l)) {
-            vector* occs = qcnf_get_occs_of_lit(qcnf, l);
-            bool removed = vector_remove_unsorted(occs, c);
-            assert(removed);
-            
-            for (unsigned j = i+1; j < c->size; j++) {
-                c->occs[j-1] = c->occs[j];
-            }
+            qcnf_remove_literal(qcnf, c, l);
         }
     }
 }
@@ -34,56 +28,68 @@ void c2_remove_literals_from_clause(QCNF* qcnf, Clause* c, int_vector* literals)
  * (2) find subset of negations of literals that cause a conflict
  */
 void c2_minimize_clause(C2* c2, Clause* c) {
+    statistics_start_timer(c2->statistics.minimization_stats);
+    
+    if (c->size == 0) {
+        return;
+    }
+    
     assert(skolem_get_unique_consequence(c2->skolem, c) == 0);
     assert(c2->minimization_pa->stack->push_count == 0);
     assert(c2->minimization_pa->decision_lvl == 0);
-    
-    statistics_start_timer(c2->minimization_stats);
     int_vector* to_remove = int_vector_init();
     
     // Create random permutation of indices of the clause
     int_vector* permutation = int_vector_init();
-    for (unsigned i = 0; i < c->size; i++) {
-        int_vector_add(permutation, (int) i);
-    }
-    int_vector_shuffle(permutation);
     
+    qcnf_unregister_clause(c2->qcnf, c);
     
-    partial_assignment_push(c2->minimization_pa);
-    for (unsigned i = 0; i < int_vector_count(permutation); i++) {
+    // iterate the minimization a couple of times
+    for (unsigned k = 0; k < c->size; k++) {
         
-        Lit l = c->occs[int_vector_get(permutation, i)];
-        int val = partial_assignment_get_value_for_conflict_analysis(c2->minimization_pa, l);
-        assert(val != -1);
+        int_vector_reset(permutation);
+        for (unsigned i = 0; i < c->size; i++) {
+            int_vector_add(permutation, (int) i);
+        }
+        int_vector_shuffle(permutation);
         
-        if (val == 0) {
-            partial_assignment_assign_value(c2->minimization_pa, - l);
-            partial_assignment_propagate(c2->minimization_pa);
+        partial_assignment_push(c2->minimization_pa);
+        for (unsigned i = 0; i < int_vector_count(permutation); i++) {
             
-            for (unsigned j = i+1; j < int_vector_count(permutation); j++) {
-                Lit other = c->occs[int_vector_get(permutation, j)];
-                if (partial_assignment_get_value_for_conflict_analysis(c2->minimization_pa, other) == 1) {
-                    // can be removed
+            Lit l = c->occs[int_vector_get(permutation, i)];
+            int val = partial_assignment_get_value_for_conflict_analysis(c2->minimization_pa, - l);
+            
+            if (val == 0) {
+                partial_assignment_assign_value(c2->minimization_pa, - l);
+                partial_assignment_propagate(c2->minimization_pa);
+            } else if (val == 1) {
+                V3("Removing implied literal %d from clause %u.\n", l, c->clause_id);
+                int_vector_add(to_remove, l);
+            }
+            
+            if (val == -1 || partial_assignment_is_conflicted(c2->minimization_pa)) {
+                // Should extract unsat core of assumptions made, but this should also work somewhat:
+                for (unsigned j = i+1; j < int_vector_count(permutation); j++) {
+                    Lit other = c->occs[int_vector_get(permutation, j)];
                     int_vector_add(to_remove, other);
                 }
+                break;
             }
         }
+        partial_assignment_pop(c2->minimization_pa);
         
-        if (partial_assignment_is_conflicted(c2->minimization_pa)) {
-            // Should extract unsat core of assumptions made, but this should also work somewhat:
-            for (unsigned j = i+1; j < int_vector_count(permutation); j++) {
-                Lit other = c->occs[int_vector_get(permutation, j)];
-                int_vector_add(to_remove, other);
-            }
-            break;
-        }
+        c2_remove_literals_from_clause(c2->qcnf, c, to_remove);
+        c2->statistics.successful_conflict_clause_minimizations += int_vector_count(to_remove);
+        V2("Conflict clause minimization removed %u literals.\n", int_vector_count(to_remove));
+//        if (int_vector_count(to_remove) == 0) {
+//            break;
+//        }
+        int_vector_reset(to_remove);
     }
-    partial_assignment_pop(c2->minimization_pa);
     
-    c2->statistics.successful_conflict_clause_minimizations += int_vector_count(to_remove);
-    V2("Conflict clause minimization removed %u literals.\n", int_vector_count(to_remove));
+    qcnf_register_clause(c2->qcnf, c);
     
     int_vector_free(permutation);
     int_vector_free(to_remove);
-    statistics_stop_and_record_timer(c2->minimization_stats);
+    statistics_stop_and_record_timer(c2->statistics.minimization_stats);
 }

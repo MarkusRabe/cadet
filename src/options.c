@@ -39,7 +39,6 @@ Options* default_options() {
 
     // Case splits
     o->case_splits = true;
-    o->case_splits_only_at_decision_level_0 = true;
 
     // Optimizations
     o->miniscoping = false;

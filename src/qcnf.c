@@ -410,22 +410,11 @@ Clause* qcnf_new_clause(QCNF* qcnf, int_vector* literals) {
         if (debug_verbosity >= 3) {
             qcnf_print_clause(c, stdout);
         }
+        free(c);
         return NULL;
     }
     
-    
-    // Update the occurrence lists
-    for (int i = 0; i < c->size; i++) {
-        Var* v = var_vector_get(qcnf->vars, lit_to_var(c->occs[i]));
-        if (c->occs[i] > 0) {
-            vector_add(&v->pos_occs, c);
-        } else {
-            vector_add(&v->neg_occs, c);
-        }
-    }
-    
-    // register clause in matrix
-    vector_set(qcnf->clauses, c->clause_id, c);
+    qcnf_register_clause(qcnf, c);
     
     if (c->size == 0) {
         stack_push_op(qcnf->stack, QCNF_UPDATE_EMPTY_CLAUSE, qcnf->empty_clause);
@@ -815,4 +804,53 @@ validate_and_return: // check that the result is correct ... this function is to
     assert(alt_res == res);
 #endif
     return res;
+}
+
+void qcnf_register_clause(QCNF* qcnf, Clause* c) {
+    // Update the occurrence lists
+    for (int i = 0; i < c->size; i++) {
+        vector_add(qcnf_get_occs_of_lit(qcnf, c->occs[i]), c);
+    }
+    
+    vector_set(qcnf->clauses, c->clause_id, c);
+    
+    if (c->size == 0) {
+        if (qcnf->empty_clause) {
+            LOG_WARNING("Found second empty clause. Likely inconsistency.");
+        }
+        qcnf->empty_clause = c;
+    }
+}
+
+void qcnf_unregister_clause(QCNF* qcnf, Clause* c) {
+    assert(c->size > 0); // otherwise we may also need to keep qcnf->empty_clause consistent
+    
+    // Update the occurrence lists
+    for (int i = 0; i < c->size; i++) {
+        vector* occs = qcnf_get_occs_of_lit(qcnf, c->occs[i]);
+        vector_remove_unsorted(occs, c);
+    }
+    
+    vector_set(qcnf->clauses, c->clause_id, NULL);
+}
+
+bool qcnf_remove_literal(QCNF* qcnf, Clause* c, Lit l) {
+    vector* occs = qcnf_get_occs_of_lit(qcnf, l);
+    bool removed = vector_remove_unsorted(occs, c);
+    unsigned i = 0;
+    bool found = false;
+    for (; i < c->size; i++) {
+        if (c->occs[i] == l) {
+            break;
+        }
+    }
+    found = i < c->size;
+    for (unsigned j = i+1; j < c->size; j++) {
+        c->occs[j-1] = c->occs[j];
+    }
+    if (found) {
+        assert(c->size > 0);
+        c->size -= 1;
+    }
+    return found;
 }

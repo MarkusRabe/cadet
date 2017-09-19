@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		28261B921F71872D006974DC /* c2_clause_minimization.c in Sources */ = {isa = PBXBuildFile; fileRef = 28261B911F71872D006974DC /* c2_clause_minimization.c */; };
 		283FC1A21F693C16007DA702 /* float_vector.c in Sources */ = {isa = PBXBuildFile; fileRef = 283FC1A01F693C16007DA702 /* float_vector.c */; };
 		284EED5A1ED39BAF00581801 /* satsolver_lingeling_assumptions.c in Sources */ = {isa = PBXBuildFile; fileRef = 284EED591ED39BAF00581801 /* satsolver_lingeling_assumptions.c */; };
 		284EED781ED3B65600581801 /* lglib.c in Sources */ = {isa = PBXBuildFile; fileRef = 284EED731ED3B65600581801 /* lglib.c */; };
@@ -68,6 +69,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		28261B911F71872D006974DC /* c2_clause_minimization.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = c2_clause_minimization.c; path = src/c2_clause_minimization.c; sourceTree = "<group>"; };
 		283FC1A01F693C16007DA702 /* float_vector.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = float_vector.c; path = src/float_vector.c; sourceTree = "<group>"; };
 		283FC1A11F693C16007DA702 /* float_vector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = float_vector.h; path = src/float_vector.h; sourceTree = "<group>"; };
 		284EED591ED39BAF00581801 /* satsolver_lingeling_assumptions.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = satsolver_lingeling_assumptions.c; path = src/satsolver_lingeling_assumptions.c; sourceTree = "<group>"; };
@@ -287,6 +289,7 @@
 				287C3B0F1E396B7600F7096A /* c2_traces.h */,
 				28FA8D2E1E10ACBC00A43B7B /* c2_validate.c */,
 				28FA8D2F1E10ACBC00A43B7B /* c2_validate.h */,
+				28261B911F71872D006974DC /* c2_clause_minimization.c */,
 			);
 			name = cadet2_ext;
 			sourceTree = "<group>";
@@ -430,6 +433,7 @@
 				28675A5B1DDAA9D000951212 /* satsolver_cryptominisat.cpp in Sources */,
 				28675A4F1DDAA9D000951212 /* main.c in Sources */,
 				28577A721E6F87200082100B /* qipasir.c in Sources */,
+				28261B921F71872D006974DC /* c2_clause_minimization.c in Sources */,
 				28DA30F41DFFDD2600EABCA6 /* skolem_dependencies.c in Sources */,
 				28675A461DDAA9D000951212 /* aiger.c in Sources */,
 				28675A611DDAA9D000951212 /* undo_stack.c in Sources */,

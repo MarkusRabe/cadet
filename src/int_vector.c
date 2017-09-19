@@ -265,3 +265,13 @@ void int_vector_add_all_sorted(int_vector* this, int_vector* other) {
     }
     assert(int_vector_is_strictly_sorted(this));
 }
+
+void int_vector_shuffle(int_vector* v) {
+    // creating a random permutation http://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle
+    for (unsigned i = 0; i < int_vector_count(v); i++) {
+        unsigned j = i + ((unsigned) rand() % (int_vector_count(v)-i));
+        int tmp = int_vector_get(v, j);
+        int_vector_set(v, j, int_vector_get(v, i));
+        int_vector_set(v, i, tmp);
+    }
+}

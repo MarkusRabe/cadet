@@ -28,14 +28,10 @@ struct conflict_analysis {
     unsigned conflicted_var_id;
     Clause* conflicted_clause;
     unsigned conflict_decision_lvl;
-    
-    // Conflict minimization
-    PartialAssignment* minimization_pa;
-    Stats* minimization_stats;
 };
 
 conflict_analysis* conflcit_analysis_init(C2* c2);
-void conflict_analysis_free(conflict_analysis* ca);
+void conflict_analysis_free(conflict_analysis*);
 
 int_vector* analyze_assignment_conflict(C2* c2,
                                         unsigned conflict_var,

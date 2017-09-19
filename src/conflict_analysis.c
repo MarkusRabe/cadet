@@ -12,6 +12,55 @@
 #include <assert.h>
 #include <stdint.h>
 
+
+bool conflict_analysis_is_fresh(conflict_analysis* ca) {
+    assert(int_vector_count(ca->conflicting_assignment) == 0);
+    assert(worklist_count(ca->queue) == 0);
+    assert(ca->domain == NULL);
+    assert(ca->conflicted_clause == NULL);
+    assert(ca->conflicted_var_id == 0);
+    assert(ca->domain_get_value == NULL);
+    assert(ca->domain_is_relevant_clause == NULL);
+    assert(ca->domain_is_legal_dependence == NULL);
+    assert(ca->domain_get_decision_lvl == NULL);
+    return true;
+}
+
+void conflict_analsysis_reset(conflict_analysis* ca) {
+    int_vector_reset(ca->conflicting_assignment);
+    worklist_reset(ca->queue);
+    ca->domain = NULL;
+    ca->conflicted_clause = NULL;
+    ca->conflicted_var_id = 0;
+    ca->domain_get_value = NULL;
+    ca->domain_is_relevant_clause = NULL;
+    ca->domain_is_legal_dependence = NULL;
+    ca->domain_get_decision_lvl = NULL;
+    ca->conflict_decision_lvl = 0;
+    
+    assert(conflict_analysis_is_fresh(ca));
+}
+
+conflict_analysis* conflcit_analysis_init(C2* c2) {
+    
+    conflict_analysis* ca = malloc(sizeof(conflict_analysis));
+    ca->c2 = c2;
+    ca->conflicting_assignment = int_vector_init();
+    ca->queue = worklist_init_unique_computation(qcnf_compare_literals_by_var_id);
+    
+    conflict_analsysis_reset(ca);
+    
+    assert(conflict_analysis_is_fresh(ca));
+    return ca;
+}
+
+void conflict_analysis_free(conflict_analysis* ca) {
+    assert(conflict_analysis_is_fresh(ca));
+    int_vector_free(ca->conflicting_assignment);
+    worklist_free(ca->queue);
+    free(ca);
+}
+
 void conflict_analysis_schedule_causing_vars_in_work_queue(conflict_analysis* ca, Clause* reason, Lit consequence) {
     assert(consequence != 0);
     assert(lit_to_var(consequence) < var_vector_count(ca->c2->qcnf->vars));
@@ -174,26 +223,6 @@ bool is_implied_by(conflict_analysis* ca, Lit lit, vector* possible_implications
     return false;
 }
 
-//void conflict_analysis_minimize_conflicting_assignment_by_implications(conflict_analysis* ca) {
-//    
-//    PartialAssignment* pa = partial_assignment_init(ca->c2->qcnf);
-////    asdf
-//    
-//    unsigned removed_num = 0;
-//    for (unsigned i = 0; i < int_vector_count(ca->conflicting_assignment); i++) {
-//        Lit lit = int_vector_get(ca->conflicting_assignment, i);
-//        Var* v = var_vector_get(ca->c2->qcnf->vars, (lit_to_var(lit)));
-//        vector* possible_implications = lit > 0 ? &v->pos_occs : &v->neg_occs;
-//        if (is_implied_by(ca, lit, possible_implications)) {
-//            int_vector_remove_index(ca->conflicting_assignment, i);
-//            removed_num += 1;
-//            i -= 1;
-//        }
-//    }
-//    ca->c2->statistics.successful_conflict_clause_minimizations += removed_num;
-//    V2("Conflict clause minimization removed %u literals.\n", removed_num);
-//}
-
 // This probably corresponds to "local minimization", not "recursive minimization"
 /* Minimizing Learned Clauses, Niklas Sorensson and Armin Biere */
 /* Towards Understanding and Harnessing the Potential of Clause Learning, Paul Beame, Henry Kautz, and Ashish Sabharwal */
@@ -214,68 +243,13 @@ void ca_minimization_through_self_subsumption(conflict_analysis* ca) {
 }
 
 void conflict_analysis_minimize_conflicting_assignment(conflict_analysis* ca) {
-    statistics_start_timer(ca->minimization_stats);
     ca_minimization_through_self_subsumption(ca);
-    statistics_stop_and_record_timer(ca->minimization_stats);
 }
 
 unsigned dependency_size(C2 *c2, Var* v) {
     assert(! v->is_universal);
     Scope* scope = vector_get(c2->qcnf->scopes, v->scope_id);
     return int_vector_count(scope->vars);
-}
-
-bool conflict_analysis_is_fresh(conflict_analysis* ca) {
-    assert(int_vector_count(ca->conflicting_assignment) == 0);
-    assert(worklist_count(ca->queue) == 0);
-    assert(ca->domain == NULL);
-    assert(ca->conflicted_clause == NULL);
-    assert(ca->conflicted_var_id == 0);
-    assert(ca->domain_get_value == NULL);
-    assert(ca->domain_is_relevant_clause == NULL);
-    assert(ca->domain_is_legal_dependence == NULL);
-    assert(ca->domain_get_decision_lvl == NULL);
-    return true;
-}
-
-void conflict_analsysis_reset(conflict_analysis* ca) {
-    int_vector_reset(ca->conflicting_assignment);
-    worklist_reset(ca->queue);
-    ca->domain = NULL;
-    ca->conflicted_clause = NULL;
-    ca->conflicted_var_id = 0;
-    ca->domain_get_value = NULL;
-    ca->domain_is_relevant_clause = NULL;
-    ca->domain_is_legal_dependence = NULL;
-    ca->domain_get_decision_lvl = NULL;
-    ca->conflict_decision_lvl = 0;
-    assert(conflict_analysis_is_fresh(ca));
-}
-
-conflict_analysis* conflcit_analysis_init(C2* c2) {
-    
-    conflict_analysis* ca = malloc(sizeof(conflict_analysis));
-    ca->c2 = c2;
-    ca->conflicting_assignment = int_vector_init();
-    ca->queue = worklist_init_unique_computation(qcnf_compare_literals_by_var_id);
-    
-    conflict_analsysis_reset(ca);
-    
-    // Conflict minimization
-    ca->minimization_pa = partial_assignment_init(c2->qcnf);
-    ca->minimization_stats = statistics_init(10000);
-    
-    assert(conflict_analysis_is_fresh(ca));
-    return ca;
-}
-
-void conflict_analysis_free(conflict_analysis* ca) {
-    assert(conflict_analysis_is_fresh(ca));
-    int_vector_free(ca->conflicting_assignment);
-    worklist_free(ca->queue);
-    partial_assignment_free(ca->minimization_pa);
-    statistics_free(ca->minimization_stats);
-    free(ca);
 }
 
 int_vector* analyze_assignment_conflict(C2* c2,
@@ -362,3 +336,4 @@ int_vector* analyze_assignment_conflict(C2* c2,
     conflict_analsysis_reset(ca);
     return conflict;
 }
+

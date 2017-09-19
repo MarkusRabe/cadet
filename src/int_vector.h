@@ -44,5 +44,5 @@ int_vector* int_vector_copy(int_vector*);
 bool int_vector_includes_sorted(int_vector*,int_vector*); // compare by subset relation
 void int_vector_add_all_sorted(int_vector* add_to, int_vector* to_add); // Adds the elements of the second to the first, sorts in the end
 void int_vector_add_all(int_vector* add_to, int_vector* to_add); // Adds the elements of the second to the first
-
+void int_vector_shuffle(int_vector*);
 #endif /* int_vector_h */

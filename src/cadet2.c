@@ -58,6 +58,10 @@ C2* c2_init_qcnf(QCNF* qcnf, Options* options) {
     c2->skolem = skolem_init(c2->qcnf, options, vector_count(qcnf->scopes) + 1, 0);
     c2->examples = examples_init(qcnf, options->examples_max_num);
     c2->ca = conflcit_analysis_init(c2);
+    
+    // Clause minimization
+    c2->minimization_pa = partial_assignment_init(qcnf);
+    c2->minimization_stats = statistics_init(10000);
 
     // Case splits
     c2->case_split_stack = int_vector_init();
@@ -115,8 +119,7 @@ void c2_free(C2* c2) {
     statistics_free(c2->statistics.failed_literals_stats);
     skolem_free(c2->skolem);
     examples_free(c2->examples);
-    conflict_analysis_free
-    (c2->ca);
+    conflict_analysis_free(c2->ca);
     val_vector_free(c2->decision_vals);
     stack_free(c2->stack);
     int_vector_free(c2->case_split_stack);
@@ -124,6 +127,8 @@ void c2_free(C2* c2) {
     if (c2->current_conflict) {
         int_vector_free(c2->current_conflict);
     }
+    partial_assignment_free(c2->minimization_pa);
+    statistics_free(c2->minimization_stats);
     free(c2);
 }
 
@@ -514,7 +519,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                 if (new_example) {
                     examples_redo(c2->examples, c2->skolem, new_example);
                 }
-
+                
                 c2_log_clause(c2, learnt_clause);
                 c2_new_clause(c2, learnt_clause);
                 

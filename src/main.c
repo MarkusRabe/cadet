@@ -263,8 +263,8 @@ int main(int argc, const char* argv[]) {
         size_t extlen = strlen(ext);
         V4("Detected file name extension %s\n", ext);
         if ( (extlen == 2 && strcmp("gz", ext) == 0) || (extlen == 4 && strcmp("gzip", ext) == 0) ) {
-            char* cmd = malloc(strlen("gzcat ") + strlen(file_name) + 5);
-            sprintf(cmd, "%s '%s'", "gzcat", file_name);
+            char* cmd = malloc(strlen("zcat ") + strlen(file_name) + 5);
+            sprintf(cmd, "%s '%s'", "zcat", file_name);
             file = popen(cmd, "r");
             free(cmd);
             if (!file) {

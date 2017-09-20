@@ -27,12 +27,14 @@ void c2_remove_literals_from_clause(QCNF* qcnf, Clause* c, int_vector* literals)
  * (1) remove literals whose negation is implied by the negation of the remaining literals
  * (2) find subset of negations of literals that cause a conflict
  */
-void c2_minimize_clause(C2* c2, Clause* c) {
+bool c2_minimize_clause(C2* c2, Clause* c) {
     statistics_start_timer(c2->statistics.minimization_stats);
     
     if (c->size == 0) {
-        return;
+        return false;
     }
+    
+    bool removed_something = false;
     
     assert(skolem_get_unique_consequence(c2->skolem, c) == 0);
     assert(c2->minimization_pa->stack->push_count == 0);
@@ -45,8 +47,8 @@ void c2_minimize_clause(C2* c2, Clause* c) {
     qcnf_unregister_clause(c2->qcnf, c);
     
     // iterate the minimization a couple of times
-    for (unsigned k = 0; k < c->size; k++) {
-        
+//    for (unsigned k = 0; k < c->size; k++) {
+    
         int_vector_reset(permutation);
         for (unsigned i = 0; i < c->size; i++) {
             int_vector_add(permutation, (int) i);
@@ -79,17 +81,19 @@ void c2_minimize_clause(C2* c2, Clause* c) {
         partial_assignment_pop(c2->minimization_pa);
         
         c2_remove_literals_from_clause(c2->qcnf, c, to_remove);
-        c2->statistics.successful_conflict_clause_minimizations += int_vector_count(to_remove);
-        V2("Conflict clause minimization removed %u literals.\n", int_vector_count(to_remove));
-//        if (int_vector_count(to_remove) == 0) {
-//            break;
-//        }
+    
+        if (int_vector_count(to_remove) > 0) {
+            removed_something = true;
+            c2->statistics.successful_conflict_clause_minimizations += int_vector_count(to_remove);
+            V2("Conflict clause minimization removed %u literals.\n", int_vector_count(to_remove));
+        }
         int_vector_reset(to_remove);
-    }
+//    }
     
     qcnf_register_clause(c2->qcnf, c);
     
     int_vector_free(permutation);
     int_vector_free(to_remove);
     statistics_stop_and_record_timer(c2->statistics.minimization_stats);
+    return removed_something;
 }

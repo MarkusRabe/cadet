@@ -263,8 +263,18 @@ int main(int argc, const char* argv[]) {
         size_t extlen = strlen(ext);
         V4("Detected file name extension %s\n", ext);
         if ( (extlen == 2 && strcmp("gz", ext) == 0) || (extlen == 4 && strcmp("gzip", ext) == 0) ) {
-            char* cmd = malloc(strlen("zcat ") + strlen(file_name) + 5);
-            sprintf(cmd, "%s '%s'", "zcat", file_name);
+#ifdef __APPLE__
+            char* unzip_tool_name = "gzcat ";
+#endif
+#ifdef __linux__
+            char* unzip_tool_name = "zcat ";
+#endif
+#ifdef _WIN32
+            abort(); // please use a proper operating system
+#endif
+            
+            char* cmd = malloc(strlen(unzip_tool_name) + strlen(file_name) + 5);
+            sprintf(cmd, "%s '%s'", unzip_tool_name, file_name);
             file = popen(cmd, "r");
             free(cmd);
             if (!file) {

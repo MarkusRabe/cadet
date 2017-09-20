@@ -449,6 +449,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
             
             if (c2->options->minimize_conflicts) {
                 c2_minimize_clause(c2, learnt_clause);
+//                c2_minimize_clause(c2, learnt_clause);
             }
             
             int_vector_free(c2->current_conflict);
@@ -794,6 +795,24 @@ cadet_res c2_sat(C2* c2) {
             assert(c2->skolem->decision_lvl == c2->restart_base_decision_lvl);
             c2->restarts += 1;
             c2_restart_heuristics(c2);
+        }
+        
+        if (c2->options->minimize_conflicts) {
+            for (int i = (int) vector_count(c2->qcnf->clauses) - 1; i >= 0; i--) {
+                Clause* c = vector_get(c2->qcnf->clauses, (unsigned) i);
+                if (! c || c->original) {
+                    break;
+                }
+                if (skolem_get_unique_consequence(c2->skolem, c) == 0) {
+                    c2_minimize_clause(c2, c);
+                    skolem_check_for_unique_consequence(c2->skolem, c);
+                }
+            }
+            if (c2->qcnf->empty_clause) {
+                c2->result = CADET_RESULT_UNSAT;
+                c2->state = C2_EMPTY_CLAUSE_CONFLICT;
+                break;
+            }
         }
     }
 

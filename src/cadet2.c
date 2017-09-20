@@ -339,17 +339,6 @@ void c2_decay_activity(C2* c2) {
     }
 }
 
-void c2_conflict_heuristics(C2* c2, Clause* conflict, unsigned conflicted_var_id) {
-    c2_decay_activity(c2);
-    for (int i = 0; i < conflict->size; i++) {
-        unsigned var_id = lit_to_var(conflict->occs[i]);
-        c2_increase_activity(c2, var_id, c2->magic.conflict_clause_weight);
-    }
-    if (conflicted_var_id != 0) {
-        c2_increase_activity(c2, conflicted_var_id, c2->magic.conflict_var_weight);
-    }
-}
-
 float c2_Jeroslow_Wang_log_weight(vector* clauses) {
     float weight = 0;
     for (unsigned i = 1; i < vector_count(clauses); i++) {
@@ -532,7 +521,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                 c2_log_clause(c2, learnt_clause);
                 c2_new_clause(c2, learnt_clause);
 
-                c2_conflict_heuristics(c2, learnt_clause, c2->skolem->conflict_var_id);
+                c2_decay_activity(c2);
 
                 V2("Learnt clause has length %u. Backtracking %u lvls to lvl %u\n", learnt_clause->size, old_dlvl - c2->skolem->decision_lvl, c2->skolem->decision_lvl);
                 c2->statistics.lvls_backtracked += old_dlvl - c2->skolem->decision_lvl;

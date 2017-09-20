@@ -368,7 +368,7 @@ void c2_case_splits_successful_case_completion(C2* c2) {
     
     while (! vacuous && c2->result == CADET_RESULT_UNKNOWN) {
         
-        if (rand() % 10 == 0) {
+        if (rand() % 30 == 0) {
             break;
         }
         

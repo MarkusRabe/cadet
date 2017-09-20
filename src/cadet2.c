@@ -94,7 +94,7 @@ C2* c2_init_qcnf(QCNF* qcnf, Options* options) {
     c2->magic.major_restart_frequency = 15;
     c2->magic.replenish_frequency = 50;
     c2->next_major_restart = c2->magic.major_restart_frequency;
-    c2->magic.num_restarts_before_Jeroslow_Wang = options->easy_debugging_mode_c2 ? 0 : 0;
+    c2->magic.num_restarts_before_Jeroslow_Wang = options->easy_debugging_mode_c2 ? 0 : 3;
     c2->magic.num_restarts_before_case_splits = options->easy_debugging_mode_c2 ? 0 : 3;
 
     // Magic constants for case splits

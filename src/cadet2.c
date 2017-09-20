@@ -47,6 +47,7 @@ C2* c2_init_qcnf(QCNF* qcnf, Options* options) {
     c2->state = C2_READY;
     c2->result = CADET_RESULT_UNKNOWN;
     c2->restarts = 0;
+    c2->restarts_since_last_major = 0;
     c2->restart_base_decision_lvl = 0;
     c2->activity_factor = (float) 1.0;
 
@@ -89,7 +90,7 @@ C2* c2_init_qcnf(QCNF* qcnf, Options* options) {
     c2->magic.decision_var_activity_modifier = (float) 0.8; // [-3.0..2.0]
     c2->magic.decay_rate = (float) 0.9;
     c2->magic.implication_graph_variable_activity = (float) 0.5;
-    c2->magic.major_restart_frequency = 20;
+    c2->magic.major_restart_frequency = 15;
     c2->magic.replenish_frequency = 50;
     c2->next_major_restart = c2->magic.major_restart_frequency;
     c2->magic.num_restarts_before_Jeroslow_Wang = options->easy_debugging_mode_c2 ? 0 : 0;
@@ -697,10 +698,18 @@ void c2_replenish_skolem_satsolver(C2* c2) {
 
 
 void c2_restart_heuristics(C2* c2) {
-    c2->next_restart = (unsigned) (c2->next_restart * c2->magic.restart_factor) + 1;
+    c2->restarts_since_last_major += 1;
+
+    c2->next_restart = (unsigned) (c2->next_restart * c2->magic.restart_factor) ;
+    
+    V1("Next restart in %u conflicts.\n", c2->next_restart);
+    
     c2_rescale_activity_values(c2);
     
-    if (c2->next_major_restart == 0) {
+    if (c2->next_major_restart == c2->restarts_since_last_major) {
+        c2->restarts_since_last_major = 0;
+        c2->next_restart = c2->magic.initial_restart;
+        
         V1("Major restart. Resetting all activity values to 0 and some random ones to 1.\n");
         for (unsigned i = 0; i < var_vector_count(c2->qcnf->vars); i++) {
             c2_set_activity(c2, i, 0.0f);
@@ -715,10 +724,7 @@ void c2_restart_heuristics(C2* c2) {
             }
         }
 
-        c2->next_major_restart = c2->magic.major_restart_frequency + (c2->restarts / 4);
-        
-    } else {
-        c2->next_major_restart -= 1;
+        c2->next_major_restart = (size_t) (c2->next_major_restart * c2->magic.restart_factor);
     }
     
     if (c2->restarts % c2->magic.replenish_frequency == c2->magic.replenish_frequency - 1) {
@@ -803,25 +809,25 @@ cadet_res c2_sat(C2* c2) {
             assert(c2->skolem->decision_lvl == c2->restart_base_decision_lvl);
             c2->restarts += 1;
             c2_restart_heuristics(c2);
-        }
-        
-//        if (c2->options->minimize_conflicts) {
-//            for (int i = (int) vector_count(c2->qcnf->clauses) - 1; i >= 0; i--) {
-//                Clause* c = vector_get(c2->qcnf->clauses, (unsigned) i);
-//                if (! c || c->original) {
+            
+//            if (c2->options->minimize_conflicts) {
+//                for (int i = (int) vector_count(c2->qcnf->clauses) - 1; i >= 0; i--) {
+//                    Clause* c = vector_get(c2->qcnf->clauses, (unsigned) i);
+//                    if (! c || c->original) {
+//                        break;
+//                    }
+//                    if (skolem_get_unique_consequence(c2->skolem, c) == 0) {
+//                        c2_minimize_clause(c2, c);
+//                        skolem_check_for_unique_consequence(c2->skolem, c);
+//                    }
+//                }
+//                if (c2->qcnf->empty_clause) {
+//                    c2->result = CADET_RESULT_UNSAT;
+//                    c2->state = C2_EMPTY_CLAUSE_CONFLICT;
 //                    break;
 //                }
-//                if (skolem_get_unique_consequence(c2->skolem, c) == 0) {
-//                    c2_minimize_clause(c2, c);
-//                    skolem_check_for_unique_consequence(c2->skolem, c);
-//                }
 //            }
-//            if (c2->qcnf->empty_clause) {
-//                c2->result = CADET_RESULT_UNSAT;
-//                c2->state = C2_EMPTY_CLAUSE_CONFLICT;
-//                break;
-//            }
-//        }
+        }
     }
 
     return c2->result;

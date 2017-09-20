@@ -84,6 +84,7 @@ struct C2 {
     c2_state state;
     cadet_res result;
     size_t restarts;
+    size_t restarts_since_last_major;
     unsigned next_restart;
     size_t next_major_restart;
     unsigned restart_base_decision_lvl; // decision_lvl used for restarts

@@ -73,6 +73,7 @@ C2* c2_init_qcnf(QCNF* qcnf, Options* options) {
     c2->statistics.added_clauses = 0;
     c2->statistics.decisions = 0;
     c2->statistics.successful_conflict_clause_minimizations = 0;
+    c2->statistics.learnt_clauses_total_length = 0;
     c2->statistics.cases_explored = 0;
     c2->statistics.lvls_backtracked = 0;
     c2->statistics.start_time = get_seconds();
@@ -446,6 +447,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                 c2_add_lit(c2, - lit);
             }
             Clause* learnt_clause = qcnf_close_clause(c2->qcnf);
+            c2->statistics.learnt_clauses_total_length += learnt_clause->size;
             
             abortif(learnt_clause == NULL, "Learnt clause could not be created. Probably duplicate.");
             
@@ -702,7 +704,7 @@ void c2_restart_heuristics(C2* c2) {
 
     c2->next_restart = (unsigned) (c2->next_restart * c2->magic.restart_factor) ;
     
-    V1("Next restart in %u conflicts.\n", c2->next_restart);
+    V3("Next restart in %u conflicts.\n", c2->next_restart);
     
     c2_rescale_activity_values(c2);
     
@@ -810,23 +812,23 @@ cadet_res c2_sat(C2* c2) {
             c2->restarts += 1;
             c2_restart_heuristics(c2);
             
-//            if (c2->options->minimize_conflicts) {
-//                for (int i = (int) vector_count(c2->qcnf->clauses) - 1; i >= 0; i--) {
-//                    Clause* c = vector_get(c2->qcnf->clauses, (unsigned) i);
-//                    if (! c || c->original) {
-//                        break;
-//                    }
-//                    if (skolem_get_unique_consequence(c2->skolem, c) == 0) {
-//                        c2_minimize_clause(c2, c);
-//                        skolem_check_for_unique_consequence(c2->skolem, c);
-//                    }
-//                }
-//                if (c2->qcnf->empty_clause) {
-//                    c2->result = CADET_RESULT_UNSAT;
-//                    c2->state = C2_EMPTY_CLAUSE_CONFLICT;
-//                    break;
-//                }
-//            }
+            if (c2->options->minimize_conflicts) {
+                for (int i = (int) vector_count(c2->qcnf->clauses) - 1; i >= 0; i--) {
+                    Clause* c = vector_get(c2->qcnf->clauses, (unsigned) i);
+                    if (! c || c->original || rand() % 100 == 0) {
+                        break;
+                    }
+                    if (skolem_get_unique_consequence(c2->skolem, c) == 0) {
+                        c2_minimize_clause(c2, c);
+                        skolem_check_for_unique_consequence(c2->skolem, c);
+                    }
+                }
+                if (c2->qcnf->empty_clause) {
+                    c2->result = CADET_RESULT_UNSAT;
+                    c2->state = C2_EMPTY_CLAUSE_CONFLICT;
+                    break;
+                }
+            }
         }
     }
 

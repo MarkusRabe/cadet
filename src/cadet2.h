@@ -40,6 +40,7 @@ struct C2_Statistics {
     size_t added_clauses;
     size_t decisions;
     size_t successful_conflict_clause_minimizations;
+    size_t learnt_clauses_total_length;
     Stats* minimization_stats;
     size_t cases_explored;
     size_t lvls_backtracked;

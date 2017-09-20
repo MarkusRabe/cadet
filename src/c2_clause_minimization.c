@@ -47,8 +47,9 @@ bool c2_minimize_clause(C2* c2, Clause* c) {
     qcnf_unregister_clause(c2->qcnf, c);
     
     // iterate the minimization a couple of times
-//    for (unsigned k = 0; k < c->size; k++) {
-    
+    unsigned max_iterations = 1;
+    for (unsigned k = 0; k < max_iterations; k++) {
+        int_vector_reset(to_remove);
         int_vector_reset(permutation);
         for (unsigned i = 0; i < c->size; i++) {
             int_vector_add(permutation, (int) i);
@@ -75,6 +76,7 @@ bool c2_minimize_clause(C2* c2, Clause* c) {
                     Lit other = c->occs[int_vector_get(permutation, j)];
                     int_vector_add(to_remove, other);
                 }
+                max_iterations = c->size;
                 break;
             }
         }
@@ -86,10 +88,11 @@ bool c2_minimize_clause(C2* c2, Clause* c) {
             removed_something = true;
             c2->statistics.successful_conflict_clause_minimizations += int_vector_count(to_remove);
             V2("Conflict clause minimization removed %u literals.\n", int_vector_count(to_remove));
+        } else {
+            break;
         }
-        int_vector_reset(to_remove);
-//    }
-    
+    }
+
     qcnf_register_clause(c2->qcnf, c);
     
     int_vector_free(permutation);

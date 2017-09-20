@@ -70,6 +70,7 @@ bool c2_minimize_clause(C2* c2, Clause* c) {
                 int_vector_add(to_remove, l);
             }
             
+            // TODO: this should actually extract the unsat core, but here we only remove the literals we didn't assume and then do this a couple of more times with other random orderings.
             if (val == -1 || partial_assignment_is_conflicted(c2->minimization_pa)) {
                 // Should extract unsat core of assumptions made, but this should also work somewhat:
                 for (unsigned j = i+1; j < int_vector_count(permutation); j++) {

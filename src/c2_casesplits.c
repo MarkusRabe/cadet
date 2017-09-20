@@ -363,22 +363,21 @@ void c2_case_splits_successful_case_completion(C2* c2) {
         c2->result = CADET_RESULT_SAT;
     }
     // Redo all but last case assumptions; stop when one turns out to be vacuous (can be in combination with earlier cases.
-    bool vacuous = false;
-    unsigned i = 0;
-    
-    while (! vacuous && c2->result == CADET_RESULT_UNKNOWN) {
-        
-        if (rand() % 30 == 0) {
-            break;
-        }
-        
-        Lit l = int_vector_get(solved_cube, i);
-        vacuous = c2_case_splits_make_assumption(c2, - l);
-        if (i == int_vector_count(solved_cube) - 1) {
-            abortif(!vacuous, "Problem with assumptions after reset");
-        }
-        i++;
-    }
+//    bool vacuous = false;
+//    unsigned i = 0;
+//    while (! vacuous && c2->result == CADET_RESULT_UNKNOWN) {
+//        
+//        if (rand() % 10 == 0) {
+//            break;
+//        }
+//        
+//        Lit l = int_vector_get(solved_cube, i);
+//        vacuous = c2_case_splits_make_assumption(c2, - l);
+//        if (i == int_vector_count(solved_cube) - 1) {
+//            abortif(!vacuous, "Problem with assumptions after reset");
+//        }
+//        i++;
+//    }
 }
 
 void c2_case_splits_undo_assumption(C2* c2, void* obj) {

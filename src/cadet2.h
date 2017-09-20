@@ -60,6 +60,7 @@ struct C2_Magic_Values {
     float implication_graph_variable_activity;
     float decay_rate;
     size_t major_restart_frequency;
+    size_t replenish_frequency;
     unsigned num_restarts_before_Jeroslow_Wang;
     
     // Magic constants for case splits

@@ -134,7 +134,7 @@ Lit c2_case_split_pick_literal(C2* c2) {
             }
         }
     }
-    if (lit != 0 && debug_verbosity >= VERBOSITY_LOW) {
+    if (lit != 0 && debug_verbosity >= VERBOSITY_MEDIUM) {
         V1("Case split literal ");
         options_print_literal_name(c2->options, c2_literal_color(c2, NULL, lit), lit);
         V1(" has quality %.2f, cost factor %.3f, and activity factor %.2f\n",
@@ -186,7 +186,7 @@ bool c2_case_splits_make_assumption(C2* c2, Lit lit) {
         }
         stack_push_op(c2->stack, C2_OP_UNIVERSAL_ASSUMPTION, (void*) (long) assumption_vacuous);
         
-        V1("  New case split depth is %u\n", c2->case_split_depth);
+        V2("New case split depth is %u\n", c2->case_split_depth);
         
         assert(skolem_is_deterministic(c2->skolem, lit_to_var(lit)));
         skolem_assume_constant_value(c2->skolem, lit);

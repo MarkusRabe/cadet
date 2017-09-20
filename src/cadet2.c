@@ -90,6 +90,7 @@ C2* c2_init_qcnf(QCNF* qcnf, Options* options) {
     c2->magic.decay_rate = (float) 0.9;
     c2->magic.implication_graph_variable_activity = (float) 0.5;
     c2->magic.major_restart_frequency = 20;
+    c2->magic.replenish_frequency = 50;
     c2->next_major_restart = c2->magic.major_restart_frequency;
     c2->magic.num_restarts_before_Jeroslow_Wang = options->easy_debugging_mode_c2 ? 0 : 0;
     c2->magic.num_restarts_before_case_splits = options->easy_debugging_mode_c2 ? 0 : 3;
@@ -682,6 +683,13 @@ void c2_replenish_skolem_satsolver(C2* c2) {
     c2->skolem->cegar->interface_activities = old_skolem->cegar->interface_activities;
     old_skolem->cegar->interface_activities = NULL;
     
+    c2->skolem->statistics = old_skolem->statistics;
+    
+    c2->skolem->cegar->successful_minimizations = old_skolem->cegar->successful_minimizations;
+    c2->skolem->cegar->additional_assignments_num = old_skolem->cegar->additional_assignments_num;
+    c2->skolem->cegar->successful_minimizations_by_additional_assignments = old_skolem->cegar->successful_minimizations;
+    c2->skolem->cegar->recent_average_cube_size = old_skolem->cegar->recent_average_cube_size;
+    
     skolem_free(old_skolem);
     
     abortif(c2_is_in_conflcit(c2) || c2->result != CADET_RESULT_UNKNOWN, "Illegal state afte replenishing");
@@ -706,19 +714,19 @@ void c2_restart_heuristics(C2* c2) {
                 c2_increase_activity(c2, random_var_id, 1.0f/(float) i);
             }
         }
-        
-        V1("Stepping out of case split.\n"); // Needed to simplify replenishing
-        
-        c2_backtrack_case_split(c2);
-        
-#if (USE_SOLVER == SOLVER_PICOSAT_ASSUMPTIONS)
-        c2_replenish_skolem_satsolver(c2);
-#endif
 
         c2->next_major_restart = c2->magic.major_restart_frequency + (c2->restarts / 4);
         
     } else {
         c2->next_major_restart -= 1;
+    }
+    
+    if (c2->restarts % c2->magic.replenish_frequency == c2->magic.replenish_frequency - 1) {
+        V1("Stepping out of case split.\n"); // Needed to simplify replenishing
+        c2_backtrack_case_split(c2);
+#if (USE_SOLVER == SOLVER_PICOSAT_ASSUMPTIONS)
+        c2_replenish_skolem_satsolver(c2);
+#endif
     }
 }
 
@@ -797,23 +805,23 @@ cadet_res c2_sat(C2* c2) {
             c2_restart_heuristics(c2);
         }
         
-        if (c2->options->minimize_conflicts) {
-            for (int i = (int) vector_count(c2->qcnf->clauses) - 1; i >= 0; i--) {
-                Clause* c = vector_get(c2->qcnf->clauses, (unsigned) i);
-                if (! c || c->original) {
-                    break;
-                }
-                if (skolem_get_unique_consequence(c2->skolem, c) == 0) {
-                    c2_minimize_clause(c2, c);
-                    skolem_check_for_unique_consequence(c2->skolem, c);
-                }
-            }
-            if (c2->qcnf->empty_clause) {
-                c2->result = CADET_RESULT_UNSAT;
-                c2->state = C2_EMPTY_CLAUSE_CONFLICT;
-                break;
-            }
-        }
+//        if (c2->options->minimize_conflicts) {
+//            for (int i = (int) vector_count(c2->qcnf->clauses) - 1; i >= 0; i--) {
+//                Clause* c = vector_get(c2->qcnf->clauses, (unsigned) i);
+//                if (! c || c->original) {
+//                    break;
+//                }
+//                if (skolem_get_unique_consequence(c2->skolem, c) == 0) {
+//                    c2_minimize_clause(c2, c);
+//                    skolem_check_for_unique_consequence(c2->skolem, c);
+//                }
+//            }
+//            if (c2->qcnf->empty_clause) {
+//                c2->result = CADET_RESULT_UNSAT;
+//                c2->state = C2_EMPTY_CLAUSE_CONFLICT;
+//                break;
+//            }
+//        }
     }
 
     return c2->result;

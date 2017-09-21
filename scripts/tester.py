@@ -72,9 +72,9 @@ BMC2006 = ['bmc2006']
 STRATEGIC_COMPANIES = ['strategiccompanies']
 QREVENGE_ADDER_SELF = ['qrevenge-adder-self-2QBF']
 FUNCTIONAL_SYNTHESIS = ['functional-synthesis']
-
-ALL_INSTANCES = HANDMADE_INSTANCES + EASY_INSTANCES + QBFLIB2010_INSTANCES + QBFEVAL2016_2QBF_INSTANCES + QBFEVAL2016_INSTANCES + CIRCUIT_UNDERSTANDING_3QBF + HARDWAREFIXPOINT + PEC_2QBF + COMPLEXITY + SYNTHESIS + RANKING + RANDOM2QBF + TERMINATOR + HORN + RENHORN + RF_1133qd + IRQ + WMI + SORTING + HOLCOMB + SYGUS_MINITEST + SYGUS_PERFORMANCE + SYGUS_GALLERY + SYGUS_MINITEST3QBF + SYGUS_PERFORMANCE3QBF + SYGUS_GALLERY3QBF + TICTACTOE3x3 + TICTACTOE4x4 + TICTACTOE5x5 + TICTACTOE6x6 + EVAL2012r2 + RIENER + BMC2006 + STRATEGIC_COMPANIES + QREVENGE_ADDER_SELF + FUNCTIONAL_SYNTHESIS + QBFEVAL2017_2QBF
-PERFORMANCE_BENCHMARKS = QBFEVAL2016_2QBF_INSTANCES + HARDWAREFIXPOINT + SYGUS_PERFORMANCE + FUNCTIONAL_SYNTHESIS
+BENCHMARK = ['benchmark']
+ALL_INSTANCES = HANDMADE_INSTANCES + EASY_INSTANCES + QBFLIB2010_INSTANCES + QBFEVAL2016_2QBF_INSTANCES + QBFEVAL2016_INSTANCES + CIRCUIT_UNDERSTANDING_3QBF + HARDWAREFIXPOINT + PEC_2QBF + COMPLEXITY + SYNTHESIS + RANKING + RANDOM2QBF + TERMINATOR + HORN + RENHORN + RF_1133qd + IRQ + WMI + SORTING + HOLCOMB + SYGUS_MINITEST + SYGUS_PERFORMANCE + SYGUS_GALLERY + SYGUS_MINITEST3QBF + SYGUS_PERFORMANCE3QBF + SYGUS_GALLERY3QBF + TICTACTOE3x3 + TICTACTOE4x4 + TICTACTOE5x5 + TICTACTOE6x6 + EVAL2012r2 + RIENER + BMC2006 + STRATEGIC_COMPANIES + QREVENGE_ADDER_SELF + FUNCTIONAL_SYNTHESIS + QBFEVAL2017_2QBF + BENCHMARK
+# PERFORMANCE_BENCHMARKS = QBFEVAL2016_2QBF_INSTANCES + HARDWAREFIXPOINT + SYGUS_PERFORMANCE + FUNCTIONAL_SYNTHESIS
 
 TIME_UTIL = '/usr/bin/time -v '
 if sys.platform == 'darwin':
@@ -563,15 +563,12 @@ if __name__ == "__main__":
                         
     for instance in ALL_INSTANCES:
         parser.add_argument('--{}'.format(instance), dest=instance, action='store_true', help='Run the {} formulas'.format(instance))
-    
-    parser.add_argument('--benchmark', dest='benchmark', action='store_true', help='Run a set of performance-critical formulas, folders: {}'.format(str(PERFORMANCE_BENCHMARKS)))
 
     ARGS = parser.parse_args()
     
     if ARGS.test:
         print('Test mode')
         ARGS.all = False
-        ARGS.benchmark = False
         ARGS.timeout = 5
         ARGS.csv = False
         ARGS.threads = 1
@@ -587,11 +584,6 @@ if __name__ == "__main__":
             if not instance in categories:
                 categories.append(instance)
         
-    if ARGS.benchmark:
-        for benchmark_family in PERFORMANCE_BENCHMARKS:
-            if not benchmark_family in categories:
-                categories.append(benchmark_family)
-        
     if not categories:
         parser.print_help()
         exit()
@@ -600,10 +592,7 @@ if __name__ == "__main__":
         ARGS.preprocessor = 'bloqqer'
     
     # Run the tests
-    if ARGS.benchmark:
-        run_testcases(ARGS.threads, ARGS.benchmark)
-    else:
-        run_testcases(ARGS.threads)
+    run_testcases(ARGS.threads)
     
     # if ARGS.profile:
 #         for key, data in profiling_db.items():
@@ -614,7 +603,7 @@ if __name__ == "__main__":
     print_stats()
     
     if ARGS.csv:
-        write_csv(args.csv, args.benchmark)
+        write_csv(args.csv)
 
     if failed:
         sys.exit(1)

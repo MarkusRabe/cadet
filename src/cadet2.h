@@ -152,7 +152,7 @@ void c2_backtrack_to_decision_lvl(C2 *c2, unsigned backtracking_lvl);
 bool c2_is_decision_var(C2*, unsigned var_id);
 int c2_get_decision_val(C2*, unsigned var_id);
 
-bool c2_minimize_clause(C2*,Clause*);
+unsigned c2_minimize_clause(C2*,Clause*);
 
 // figuring out properties of instances:
 void c2_analysis_determine_number_of_partitions(C2* c2);

@@ -18,7 +18,9 @@ void c2_remove_literals_from_clause(QCNF* qcnf, Clause* c, int_vector* literals)
     for (unsigned i = 0; i < c->size; i++) {
         Lit l = c->occs[i];
         if (int_vector_contains_sorted(literals, l)) {
-            qcnf_remove_literal(qcnf, c, l);
+            bool removed = qcnf_remove_literal(qcnf, c, l);
+            i -= 1;
+            assert(removed);
         }
     }
 }
@@ -27,14 +29,15 @@ void c2_remove_literals_from_clause(QCNF* qcnf, Clause* c, int_vector* literals)
  * (1) remove literals whose negation is implied by the negation of the remaining literals
  * (2) find subset of negations of literals that cause a conflict
  */
-bool c2_minimize_clause(C2* c2, Clause* c) {
+unsigned c2_minimize_clause(C2* c2, Clause* c) {
     statistics_start_timer(c2->statistics.minimization_stats);
     
     if (c->size == 0) {
         return false;
     }
     
-    bool removed_something = false;
+    unsigned removed_total = 0;
+    unsigned initial_size = c->size;
     
     assert(skolem_get_unique_consequence(c2->skolem, c) == 0);
     assert(c2->minimization_pa->stack->push_count == 0);
@@ -55,6 +58,7 @@ bool c2_minimize_clause(C2* c2, Clause* c) {
             int_vector_add(permutation, (int) i);
         }
         int_vector_shuffle(permutation);
+        assert(c->size == int_vector_count(permutation));
         
         partial_assignment_push(c2->minimization_pa);
         for (unsigned i = 0; i < int_vector_count(permutation); i++) {
@@ -83,13 +87,12 @@ bool c2_minimize_clause(C2* c2, Clause* c) {
         }
         partial_assignment_pop(c2->minimization_pa);
         
+        assert(int_vector_count(to_remove) <= c->size);
         c2_remove_literals_from_clause(c2->qcnf, c, to_remove);
-    
-        if (int_vector_count(to_remove) > 0) {
-            removed_something = true;
-            c2->statistics.successful_conflict_clause_minimizations += int_vector_count(to_remove);
-            V2("Conflict clause minimization removed %u literals.\n", int_vector_count(to_remove));
-        } else {
+        removed_total += int_vector_count(to_remove);
+        assert(int_vector_count(permutation) - int_vector_count(to_remove) == c->size);
+        
+        if (int_vector_count(to_remove) == 0) {
             break;
         }
     }
@@ -99,5 +102,10 @@ bool c2_minimize_clause(C2* c2, Clause* c) {
     int_vector_free(permutation);
     int_vector_free(to_remove);
     statistics_stop_and_record_timer(c2->statistics.minimization_stats);
-    return removed_something;
+    
+    V1("Conflict clause minimization removed %u of %u literals.\n", removed_total, initial_size);
+    assert(removed_total < initial_size);
+    c2->statistics.successful_conflict_clause_minimizations += removed_total;
+    
+    return removed_total;
 }

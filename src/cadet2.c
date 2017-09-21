@@ -436,13 +436,12 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                 c2_add_lit(c2, - lit);
             }
             Clause* learnt_clause = qcnf_close_clause(c2->qcnf);
+            abortif(learnt_clause == NULL, "Conflict clause could not be created. Conflict counter: %zu", c2->statistics.conflicts);
+            learnt_clause->original = false;
             c2->statistics.learnt_clauses_total_length += learnt_clause->size;
-            
-            abortif(learnt_clause == NULL, "Learnt clause could not be created. Probably duplicate.");
             
             if (c2->options->minimize_conflicts) {
                 c2_minimize_clause(c2, learnt_clause);
-//                c2_minimize_clause(c2, learnt_clause);
             }
             
             int_vector_free(c2->current_conflict);
@@ -505,13 +504,6 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                 c2_backtrack_to_decision_lvl(c2, backtracking_lvl);
 
                 assert(!skolem_is_conflicted(c2->skolem));
-                
-                
-
-                abortif(learnt_clause == NULL, "Conflict clause could not be created. Conflict counter: %zu", c2->statistics.conflicts);
-
-                learnt_clause->original = false;
-                learnt_clause->consistent_with_originals = true;
                 assert(skolem_get_unique_consequence(c2->skolem, learnt_clause) == 0);
 
                 if (new_example) {

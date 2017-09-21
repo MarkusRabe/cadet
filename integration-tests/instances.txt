@@ -7526,6 +7526,9 @@ integration-tests/rf28rr.qdimacs | 10
 ../qbf-benchmarks/evaluations/qbfeval2017-2QBF/nreachq_query11_1344n.qdimacs.gz | 30
 ../qbf-benchmarks/evaluations/qbfeval2017-2QBF/nreachq_query42_1344n.qdimacs.gz | 30
 ../qbf-benchmarks/evaluations/qbfeval2017-2QBF/nreachq_query54_1344n.qdimacs.gz | 30
+../qbf-benchmarks/evaluations/qbfeval2017-2QBF/reachqu_query42_1344n.qdimacs.gz | 30
+../qbf-benchmarks/evaluations/qbfeval2017-2QBF/trivial_query42_1344n.qdimacs.gz | 30
+../qbf-benchmarks/evaluations/qbfeval2017-2QBF/trueque_query42_1344n.qdimacs.gz | 30
 ../qbf-benchmarks/evaluations/qbfeval2017-2QBF/ntrivil_query42_1344n.qdimacs.gz | 30
 ../qbf-benchmarks/evaluations/qbfeval2017-2QBF/nxquery_query42_1344n.qdimacs.gz | 30
 ../qbf-benchmarks/evaluations/qbfeval2017-2QBF/nxquery_query50_1344n.qdimacs.gz | 30
@@ -7591,7 +7594,6 @@ integration-tests/rf28rr.qdimacs | 10
 ../qbf-benchmarks/evaluations/qbfeval2017-2QBF/rankfunc60_unsigned_32.qdimacs.gz | 30
 ../qbf-benchmarks/evaluations/qbfeval2017-2QBF/rankfunc61_signed_64.qdimacs.gz | 30
 ../qbf-benchmarks/evaluations/qbfeval2017-2QBF/rankfunc61_unsigned_64.qdimacs.gz | 30
-../qbf-benchmarks/evaluations/qbfeval2017-2QBF/reachqu_query42_1344n.qdimacs.gz | 30
 ../qbf-benchmarks/evaluations/qbfeval2017-2QBF/sortnetsort10.AE.stepl.004.qdimacs.gz | 30
 ../qbf-benchmarks/evaluations/qbfeval2017-2QBF/sortnetsort10.AE.stepl.005.qdimacs.gz | 30
 ../qbf-benchmarks/evaluations/qbfeval2017-2QBF/sortnetsort10.AE.stepl.011.qdimacs.gz | 30
@@ -7682,8 +7684,6 @@ integration-tests/rf28rr.qdimacs | 10
 ../qbf-benchmarks/evaluations/qbfeval2017-2QBF/stmt53_296_346.qdimacs.gz | 30
 ../qbf-benchmarks/evaluations/qbfeval2017-2QBF/stmt5_731_730.qdimacs.gz | 30
 ../qbf-benchmarks/evaluations/qbfeval2017-2QBF/stmt85_300_399.qdimacs.gz | 30
-../qbf-benchmarks/evaluations/qbfeval2017-2QBF/trivial_query42_1344n.qdimacs.gz | 30
-../qbf-benchmarks/evaluations/qbfeval2017-2QBF/trueque_query42_1344n.qdimacs.gz | 30
 ../qbf-benchmarks/FV/sterin/qrevenge/adder-self-2QBF/adder-1-adder-1.qdimacs.gz | 20
 ../qbf-benchmarks/FV/sterin/qrevenge/adder-self-2QBF/adder-2-adder-2.qdimacs.gz | 20
 ../qbf-benchmarks/FV/sterin/qrevenge/adder-self-2QBF/adder-3-adder-3.qdimacs.gz | 20
@@ -7826,18 +7826,15 @@ integration-tests/rf28rr.qdimacs | 10
 ../qbf-benchmarks/random/random2QBF/2qbf-5cnf-50var-500cl.1.qdimacs.gz | 30
 ../qbf-benchmarks/FV/tentrup-finkbeiner/pec-2qbf/pec_bit_cell_arbiter_6_7_3.qdimacs.gz | 30
 ../qbf-benchmarks/FV/tentrup-finkbeiner/pec-2qbf/pec_look_ahead_arbiter_6_9_5.qdimacs.gz | 30
-../qbf-benchmarks/FV/tentrup-finkbeiner/pec-2qbf/pec_look_ahead_arbiter_6_3_4.qdimacs.gz | 30
 ../qbf-benchmarks/FV/tentrup-finkbeiner/pec-2qbf/pec_look_ahead_arbiter_6_2_2.qdimacs.gz | 30
 ../qbf-benchmarks/FV/tentrup-finkbeiner/pec-2qbf/pec_adder_n_bit_6_9_5.qdimacs.gz | 30
 ../qbf-benchmarks/FV/tentrup-finkbeiner/pec-2qbf/pec_look_ahead_arbiter_6_9_3.qdimacs.gz | 30
 ../qbf-benchmarks/FV/tentrup-finkbeiner/pec-2qbf/pec_look_ahead_arbiter_6_6_4.qdimacs.gz | 30
-../qbf-benchmarks/FV/tentrup-finkbeiner/pec-2qbf/pec_look_ahead_arbiter_6_9_1.qdimacs.gz | 30
 ../qbf-benchmarks/FV/tentrup-finkbeiner/pec-2qbf/pec_adder_n_bit_6_3_2.qdimacs.gz | 30
 ../qbf-benchmarks/FV/tentrup-finkbeiner/pec-2qbf/pec_look_ahead_arbiter_6_4_5.qdimacs.gz | 30
 ../qbf-benchmarks/FV/tentrup-finkbeiner/pec-2qbf/pec_adder_n_bit_6_4_1.qdimacs.gz | 30
 ../qbf-benchmarks/FV/tentrup-finkbeiner/pec-2qbf/pec_multiplexer_6_5_3.qdimacs.gz | 30
 ../qbf-benchmarks/FV/tentrup-finkbeiner/pec-2qbf/pec_adder_n_bit_6_1_4.qdimacs.gz | 30
-../qbf-benchmarks/FV/tentrup-finkbeiner/pec-2qbf/pec_adder_n_bit_6_1_3.qdimacs.gz | 30
 ../qbf-benchmarks/FV/tentrup-finkbeiner/pec-2qbf/pec_adder_n_bit_6_6_4.qdimacs.gz | 30
 ../qbf-benchmarks/FV/tentrup-finkbeiner/pec-2qbf/pec_bit_cell_arbiter_6_9_4.qdimacs.gz | 30
 ../qbf-benchmarks/FV/tentrup-finkbeiner/pec-2qbf/pec_multiplexer_6_3_1.qdimacs.gz | 30

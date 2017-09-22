@@ -3,6 +3,7 @@
 import sys, os, re, argparse, random, signal, multiprocessing, Queue, threading
 import numpy as np
 import matplotlib.pyplot as plt
+import psutil
 
 from reporting import log, log_progress, cyan, red, green, yellow
 from command import Command
@@ -531,6 +532,7 @@ def get_benchmark_result(testcase, time_output):
     return float(seconds), float(memory) / 1024.0
 
 if __name__ == "__main__":
+    
     parser = argparse.ArgumentParser()
     parser.add_argument('-v', '--verbose', dest='verbose', action='store_true',
                         help='Additional debug output for the tester tool')
@@ -560,6 +562,8 @@ if __name__ == "__main__":
                         help='Specify folder of formulas to solve.')
     parser.add_argument('-p', '--profile', dest='profile', action='store_true', default=None,
                         help='Run in profiling mode. Evaluate statistics.')
+    parser.add_argument('-f', '--force', dest='force', action='store_true', default=None,
+                        help='Override CPU load check.')
                         
     for instance in ALL_INSTANCES:
         parser.add_argument('--{}'.format(instance), dest=instance, action='store_true', help='Run the {} formulas'.format(instance))
@@ -590,6 +594,21 @@ if __name__ == "__main__":
     
     if ARGS.use_bloqqer:
         ARGS.preprocessor = 'bloqqer'
+    
+    try:
+        import psutil
+        cpu_load = psutil.cpu_percent(interval=1, percpu=True)
+        print('CPU load: ' + str(cpu_load))
+        total_cpu_load = sum(cpu_load)
+        if (sum(cpu_load) > 1.5):
+            if (not ARGS.force):
+                print('Error: CPU load too high. Use -f to force.')
+                sys.exit(1)
+            else: 
+                print('Warning: CPU load high and override used.')
+    except ImportError, e:
+        print('Warning: Could not check CPU load.')
+        pass # module doesn't exist, deal with it.
     
     # Run the tests
     run_testcases(ARGS.threads)

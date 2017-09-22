@@ -3,7 +3,6 @@
 import sys, os, re, argparse, random, signal, multiprocessing, Queue, threading
 import numpy as np
 import matplotlib.pyplot as plt
-import psutil
 
 from reporting import log, log_progress, cyan, red, green, yellow
 from command import Command

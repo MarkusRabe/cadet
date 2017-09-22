@@ -713,9 +713,9 @@ void c2_restart_heuristics(C2* c2) {
     if (c2->restarts % c2->magic.replenish_frequency == c2->magic.replenish_frequency - 1) {
         V1("Stepping out of case split.\n"); // Needed to simplify replenishing
         c2_backtrack_case_split(c2);
-#if (USE_SOLVER == SOLVER_PICOSAT_ASSUMPTIONS)
+//#if (USE_SOLVER == SOLVER_PICOSAT_ASSUMPTIONS)
         c2_replenish_skolem_satsolver(c2);
-#endif
+//#endif
     }
 }
 

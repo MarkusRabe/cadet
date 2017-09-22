@@ -91,18 +91,24 @@ unsigned c2_case_split_probe(C2* c2, Lit lit) {
 
     skolem_push(c2->skolem);
     skolem_assume_constant_value(c2->skolem, lit);
-    assert(c2->skolem->mode == SKOLEM_MODE_STANDARD);
-    c2->skolem->mode = SKOLEM_MODE_CONSTANT_PROPAGATIONS_TO_DETERMINISTICS;
-    skolem_propagate(c2->skolem);
-    c2->skolem->mode = SKOLEM_MODE_STANDARD;
-
-    if (skolem_is_conflicted(c2->skolem)) {
+    
+    if (satsolver_sat(c2->skolem->skolem) == SATSOLVER_RESULT_UNSAT) {
         V1("Skolem conflict with assumed constant %d: %d\n", lit, c2->skolem->conflict_var_id);
-        c2->statistics.failed_literals_conflicts++;
-        case_split_decision_metric = UINT_MAX; //ensure the variable is chosen
+        case_split_decision_metric = UINT_MAX;
     } else {
-        V2("Number of propagations when assigning %d: %zu\n", lit, c2->skolem->statistics.propagations - case_split_decision_metric);
-        case_split_decision_metric = c2->skolem->statistics.propagations - case_split_decision_metric;
+        assert(c2->skolem->mode == SKOLEM_MODE_STANDARD);
+        c2->skolem->mode = SKOLEM_MODE_CONSTANT_PROPAGATIONS_TO_DETERMINISTICS;
+        skolem_propagate(c2->skolem);
+        c2->skolem->mode = SKOLEM_MODE_STANDARD;
+        
+        if (skolem_is_conflicted(c2->skolem)) {
+            V1("Skolem conflict with assumed constant %d: %d\n", lit, c2->skolem->conflict_var_id);
+            c2->statistics.failed_literals_conflicts++;
+            case_split_decision_metric = UINT_MAX; //ensure the variable is chosen
+        } else {
+            V2("Number of propagations when assigning %d: %zu\n", lit, c2->skolem->statistics.propagations - case_split_decision_metric);
+            case_split_decision_metric = c2->skolem->statistics.propagations - case_split_decision_metric;
+        }
     }
 
     skolem_pop(c2->skolem);
@@ -147,10 +153,10 @@ Lit c2_case_split_pick_literal(C2* c2) {
             float combined_quality = combined_factor * (float) (propagations_pos * propagations_neg + propagations_pos + propagations_neg);
             if (combined_quality > max_total) {
                 lit = (propagations_pos > propagations_neg ? 1 : - 1) * (Lit) v->var_id;
-//                if (rand() % 20 == 0) {
-//                    V1("Randomly flipped case split literal.\n");
-//                    lit = -lit;
-//                }
+                if (rand() % 30 == 0) {
+                    V1("Randomly flipped case split literal.\n");
+                    lit = -lit;
+                }
                 max_total = combined_quality;
                 cost_factor_of_max = cost_factor;
             }
@@ -389,7 +395,7 @@ void c2_case_splits_successful_case_completion(C2* c2) {
     unsigned i = 0;
     while (! vacuous && c2->result == CADET_RESULT_UNKNOWN) {
         
-        if (rand() % 10 == 0) {
+        if (rand() % 20 == 0) {
             break;
         }
         

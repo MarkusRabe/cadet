@@ -92,10 +92,10 @@ unsigned c2_case_split_probe(C2* c2, Lit lit) {
     skolem_push(c2->skolem);
     skolem_assume_constant_value(c2->skolem, lit);
     
-    if (satsolver_sat(c2->skolem->skolem) == SATSOLVER_RESULT_UNSAT) {
-        V1("Skolem conflict with assumed constant %d: %d\n", lit, c2->skolem->conflict_var_id);
-        case_split_decision_metric = UINT_MAX;
-    } else {
+//    if (satsolver_sat(c2->skolem->skolem) == SATSOLVER_RESULT_UNSAT) {
+//        V1("Skolem conflict with assumed constant %d: %d\n", lit, c2->skolem->conflict_var_id);
+//        case_split_decision_metric = UINT_MAX;
+//    } else {
         assert(c2->skolem->mode == SKOLEM_MODE_STANDARD);
         c2->skolem->mode = SKOLEM_MODE_CONSTANT_PROPAGATIONS_TO_DETERMINISTICS;
         skolem_propagate(c2->skolem);
@@ -109,7 +109,7 @@ unsigned c2_case_split_probe(C2* c2, Lit lit) {
             V2("Number of propagations when assigning %d: %zu\n", lit, c2->skolem->statistics.propagations - case_split_decision_metric);
             case_split_decision_metric = c2->skolem->statistics.propagations - case_split_decision_metric;
         }
-    }
+//    }
 
     skolem_pop(c2->skolem);
     statistics_stop_and_record_timer(c2->statistics.failed_literals_stats);

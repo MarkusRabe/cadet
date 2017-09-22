@@ -15,7 +15,25 @@
 
 void c2_case_split_backtracking_heuristics(C2* c2) {
     c2->next_restart = c2->magic.initial_restart;
-//    c2->magic.num_restarts_before_case_splits = (unsigned) c2->restarts + c2->magic.initial_restart;
+    c2->next_major_restart = c2->magic.major_restart_frequency;
+    c2->restarts_since_last_major = 0;
+    
+    unsigned kept = 0;
+    for (int i = (int) vector_count(c2->qcnf->clauses) - 1; i >= 0; i--) {
+        Clause* c = vector_get(c2->qcnf->clauses, (unsigned) i);
+        if (! c) {
+            continue;
+        }
+        if (c->original) {
+            break;
+        }
+        if (c->size > 3 && skolem_get_unique_consequence(c2->skolem, c) == 0) {
+            qcnf_unregister_clause(c2->qcnf, c);
+        } else {
+            kept += 1;
+        }
+    }
+    V1("Kept %d clauses\n", kept);
 }
 
 void c2_successful_case_split_heuristics(C2* c2, int_vector* solved_cube) {
@@ -129,6 +147,10 @@ Lit c2_case_split_pick_literal(C2* c2) {
             float combined_quality = combined_factor * (float) (propagations_pos * propagations_neg + propagations_pos + propagations_neg);
             if (combined_quality > max_total) {
                 lit = (propagations_pos > propagations_neg ? 1 : - 1) * (Lit) v->var_id;
+//                if (rand() % 20 == 0) {
+//                    V1("Randomly flipped case split literal.\n");
+//                    lit = -lit;
+//                }
                 max_total = combined_quality;
                 cost_factor_of_max = cost_factor;
             }

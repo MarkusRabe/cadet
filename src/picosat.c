@@ -1,6 +1,16 @@
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wconversion"
 #pragma clang diagnostic ignored "-Wconditional-uninitialized"
+
+// Don't use NDEBUG in picosat
+#define DEBUG_PERFORMANCE
+#ifdef DEBUG_PERFORMANCE
+#ifdef NDEBUG
+#define NDEBUG_TMP
+#undef NDEBUG
+#endif
+#endif
+
 /****************************************************************************
 Copyright (c) 2006 - 2015, Armin Biere, Johannes Kepler University.
 
@@ -8510,5 +8520,9 @@ picosat_deref_partial (PS * ps, int int_lit)
 
   return pderef (ps, int_lit);
 }
+
+#ifdef NDEBUG_TMP
+#define NDEBUG
+#endif
 
 #pragma clang diagnostic pop

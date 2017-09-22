@@ -92,7 +92,7 @@ C2* c2_init_qcnf(QCNF* qcnf, Options* options) {
     c2->magic.decay_rate = (float) 0.9;
     c2->magic.implication_graph_variable_activity = (float) 0.5;
     c2->magic.major_restart_frequency = 15;
-    c2->magic.replenish_frequency = 50;
+    c2->magic.replenish_frequency = 100;
     c2->next_major_restart = c2->magic.major_restart_frequency;
     c2->magic.num_restarts_before_Jeroslow_Wang = options->easy_debugging_mode_c2 ? 0 : 3;
     c2->magic.num_restarts_before_case_splits = options->easy_debugging_mode_c2 ? 0 : 3;
@@ -691,7 +691,7 @@ void c2_restart_heuristics(C2* c2) {
     
     if (c2->next_major_restart == c2->restarts_since_last_major) {
         c2->restarts_since_last_major = 0;
-        c2->next_restart = c2->magic.initial_restart;
+        c2->next_restart = c2->magic.initial_restart; // resets restart frequency
         
         V1("Major restart. Resetting all activity values to 0 and some random ones to 1.\n");
         for (unsigned i = 0; i < var_vector_count(c2->qcnf->vars); i++) {
@@ -796,7 +796,10 @@ cadet_res c2_sat(C2* c2) {
             if (c2->options->minimize_conflicts) {
                 for (int i = (int) vector_count(c2->qcnf->clauses) - 1; i >= 0; i--) {
                     Clause* c = vector_get(c2->qcnf->clauses, (unsigned) i);
-                    if (! c || c->original || rand() % 100 == 0) {
+                    if (! c) {
+                        continue;
+                    }
+                    if (c->original || rand() % 100 == 0) {
                         break;
                     }
                     if (skolem_get_unique_consequence(c2->skolem, c) == 0) {

@@ -103,7 +103,7 @@ unsigned c2_minimize_clause(C2* c2, Clause* c) {
     int_vector_free(to_remove);
     statistics_stop_and_record_timer(c2->statistics.minimization_stats);
     
-    V1("Conflict clause minimization removed %u of %u literals.\n", removed_total, initial_size);
+    V2("Conflict clause minimization removed %u of %u literals.\n", removed_total, initial_size);
     assert(removed_total < initial_size);
     c2->statistics.successful_conflict_clause_minimizations += removed_total;
     

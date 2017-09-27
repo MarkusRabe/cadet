@@ -26,7 +26,7 @@ void print_usage(const char* name) {
                                     "\t--qdimacs_out\t\tOutput compliant with QDIMACS standard\n"
                                     "\n"
                                 "  Options for the QBF engine\n"
-                                    "\t-p \t\t\tEasy debugging configuration (default off)\n"
+                                    "\t--debugging \t\tEasy debugging configuration (default off)\n"
                                     "\t--cegar\t\t\tUse CEGAR strategy in addition to incremental determinization (default off).\n"
                                     "\t--cegar_only\t\tUse CEGAR strategy exclusively.\n"
                                     "\t--case_splits \t\tCase distinctions (default off) \n"
@@ -116,9 +116,6 @@ int main(int argc, const char* argv[]) {
                 case 'h':
                     print_usage(argv[0]);
                     return 0;
-                    
-                case 'p':
-                    options->easy_debugging_mode_c2 = false;
                 
                 case 'v':
                     // verbosity flag
@@ -185,6 +182,8 @@ int main(int argc, const char* argv[]) {
                         log_colors = false;
                     } else if (strcmp(argv[i], "--aiger_negated") == 0) {
                         options->aiger_negated_encoding = true;
+                    } else if (strcmp(argv[i], "--debugging") == 0) {
+                        options->easy_debugging_mode_c2 = true;
                     } else if (strcmp(argv[i], "--aiger_controllable_inputs") == 0) {
                         if (i + 1 >= argc) {
                             LOG_ERROR("Missing string for argument --aiger_controllable_inputs\n");
@@ -201,7 +200,7 @@ int main(int argc, const char* argv[]) {
                             V0("Functional synthesis currently incompatible with CEGAR. Deactivating CEGAR.\n");
                             options->cegar = false;
                         }
-                    } else if (strcmp(argv[i], "--minimize_conflicts") == 0) {
+                    } else if (strcmp(argv[i], "--minimize") == 0) {
                         options->minimize_conflicts = ! options->minimize_conflicts;
                     } else if (strcmp(argv[i], "--enhanced_pure_literals") == 0) {
                         options->enhanced_pure_literals = true;
@@ -264,8 +263,18 @@ int main(int argc, const char* argv[]) {
         size_t extlen = strlen(ext);
         V4("Detected file name extension %s\n", ext);
         if ( (extlen == 2 && strcmp("gz", ext) == 0) || (extlen == 4 && strcmp("gzip", ext) == 0) ) {
-            char* cmd = malloc(strlen("gzcat ") + strlen(file_name) + 5);
-            sprintf(cmd, "%s '%s'", "gzcat", file_name);
+#ifdef __APPLE__
+            char* unzip_tool_name = "gzcat ";
+#endif
+#ifdef __linux__
+            char* unzip_tool_name = "zcat ";
+#endif
+#ifdef _WIN32
+            abort(); // please use a proper operating system
+#endif
+            
+            char* cmd = malloc(strlen(unzip_tool_name) + strlen(file_name) + 5);
+            sprintf(cmd, "%s '%s'", unzip_tool_name, file_name);
             file = popen(cmd, "r");
             free(cmd);
             if (!file) {

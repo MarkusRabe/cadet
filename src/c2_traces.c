@@ -172,8 +172,11 @@ void c2_print_statistics(C2* c2) {
     V0("  Conflicts: %zu\n", c2->statistics.conflicts);
     V0("  Levels backtracked: %zu\n", c2->statistics.lvls_backtracked);
     V0("  Restarts:  %zu\n", c2->restarts);
-    V0("  Successful conflict minimizations:  %zu\n", c2->statistics.successful_conflict_clause_minimizations);
     V0("  Cases explored:  %zu\n", c2->statistics.cases_explored);
+    V0("  Literals eliminated:  %zu / %zu\n", c2->statistics.successful_conflict_clause_minimizations, c2->statistics.learnt_clauses_total_length);
+    V0("  Time spent minimizing: %f\n", c2->statistics.minimization_stats->accumulated_value)
+    V0("  Failed Literals Conflicts:  %zu\n", c2->statistics.failed_literals_conflicts);
+    statistics_print(c2->statistics.failed_literals_stats);
 }
 
 bool c2_printed_color_legend = false;

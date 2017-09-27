@@ -182,5 +182,8 @@ void qcnf_undo_op(void* qcnf,char,void*);
 
 Clause* qcnf_new_clause(QCNF* qcnf, int_vector* literals);
 
+void qcnf_register_clause(QCNF*, Clause*);
+void qcnf_unregister_clause(QCNF*, Clause*);
+bool qcnf_remove_literal(QCNF*, Clause*, Lit);
 
 #endif /* qcnf_h */

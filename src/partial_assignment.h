@@ -68,7 +68,7 @@ bool partial_assignment_is_antecedent_satisfied(PartialAssignment*, Clause*, Lit
 
 // INTERACTION WITH CADET2
 void partial_assignment_propagate(PartialAssignment* pa);
-unsigned partial_assignment_is_conflicted(PartialAssignment*);
+bool partial_assignment_is_conflicted(PartialAssignment*);
 void partial_assignment_new_clause(PartialAssignment* pa, Clause* c);
 
 // INTERACTION WITH CONFLICT ANALYSIS

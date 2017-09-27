@@ -9,28 +9,28 @@
 #ifndef cadet2_h
 #define cadet2_h
 
+struct C2;
+typedef struct C2 C2;
+
 #include "skolem.h"
 #include "qcnf.h"
 #include "options.h"
 #include "examples.h"
 #include "val_vector.h"
+#include "conflict_analysis.h"
 
 #include <stdio.h>
 
-struct C2;
-typedef struct C2 C2;
-
 typedef enum {
     C2_READY,
-    C2_PA_CONFLICT,
     C2_SKOLEM_CONFLICT,
     C2_CEGAR_CONFLICT,
     C2_EMPTY_CLAUSE_CONFLICT,
-    C2_PROPOSITIONAL_CONFLICT,
     C2_EXAMPLES_CONFLICT
 } c2_state;
 
 typedef enum {
+    C2_CASE_SPLIT_DEPTH_PENALTY_LINEAR,
     C2_CASE_SPLIT_DEPTH_PENALTY_EXPONENTIAL,
     C2_CASE_SPLIT_DEPTH_PENALTY_QUADRATIC
 } C2_CSDP;
@@ -40,10 +40,15 @@ struct C2_Statistics {
     size_t added_clauses;
     size_t decisions;
     size_t successful_conflict_clause_minimizations;
+    size_t learnt_clauses_total_length;
+    Stats* minimization_stats;
     size_t cases_explored;
     size_t lvls_backtracked;
     
     double start_time;
+    
+    Stats* failed_literals_stats;
+    size_t failed_literals_conflicts;
 };
 
 struct C2_Magic_Values {
@@ -56,6 +61,7 @@ struct C2_Magic_Values {
     float implication_graph_variable_activity;
     float decay_rate;
     size_t major_restart_frequency;
+    size_t replenish_frequency;
     unsigned num_restarts_before_Jeroslow_Wang;
     
     // Magic constants for case splits
@@ -63,7 +69,12 @@ struct C2_Magic_Values {
     float skolem_success_horizon; // for case splits (factor describing how the receding horizon is built)
     float notoriousity_threshold_factor; // for case splits
     float skolem_success_recent_average_initialization;
+    unsigned case_split_linear_depth_penalty_factor;
 };
+
+
+struct conflict_analysis;
+typedef struct conflict_analysis conflict_analysis;
 
 struct C2 {
     QCNF* qcnf;
@@ -74,23 +85,30 @@ struct C2 {
     c2_state state;
     cadet_res result;
     size_t restarts;
+    size_t restarts_since_last_major;
     unsigned next_restart;
+    size_t next_major_restart;
     unsigned restart_base_decision_lvl; // decision_lvl used for restarts
     Stack* stack; // for backtracking
+    int_vector* current_conflict;
     
     // Reasoning domains
     Skolem* skolem;
     Examples* examples;
+    conflict_analysis* ca;
+    
+    // Clause minimization
+    PartialAssignment* minimization_pa;
     
     // Data structures for heuristics
     float activity_factor;
     
     // Case splits
     int_vector* case_split_stack;
+    unsigned case_split_depth;
     size_t decisions_since_last_conflict;
     float skolem_success_recent_average;
     C2_CSDP case_split_depth_penalty;
-    size_t conflicts_between_case_splits;
     size_t conflicts_between_case_splits_countdown;
     
     struct C2_Statistics statistics;
@@ -119,7 +137,8 @@ void c2_print_debug_info(C2*);
 
 // PRIVATE FUNCTIONS
 typedef enum {
-    C2_OP_ASSIGN_DECISION_VAL
+    C2_OP_ASSIGN_DECISION_VAL,
+    C2_OP_UNIVERSAL_ASSUMPTION
 } C2_OPERATION;
 void c2_undo(void* parent, char type, void* obj);
 
@@ -132,6 +151,8 @@ void c2_backtrack_to_decision_lvl(C2 *c2, unsigned backtracking_lvl);
 
 bool c2_is_decision_var(C2*, unsigned var_id);
 int c2_get_decision_val(C2*, unsigned var_id);
+
+unsigned c2_minimize_clause(C2*,Clause*);
 
 // figuring out properties of instances:
 void c2_analysis_determine_number_of_partitions(C2* c2);

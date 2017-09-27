@@ -38,6 +38,7 @@ categories = []
 HANDMADE_INSTANCES = ['handmade']
 QBFLIB2010_INSTANCES = ['qbflib2010-2QBF']
 QBFEVAL2016_2QBF_INSTANCES = ['qbfeval2016-2QBF']
+QBFEVAL2017_2QBF = ['qbfeval2017-2QBF']
 QBFEVAL2016_INSTANCES = ['qbfeval2016']
 EVAL2012r2 = ['eval2012r2']
 HARDWAREFIXPOINT = ['hardwarefixpoint']
@@ -71,8 +72,9 @@ BMC2006 = ['bmc2006']
 STRATEGIC_COMPANIES = ['strategiccompanies']
 QREVENGE_ADDER_SELF = ['qrevenge-adder-self-2QBF']
 FUNCTIONAL_SYNTHESIS = ['functional-synthesis']
-ALL_INSTANCES = HANDMADE_INSTANCES + EASY_INSTANCES + QBFLIB2010_INSTANCES + QBFEVAL2016_2QBF_INSTANCES + QBFEVAL2016_INSTANCES + CIRCUIT_UNDERSTANDING_3QBF + HARDWAREFIXPOINT + PEC_2QBF + COMPLEXITY + SYNTHESIS + RANKING + RANDOM2QBF + TERMINATOR + HORN + RENHORN + RF_1133qd + IRQ + WMI + SORTING + HOLCOMB + SYGUS_MINITEST + SYGUS_PERFORMANCE + SYGUS_GALLERY + SYGUS_MINITEST3QBF + SYGUS_PERFORMANCE3QBF + SYGUS_GALLERY3QBF + TICTACTOE3x3 + TICTACTOE4x4 + TICTACTOE5x5 + TICTACTOE6x6 + EVAL2012r2 + RIENER + BMC2006 + STRATEGIC_COMPANIES + QREVENGE_ADDER_SELF + FUNCTIONAL_SYNTHESIS
-PERFORMANCE_BENCHMARKS = QBFEVAL2016_2QBF_INSTANCES + HARDWAREFIXPOINT + SYGUS_PERFORMANCE + FUNCTIONAL_SYNTHESIS
+BENCHMARK = ['benchmark']
+ALL_INSTANCES = HANDMADE_INSTANCES + EASY_INSTANCES + QBFLIB2010_INSTANCES + QBFEVAL2016_2QBF_INSTANCES + QBFEVAL2016_INSTANCES + CIRCUIT_UNDERSTANDING_3QBF + HARDWAREFIXPOINT + PEC_2QBF + COMPLEXITY + SYNTHESIS + RANKING + RANDOM2QBF + TERMINATOR + HORN + RENHORN + RF_1133qd + IRQ + WMI + SORTING + HOLCOMB + SYGUS_MINITEST + SYGUS_PERFORMANCE + SYGUS_GALLERY + SYGUS_MINITEST3QBF + SYGUS_PERFORMANCE3QBF + SYGUS_GALLERY3QBF + TICTACTOE3x3 + TICTACTOE4x4 + TICTACTOE5x5 + TICTACTOE6x6 + EVAL2012r2 + RIENER + BMC2006 + STRATEGIC_COMPANIES + QREVENGE_ADDER_SELF + FUNCTIONAL_SYNTHESIS + QBFEVAL2017_2QBF + BENCHMARK
+# PERFORMANCE_BENCHMARKS = QBFEVAL2016_2QBF_INSTANCES + HARDWAREFIXPOINT + SYGUS_PERFORMANCE + FUNCTIONAL_SYNTHESIS
 
 TIME_UTIL = '/usr/bin/time -v '
 if sys.platform == 'darwin':
@@ -359,7 +361,7 @@ def run_testcase(testcase):
     
     # BLOQQER += ' --bce=1 --ble=0 --eq=0 --ve=0 --exp=1 --cce=0 --hbce=0 --hble=0'
     
-    if testcase.endswith('gz'):
+    if testcase.endswith('.gz'):
         if sys.platform == "linux" or sys.platform == "linux2":
             # linux
             file_reader = 'zcat'
@@ -464,12 +466,12 @@ def getTestCases():
             detected_files = 0
             for filename in filenames:
                 if filename.endswith('qdimacs.gz') or filename.endswith('aag') or filename.endswith('aig') or filename.endswith('qdimacs'):
-                    value = (os.path.join(ARGS.directory,filename),30)
+                    value = (os.path.join(dirpath,filename),30)
                     test_cases['directory'].append(value)
                     detected_files += 1
                 else:
                     omitted_files += 1
-            print("Detected {} files in directory {}".format(detected_files,ARGS.directory))
+            print("Detected {} files in directory {}".format(detected_files,dirpath))
             if omitted_files > 0:
                 print("Omitted {} files".format(omitted_files))
         return test_cases
@@ -529,6 +531,7 @@ def get_benchmark_result(testcase, time_output):
     return float(seconds), float(memory) / 1024.0
 
 if __name__ == "__main__":
+    
     parser = argparse.ArgumentParser()
     parser.add_argument('-v', '--verbose', dest='verbose', action='store_true',
                         help='Additional debug output for the tester tool')
@@ -558,18 +561,17 @@ if __name__ == "__main__":
                         help='Specify folder of formulas to solve.')
     parser.add_argument('-p', '--profile', dest='profile', action='store_true', default=None,
                         help='Run in profiling mode. Evaluate statistics.')
+    parser.add_argument('-f', '--force', dest='force', action='store_true', default=None,
+                        help='Override CPU load check.')
                         
     for instance in ALL_INSTANCES:
         parser.add_argument('--{}'.format(instance), dest=instance, action='store_true', help='Run the {} formulas'.format(instance))
-    
-    parser.add_argument('--benchmark', dest='benchmark', action='store_true', help='Run a set of performance-critical formulas, folders: {}'.format(str(PERFORMANCE_BENCHMARKS)))
 
     ARGS = parser.parse_args()
     
     if ARGS.test:
         print('Test mode')
         ARGS.all = False
-        ARGS.benchmark = False
         ARGS.timeout = 5
         ARGS.csv = False
         ARGS.threads = 1
@@ -585,11 +587,6 @@ if __name__ == "__main__":
             if not instance in categories:
                 categories.append(instance)
         
-    if ARGS.benchmark:
-        for benchmark_family in PERFORMANCE_BENCHMARKS:
-            if not benchmark_family in categories:
-                categories.append(benchmark_family)
-        
     if not categories:
         parser.print_help()
         exit()
@@ -597,11 +594,23 @@ if __name__ == "__main__":
     if ARGS.use_bloqqer:
         ARGS.preprocessor = 'bloqqer'
     
+    try:
+        import psutil
+        cpu_load = psutil.cpu_percent(interval=1, percpu=True)
+        print('CPU load: ' + str(cpu_load))
+        total_cpu_load = sum(cpu_load)
+        if (sum(cpu_load) > 1.5):
+            if (not ARGS.force):
+                print('Error: CPU load too high. Use -f to force.')
+                sys.exit(1)
+            else: 
+                print('Warning: CPU load high and override used.')
+    except ImportError, e:
+        print('Warning: Could not check CPU load.')
+        pass # module doesn't exist, deal with it.
+    
     # Run the tests
-    if ARGS.benchmark:
-        run_testcases(ARGS.threads, ARGS.benchmark)
-    else:
-        run_testcases(ARGS.threads)
+    run_testcases(ARGS.threads)
     
     # if ARGS.profile:
 #         for key, data in profiling_db.items():
@@ -612,7 +621,7 @@ if __name__ == "__main__":
     print_stats()
     
     if ARGS.csv:
-        write_csv(args.csv, args.benchmark)
+        write_csv(args.csv)
 
     if failed:
         sys.exit(1)

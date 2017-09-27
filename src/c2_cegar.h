@@ -10,27 +10,35 @@
 #define c2_cegar_h
 
 #include "cadet2.h"
+#include "float_vector.h"
 
 #include <stdio.h>
+
+struct Cegar_Magic_Values {
+    unsigned max_cegar_iterations_per_learnt_clause;
+    unsigned cegar_effectiveness_threshold;
+    float universal_activity_decay;
+};
+
 typedef struct Cegar Cegar;
 struct Cegar {
     SATSolver* exists_solver;
     QCNF* qcnf;
     int_vector* interface_vars;
+    float_vector* interface_activities; // contains the frequencies of the interface variabes as floats
+    map* original_satlits;
     int_vector* is_used_in_lemma;
     int_vector* additional_assignment;
     
     vector* solved_cubes;
     
-    // Magic values
-    unsigned cegar_effectiveness_threshold;
-    
     // Statistics
     unsigned successful_minimizations;
     unsigned additional_assignments_num;
     unsigned successful_minimizations_by_additional_assignments;
-    unsigned cubes_num;
     float recent_average_cube_size;
+    
+    struct Cegar_Magic_Values magic;
 };
 
 /* Initializes a cegar object, including the SAT solver using 
@@ -48,12 +56,19 @@ void cegar_free(Cegar* c);
  * May change the state of C2 when termination criterion is found.
  */
 cadet_res cegar_build_abstraction_for_assignment(C2*);
+
 int cegar_get_val(void* domain, Lit lit);
+
 cadet_res cegar_solve_2QBF(C2* c2, int rounds_num);
-void cegar_do_cegar_if_effective(C2* c2);
-bool cegar_try_to_handle_conflict(Skolem* s);
+void cegar_new_cube(Skolem* s, int_vector* cube);
+void do_cegar_if_effective(C2* c2);
+
 void cegar_print_statistics(Cegar*);
 void cegar_update_interface(Skolem*);
 bool cegar_is_initialized(Cegar*);
+
+float cegar_get_universal_activity(Cegar*, unsigned var_id);
+void cegar_add_universal_activity(Cegar*, unsigned var_id, float value);
+void cegar_universal_activity_decay(Cegar*, unsigned var_id);
 
 #endif /* c2_cegar_h */

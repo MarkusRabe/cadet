@@ -895,24 +895,7 @@ unsigned skolem_global_conflict_check(Skolem* s, bool can_delay) {
     satsolver_clause_finished(s->skolem);
     
     s->statistics.global_conflict_checks++;
-    sat_res result = SATSOLVER_UNKNOWN;
-    
-    unsigned max_iter = 100;
-    while (true) {
-        result = satsolver_sat(s->skolem);
-        if (result == SATSOLVER_SATISFIABLE && s->options->cegar && cegar_is_initialized(s->cegar) && s->cegar->recent_average_cube_size < s->cegar->cegar_effectiveness_threshold && max_iter-- > 0) {
-            // Added "s->cegar" to the condition to make sure that this is only called after the initial propagation.
-            
-            if (cegar_try_to_handle_conflict(s)) {
-                // solved handled this conflict with a sufficently small cube by CEGAR
-                continue;
-            } else {
-                result = satsolver_sat(s->skolem);
-            }
-        }
-        break; // standard case is that we exit the loop
-    }
-    abortif(result == SATSOLVER_UNKNOWN, "SATSOLVER returned unknown.");
+    sat_res result = satsolver_sat(s->skolem);
     
     assert(s->conflict_var_id == 0);
     if (result == SATSOLVER_SATISFIABLE) {
@@ -1172,7 +1155,7 @@ void skolem_update_clause_worklist(Skolem* s, int unassigned_lit) {
     }
 }
 
-// Different from satsolver assumptions. Assume fixes a constant for a variable that is already deterministic
+// Different from satsolver assumptions. Assumes a constant for a variable that is already deterministic
 void skolem_assume_constant_value(Skolem* s, Lit lit) {
     V3("Skolem: Assume value %d.\n", lit);
     unsigned var_id = lit_to_var(lit);
@@ -1191,7 +1174,7 @@ void skolem_assume_constant_value(Skolem* s, Lit lit) {
     skolem_assign_constant_value(s, lit, deps, NULL);
     s->mode = SKOLEM_MODE_STANDARD;
     
-    // TODO: the assignment might cause many global conflict checks. Suppressing them for variables that are deterministic already seems brutal, but might be OK. If this leads to an inconsistent function definition, no conflicts can be produced in the global conflict check, which is fine in this case. Also, it shouldn't be possible, since we picked a notorious var that had this value already lots of times.
+    // The assignment might cause many global conflict checks. Suppressing them for variables that are deterministic already seems brutal, but might be OK. If this leads to an inconsistent function definition, no conflicts can be produced in the global conflict check, which is fine in this case. Also, it shouldn't be possible, since we picked a notorious var that had this value already lots of times.
 }
 
 // Has the same effect as propagating a singleton clause. May be expensive if called for a deterministic variable, because of required global conflict check.
@@ -1292,8 +1275,8 @@ void skolem_propagate_constants_over_clause(Skolem* s, Clause* c) {
                 break;
             case 1:
                 goto cleanup; // clause satisfied
-//            default: // cannot happen
-//                abort();
+            default: // cannot happen
+                abort();
         }
     }
     if (qcnf_is_DQBF(s->qcnf)) {
@@ -1305,6 +1288,17 @@ void skolem_propagate_constants_over_clause(Skolem* s, Clause* c) {
         assert(!skolem_is_conflicted(s));
         s->statistics.explicit_propagation_conflicts++;
         s->conflicted_clause = c;
+        unsigned max_dlvl_var = 0;
+        unsigned max_dlvl = 0;
+        for (unsigned i = 0; i < c->size; i++) {
+            unsigned var_id = lit_to_var(c->occs[i]);
+            unsigned dlvl = skolem_get_dlvl_for_constant(s, var_id);
+            if (dlvl >= max_dlvl) {
+                max_dlvl = dlvl;
+                max_dlvl_var = var_id;
+            }
+        }
+        abortif(max_dlvl_var == 0, "No variable in clause found.");
         s->conflict_var_id = lit_to_var(c->occs[c->size - 1]); // conflict is the last variable in the clause :/
         s->state = SKOLEM_STATE_CONSTANTS_CONLICT;
         stack_push_op(s->stack, SKOLEM_OP_PROPAGATION_CONFLICT, NULL);

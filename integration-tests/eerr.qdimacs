@@ -1,0 +1,36 @@
+c 2017-09-16 12:42:54 by qbfdd.py,v 1.2.2
+c qbfdd.py /Users/markus/work/cadet/feat-lookahead-casesplits/eequery_query04_1344nqdimacs_reduced_reduced.txt /Users/markus/work/cadet/feat-lookahead-casesplits/scripts/equiscript3.sh ./cadet depqbf -m ddmin -g b -S
+c 
+c mode: ddmin
+c rounds: 2
+c test runs: 522
+c time elapsed:  7.82s
+c total: clauses  : -4 (15.38%)
+c        variables: -6 (22.22%)
+c        literals : -10 (17.86%)
+c 
+c Interface vars: (5 in total) ...  4 6 21
+c
+p cnf 21 22
+a 3 4 5 6 0
+e 1 2 7 8 9 10 12 13 14 15 17 18 20 21 0
+-12 5 13 0
+12 6 0
+-6 20 0
+6 -20 0
+1 -21 -18 0
+21 -5 0
+21 -20 0
+18 -3 0
+18 -17 0
+-15 -14 0
+15 -2 0
+15 -1 0
+14 -10 0
+14 -13 0
+12 2 0
+-9 -8 0
+9 4 0
+9 2 0
+8 -2 0
+7 2 0

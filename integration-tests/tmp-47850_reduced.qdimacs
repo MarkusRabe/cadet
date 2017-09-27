@@ -1,0 +1,26 @@
+c 2017-09-15 18:06:26 by qbfdd.py,v 1.2.2
+c qbfdd.py /Users/markus/work/cadet/feat-lookahead-casesplits/tmp-47850.qdimacs /Users/markus/work/cadet/feat-lookahead-casesplits/cadet -m ddmin -g b -S
+c 
+c mode: ddmin
+c rounds: 2
+c test runs: 955
+c time elapsed:  8.56s
+c total: clauses  : -307 (96.24%)
+c        variables: -198 (93.84%)
+c        literals : -761 (96.70%)
+c 
+p cnf 13 12
+a 3 4 5 6 0
+e 1 2 7 8 9 10 11 12 13 0
+2 1 0
+-13 -12 0
+13 -1 0
+12 -9 0
+5 -11 -10 0
+11 6 0
+11 1 0
+10 -1 0
+-8 -7 9 0
+8 4 0
+8 1 0
+7 3 0

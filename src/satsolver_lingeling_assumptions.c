@@ -251,7 +251,7 @@ sat_res satsolver_sat(SATSolver* solver) {
     
 #ifdef SATSOLVER_TRACE
     if (solver->trace_solver_commands) {
-        LOG_PRINTF("assert(picosat_sat(s,%d) == %d);\n", PICOSAT_DECISION_LIMIT, res);
+        LOG_PRINTF("assert(lglsat(s) == %d);\n", solver->res);
     }
 #endif
     return solver->res;
@@ -383,8 +383,8 @@ void satsolver_pop(SATSolver* solver) {
     
 #ifdef SATSOLVER_TRACE
     if (solver->trace_solver_commands) {
-        LOG_PRINTF("picosat_add(s,%d); // context %u\n", context_var, int_vector_count(solver->context_literals) + 1);
-        LOG_PRINTF("picosat_add(s,0);\n");
+        LOG_PRINTF("lgladd(s,%d); // context %u\n", context_var, int_vector_count(solver->context_literals) + 1);
+        LOG_PRINTF("lgladd(s,0);\n");
     }
 #endif
 }

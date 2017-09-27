@@ -47,7 +47,6 @@ typedef struct {
     
     // Case splits
     bool case_splits;
-    bool case_splits_only_at_decision_level_0;
     
     // Optimizations
     bool miniscoping;
@@ -57,6 +56,7 @@ typedef struct {
     bool delete_clauses_on_restarts;
     bool propagate_pure_literals;
     bool enhanced_pure_literals;
+    bool failed_literals;
     
     // Output options
     bool print_qdimacs;

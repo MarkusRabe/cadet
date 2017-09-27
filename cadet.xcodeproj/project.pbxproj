@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		28261B921F71872D006974DC /* c2_clause_minimization.c in Sources */ = {isa = PBXBuildFile; fileRef = 28261B911F71872D006974DC /* c2_clause_minimization.c */; };
+		283FC1A21F693C16007DA702 /* float_vector.c in Sources */ = {isa = PBXBuildFile; fileRef = 283FC1A01F693C16007DA702 /* float_vector.c */; };
 		284EED5A1ED39BAF00581801 /* satsolver_lingeling_assumptions.c in Sources */ = {isa = PBXBuildFile; fileRef = 284EED591ED39BAF00581801 /* satsolver_lingeling_assumptions.c */; };
 		284EED781ED3B65600581801 /* lglib.c in Sources */ = {isa = PBXBuildFile; fileRef = 284EED731ED3B65600581801 /* lglib.c */; };
 		284EED791ED3B65600581801 /* lglopts.c in Sources */ = {isa = PBXBuildFile; fileRef = 284EED761ED3B65600581801 /* lglopts.c */; };
@@ -67,6 +69,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		28261B911F71872D006974DC /* c2_clause_minimization.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = c2_clause_minimization.c; path = src/c2_clause_minimization.c; sourceTree = "<group>"; };
+		283FC1A01F693C16007DA702 /* float_vector.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = float_vector.c; path = src/float_vector.c; sourceTree = "<group>"; };
+		283FC1A11F693C16007DA702 /* float_vector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = float_vector.h; path = src/float_vector.h; sourceTree = "<group>"; };
 		284EED591ED39BAF00581801 /* satsolver_lingeling_assumptions.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = satsolver_lingeling_assumptions.c; path = src/satsolver_lingeling_assumptions.c; sourceTree = "<group>"; };
 		284EED711ED3B65600581801 /* lglconst.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = lglconst.h; path = src/lingeling/lglconst.h; sourceTree = "<group>"; };
 		284EED731ED3B65600581801 /* lglib.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = lglib.c; path = src/lingeling/lglib.c; sourceTree = "<group>"; };
@@ -198,6 +203,8 @@
 				28675A441DDAA9D000951212 /* vector.h */,
 				28EBA54F1DE19539003D21EB /* int_vector.c */,
 				28EBA5501DE19539003D21EB /* int_vector.h */,
+				283FC1A01F693C16007DA702 /* float_vector.c */,
+				283FC1A11F693C16007DA702 /* float_vector.h */,
 				28EBA5521DE195DD003D21EB /* skolem_var_vector.c */,
 				28EBA5531DE195DD003D21EB /* skolem_var_vector.h */,
 				28EBA5551DE19BFC003D21EB /* var_vector.c */,
@@ -282,6 +289,7 @@
 				287C3B0F1E396B7600F7096A /* c2_traces.h */,
 				28FA8D2E1E10ACBC00A43B7B /* c2_validate.c */,
 				28FA8D2F1E10ACBC00A43B7B /* c2_validate.h */,
+				28261B911F71872D006974DC /* c2_clause_minimization.c */,
 			);
 			name = cadet2_ext;
 			sourceTree = "<group>";
@@ -394,6 +402,7 @@
 				28675A5E1DDAA9D000951212 /* set.c in Sources */,
 				28FA8D301E10ACBC00A43B7B /* c2_validate.c in Sources */,
 				287C3B1B1E3C2D5500F7096A /* val_vector.c in Sources */,
+				283FC1A21F693C16007DA702 /* float_vector.c in Sources */,
 				28F2769C1E6FE45400B471CB /* qipasir_parser.c in Sources */,
 				287BB7C31E0609B000AAE180 /* partitions.c in Sources */,
 				287C3B101E396B7600F7096A /* c2_traces.c in Sources */,
@@ -424,6 +433,7 @@
 				28675A5B1DDAA9D000951212 /* satsolver_cryptominisat.cpp in Sources */,
 				28675A4F1DDAA9D000951212 /* main.c in Sources */,
 				28577A721E6F87200082100B /* qipasir.c in Sources */,
+				28261B921F71872D006974DC /* c2_clause_minimization.c in Sources */,
 				28DA30F41DFFDD2600EABCA6 /* skolem_dependencies.c in Sources */,
 				28675A461DDAA9D000951212 /* aiger.c in Sources */,
 				28675A611DDAA9D000951212 /* undo_stack.c in Sources */,

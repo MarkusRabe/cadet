@@ -24,23 +24,6 @@ int compare_integers_natural_order(const void * a, const void * b) {
     return x - y;
 }
 
-int random_permutation(int* item_array, int* permutation) {
-    int item_array_size = 0; 
-    while (item_array[item_array_size]!=0) {
-        permutation[item_array_size]=item_array_size;
-        item_array_size++;
-    }
-    
-    // creating a random permutation http://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle
-    for (int i = 0; i<item_array_size;i++) {
-        int j = i + (rand() % (item_array_size-i));
-        int tmp = permutation[j];
-        permutation[j] = permutation[i];
-        permutation[i]=tmp;
-    }
-    return item_array_size;
-}
-
 double get_seconds() {
     struct timeval tv;
     gettimeofday(&tv, NULL);

@@ -599,7 +599,7 @@ if __name__ == "__main__":
         cpu_load = psutil.cpu_percent(interval=1, percpu=True)
         print('CPU load: ' + str(cpu_load))
         total_cpu_load = sum(cpu_load)
-        if (sum(cpu_load) > 1.5):
+        if (sum(cpu_load) > 50.0):
             if (not ARGS.force):
                 print('Error: CPU load too high. Use -f to force.')
                 sys.exit(1)

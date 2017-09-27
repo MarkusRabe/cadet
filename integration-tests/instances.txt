@@ -72,7 +72,6 @@ integration-tests/sorting_network_4_5_rr.qdimacs | 20
 integration-tests/fuzz1380_reduced.qdimacs | 10
 integration-tests/fuzz14807_reduced.qdimacs | 20
 integration-tests/bug_refinement_reduced2.qdimacs | 20
-integration-tests/RR.aig | 20
 integration-tests/fuzz19494_reduced.qdimacs | 20
 integration-tests/fuzz23979_reduced.qdimacs | 20
 integration-tests/fuzz12668_reduced.qdimacs | 10

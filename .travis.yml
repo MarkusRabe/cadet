@@ -11,7 +11,7 @@ compiler:
   - gcc
   
 before_install:
-  - pip install --user python-numpy subprocess32, numpy, six, cycler, python-dateutil, functools32, pytz, pyparsing, matplotlib
+  - pip install --user subprocess32, numpy, six, cycler, python-dateutil, functools32, pytz, pyparsing, matplotlib
   
 script: ./configure && make && make test
 

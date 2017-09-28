@@ -1,3 +1,6 @@
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/bfd02d3e1f7540d0ac920e4812bef953)](https://www.codacy.com/app/MarkusRabe/cadet?utm_source=github.com&utm_medium=referral&utm_content=MarkusRabe/cadet&utm_campaign=badger)
+[![Build Status](https://travis-ci.org/MarkusRabe/cadet.svg?branch=master)](https://travis-ci.org/MarkusRabe/cadet)
+
 # CADET
 CADET is a solver for _quantified Boolean formulas_ with one quantifier alternation (2QBF) written and maintained by [Markus N. Rabe](https://people.eecs.berkeley.edu/~rabe/). The solver is based on the _Incremental Determinization_ algorithm published in SAT 2016. 
 

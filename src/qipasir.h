@@ -1,6 +1,8 @@
 //
 //  qipasir.h
 //
+// QIPASIR v1.0
+//
 // A generic API for incremental QBF, derived from the API ipasir for SAT.
 //
 

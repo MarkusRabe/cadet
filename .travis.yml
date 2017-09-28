@@ -1,0 +1,17 @@
+language: C
+
+os:
+  - linux
+  # - osx
+
+dist: trusty
+
+compiler:
+  - clang
+  - gcc
+  
+before_install:
+# - sudo apt-get update
+  
+script: ./configure && make && make test
+

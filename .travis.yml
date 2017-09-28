@@ -11,7 +11,8 @@ compiler:
   - gcc
   
 before_install:
-# - sudo apt-get update
+  - pip update
+  - pip install --user python-numpy subprocess32, numpy, six, cycler, python-dateutil, functools32, pytz, pyparsing, matplotlib
   
 script: ./configure && make && make test
 

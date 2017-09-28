@@ -16,11 +16,10 @@ for arg in "$@"; do
         prefix=`echo $arg | sed 's/--prefix=//'`
         ;;
 
-    --enable-debug)
-        debugsym=true;;
-    --disable-debug)
-        debugsym=false;;
-
+    --debug)
+        debugsym=true
+        ;;
+    
     --satsolver=*)
         satsolver=`echo $arg | sed 's/--satsolver=//'`
         ;;
@@ -29,8 +28,7 @@ for arg in "$@"; do
         echo 'usage: ./configure [options]'
         echo 'options:'
         echo '  --prefix=<path>: installation prefix'
-        echo '  --enable-debug: include debug symbols'
-        echo '  --disable-debug: do not include debug symbols (default)'
+        echo '  --debug: include debug symbols'
         echo '  --satsolver=<value>: either picosat or minisat'
         echo 'all invalid options are silently ignored'
         exit 0
@@ -42,8 +40,8 @@ echo 'generating makefile ...'
 echo "PREFIX = $prefix" > Makefile
 
 if $debugsym; then
-    echo 'CFLAGS = -g -DDEBUG' >> Makefile
-    echo 'CPPFLAGS = -g -DDEBUG' >> Makefile
+    echo 'CFLAGS = -g -DDEBUG -Wall -Wextra -pedantic' >> Makefile
+    echo 'CPPFLAGS = -g -DDEBUG -Wall -Wextra -pedantic' >> Makefile
 else
   echo 'CFLAGS = -O3 -flto -DNDEBUG' >> Makefile
   echo 'CPPFLAGS = -O3 -flto -DNDEBUG' >> Makefile

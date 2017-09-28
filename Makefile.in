@@ -2,8 +2,8 @@ TARGET = cadet
 SRCDIR = ./src
 LIBS = -lm -lstdc++
 CC = cc
-CFLAGS += -std=c11 -Wall -Wextra -pedantic
-CPPFLAGS += -std=c++11 -Wall -Wextra -pedantic
+CFLAGS += -std=c11 
+CPPFLAGS += -std=c++11 
 
 .PHONY: default clean test
 

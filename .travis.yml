@@ -11,7 +11,8 @@ compiler:
   - gcc
   
 before_install:
-  - pip install --user subprocess32 numpy six cycler python-dateutil functools32 pytz pyparsing matplotlib
+  - sudo apt-get install python-tk python-numpy
+  # - pip install --user subprocess32 numpy cycler python-dateutil functools32 pytz pyparsing matplotlib
   
 script: ./configure && make && make test
 

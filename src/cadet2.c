@@ -83,7 +83,7 @@ C2* c2_init_qcnf(QCNF* qcnf, Options* options) {
     c2->statistics.failed_literals_conflicts = 0;
 
     // Magic constants
-    c2->magic.initial_restart = options->easy_debugging_mode_c2 ? 6 : 6; // [1..100] // depends also on restart factor
+    c2->magic.initial_restart = 6; // [1..100] // depends also on restart factor
     c2->next_restart = c2->magic.initial_restart;
     c2->magic.restart_factor = (float) 1.2; // [1.01..2]
     c2->magic.conflict_var_weight = 2; // [0..5]
@@ -241,7 +241,6 @@ Var* c2_pick_most_active_notdeterministic_variable(C2* c2) {
 
 void c2_backtrack_to_decision_lvl(C2 *c2, unsigned backtracking_lvl) {
     V2("Backtrack to level %u\n",backtracking_lvl);
-    assert(backtracking_lvl >= 0);
     assert(c2->stack->push_count == c2->skolem->stack->push_count);
     assert(c2->stack->push_count == c2->examples->stack->push_count);
     while (c2->stack->push_count > backtracking_lvl) {

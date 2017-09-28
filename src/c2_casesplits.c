@@ -33,7 +33,7 @@ void c2_case_split_backtracking_heuristics(C2* c2) {
             kept += 1;
         }
     }
-    V1("Kept %d clauses\n", kept);
+    V1("Kept %u clauses\n", kept);
 }
 
 void c2_successful_case_split_heuristics(C2* c2, int_vector* solved_cube) {
@@ -102,7 +102,7 @@ unsigned c2_case_split_probe(C2* c2, Lit lit) {
         c2->skolem->mode = SKOLEM_MODE_STANDARD;
         
         if (skolem_is_conflicted(c2->skolem)) {
-            V1("Skolem conflict with assumed constant %d: %d\n", lit, c2->skolem->conflict_var_id);
+            V1("Skolem conflict with assumed constant %u: %d\n", lit, c2->skolem->conflict_var_id);
             c2->statistics.failed_literals_conflicts++;
             case_split_decision_metric = UINT_MAX; //ensure the variable is chosen
         } else {

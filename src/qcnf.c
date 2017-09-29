@@ -836,7 +836,7 @@ void qcnf_unregister_clause(QCNF* qcnf, Clause* c) {
 
 bool qcnf_remove_literal(QCNF* qcnf, Clause* c, Lit l) {
     vector* occs = qcnf_get_occs_of_lit(qcnf, l);
-    bool removed = vector_remove_unsorted(occs, c);
+    vector_remove_unsorted(occs, c);
     unsigned i = 0;
     bool found = false;
     for (; i < c->size; i++) {

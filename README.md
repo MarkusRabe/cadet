@@ -9,8 +9,7 @@ As of 2017, CADET is one of the fastest and most reliable solvers for 2QBF formu
 
 ## Installing CADET
 
-CADET comes with no requirements but those included in the package and it can be built with both clang and gcc. 
-The testing scripts require Python 2.7. 
+CADET can be built from source with both clang and gcc. You can find pre-built binaries of CADET for Linux and OSX. The testing scripts require Python 2.7. 
 
 To compile the solver type:
 
@@ -40,7 +39,7 @@ CADET reads files in both [QDIMACS](http://www.qbflib.org/qdimacs.html) and [AIG
 
 CADET is able to prove (or _certify_) its results. As 2QBF formulas in QDIMACS have a forall-exists quantifier alternation, proofs for UNSAT results are given as an assignment to the universally quantified variables. Proofs for SAT results are given as a circuit, mapping assignments to the universally quantified variables to assignments to the existentially quantified variables. 
 
-Certificates for UNSAT results are written to stdout according to the [QDIMACS](http://www.qbflib.org/qdimacs.html) standard. CADET checks UNSAT certificates internally by default. 
+Certificates for UNSAT results are written to stdout according to the [QDIMACS](http://www.qbflib.org/qdimacs.html) standard. To print output according to the QDIMACS standard, use the `--qdimacs_out` flag. CADET checks UNSAT certificates internally by default. 
 
 With the command line option `-c [file]` CADET writes the SAT certificate for true 2QBF. You can either specify a file name to which the certificate should be written (ending in `.aag` or `.aig`) or you can specify `sdtout` to let CADET print the certificate on the terminal. For example, type:
 

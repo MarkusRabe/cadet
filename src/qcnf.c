@@ -857,30 +857,86 @@ bool qcnf_remove_literal(QCNF* qcnf, Clause* c, Lit l) {
     return found;
 }
 
+bool qcnf_occus_only_in_binary_clauses(QCNF* qcnf, Lit lit) {
+    vector* occs = qcnf_get_occs_of_lit(qcnf, lit);
+    for (unsigned i = 0; i < vector_count(occs); i++) {
+        Clause* c = (Clause*) vector_get(occs, i);
+        if (c->size != 2) {
+            return false;
+        }
+    }
+    return true;
+}
+
+Lit qcnf_get_other_lit(QCNF* qcnf, Clause* c, Lit lit) {
+    assert(c->size == 2); // actually not needed
+    assert(qcnf_contains_literal(c, lit));
+    for (unsigned i = 0; i < c->size; i++) {
+        if (c->occs[i] != lit) {
+            return c->occs[i];
+        }
+    }
+    assert(false);
+    return 0;
+}
+
 /* Plaisted-Greenbaum is a Tseitin-like encoding that omits some clauses.
  * This function adds the missing clauses without changing the truth of the formula.
  * This may help to improve determinicity propagation.
  */
 void qcnf_plaisted_greenbaum_completion(QCNF* qcnf) {
-    unsigned added = 0;
+    unsigned added_binary = 0;
+    unsigned added_non_binary = 0;
     for (unsigned i = 0; i < var_vector_count(qcnf->vars); i++) {
         Var* v = var_vector_get(qcnf->vars, i);
         if (v->var_id != 0 && ! v->is_universal) {
+            
+            bool added_long_clause = false;
+            
             for (int polarity = -1; polarity < 2; polarity += 2) {
-                vector* occs = qcnf_get_occs_of_lit(qcnf, polarity * (Lit) v->var_id);
-                if (vector_count(occs) == 1) {
-                    Clause* c = (Clause*) vector_get(occs, 0);
-                    for (unsigned j = 0; j < c->size; j++) {
-                        Lit l = c->occs[j];
-                        if (lit_to_var(l) != v->var_id) {
-                            qcnf_add_lit(qcnf, -l);
-                            qcnf_add_lit(qcnf, - polarity * (Lit) v->var_id);
-                            Clause* new = qcnf_close_clause(qcnf);
-                            if (new) {
-                                added += 1;
-                                new->original = 0;
-                                new->consistent_with_originals = 1;
-                                new->PG = 1;
+                Lit this = polarity * (Lit) v->var_id;
+                if (qcnf_occus_only_in_binary_clauses(qcnf, this)) {
+                    added_long_clause = true;
+                    
+                    vector* occs = qcnf_get_occs_of_lit(qcnf, this);
+                    for (unsigned j = 0; j < vector_count(occs); j++) {
+                        Clause* c = vector_get(occs, j);
+                        assert(c->size == 2);
+                        Lit other = qcnf_get_other_lit(qcnf, c, this);
+                        qcnf_add_lit(qcnf, - other);
+                    }
+                    qcnf_add_lit(qcnf, -this);
+                    Clause* new = qcnf_close_clause(qcnf);
+                    if (new) {
+//                        qcnf_print_clause(new, stdout);
+                        added_non_binary += 1;
+                        new->original = 0;
+                        new->consistent_with_originals = 1;
+                        new->PG = 1;
+                    }
+                }
+            }
+            
+            
+            if (!added_long_clause) { // check if any polarity occcurs just once, then add binaries
+                for (int polarity = -1; polarity < 2; polarity += 2) {
+                    Lit this = polarity * (Lit) v->var_id;
+                    vector* occs = qcnf_get_occs_of_lit(qcnf, this);
+                    if (vector_count(occs) == 1) {
+                        Clause* c = (Clause*) vector_get(occs, 0);
+                        for (unsigned j = 0; j < c->size; j++) {
+                            Lit l = c->occs[j];
+                            if (lit_to_var(l) != v->var_id) {
+                                qcnf_add_lit(qcnf, -l);
+                                qcnf_add_lit(qcnf, - this);
+                                Clause* new = qcnf_close_clause(qcnf);
+                                if (new) {
+//                                    qcnf_print_clause(new, stdout);
+                                    added_binary += 1;
+                                    new->original = 0;
+                                    new->consistent_with_originals = 1;
+                                    new->PG = 1;
+                                }
                             }
                         }
                     }
@@ -888,7 +944,7 @@ void qcnf_plaisted_greenbaum_completion(QCNF* qcnf) {
             }
         }
     }
-    V1("Plaisted-Greenbaum completion added %d clauses.\n", added);
+    V1("Plaisted-Greenbaum completion added %u binary and %u non-binary clauses.\n", added_binary, added_non_binary);
 }
 
 

@@ -745,7 +745,7 @@ cadet_res c2_sat(C2* c2) {
         return CADET_RESULT_UNKNOWN;
     }
     //////
-
+    
     for (unsigned i = 0; i < c2->options->initial_examples; i ++) {
         PartialAssignment* pa = examples_add_random_assignment(c2->examples);
         if (pa && partial_assignment_is_conflicted(pa)) {
@@ -835,6 +835,8 @@ cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
     V1("Number of clauses: %u\n", vector_count(qcnf->clauses));
     V1("Number of scopes: %u\n", vector_count(qcnf->scopes));
 
+    qcnf_plaisted_greenbaum_completion(qcnf);
+    
     C2* c2 = c2_init_qcnf(qcnf, options);
 
     c2_sat(c2);

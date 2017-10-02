@@ -365,7 +365,9 @@ unsigned qcnf_get_smallest_free_clause_id(QCNF* qcnf) {
 }
 
 Clause* qcnf_new_clause(QCNF* qcnf, int_vector* literals) {
-
+    assert(literals == qcnf->new_clause || int_vector_count(qcnf->new_clause) == 0);
+    abortif(int_vector_count(literals) > 33554431, "Clause length is greater than 2^25. You're doing it wrong.");
+    
     int_vector_sort(literals, qcnf_compare_literal_pointers_by_var_id);
     for (unsigned i = 0; i+1 < int_vector_count(literals); i++) {
         // find pairs of positive/negative literals of the same variable
@@ -854,3 +856,40 @@ bool qcnf_remove_literal(QCNF* qcnf, Clause* c, Lit l) {
     }
     return found;
 }
+
+/* Plaisted-Greenbaum is a Tseitin-like encoding that omits some clauses.
+ * This function adds the missing clauses without changing the truth of the formula.
+ * This may help to improve determinicity propagation.
+ */
+void qcnf_plaisted_greenbaum_completion(QCNF* qcnf) {
+    unsigned added = 0;
+    for (unsigned i = 0; i < var_vector_count(qcnf->vars); i++) {
+        Var* v = var_vector_get(qcnf->vars, i);
+        if (v->var_id != 0 && ! v->is_universal) {
+            for (int polarity = -1; polarity < 2; polarity += 2) {
+                vector* occs = qcnf_get_occs_of_lit(qcnf, polarity * (Lit) v->var_id);
+                if (vector_count(occs) == 1) {
+                    Clause* c = (Clause*) vector_get(occs, 0);
+                    for (unsigned j = 0; j < c->size; j++) {
+                        Lit l = c->occs[j];
+                        if (lit_to_var(l) != v->var_id) {
+                            qcnf_add_lit(qcnf, -l);
+                            qcnf_add_lit(qcnf, - polarity * (Lit) v->var_id);
+                            Clause* new = qcnf_close_clause(qcnf);
+                            if (new) {
+                                added += 1;
+                                new->original = 0;
+                                new->consistent_with_originals = 1;
+                                new->PG = 1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    V1("Plaisted-Greenbaum completion added %d clauses.\n", added);
+}
+
+
+

@@ -46,7 +46,8 @@ struct Clause {
 
     unsigned int original                  : 1;
     unsigned int consistent_with_originals : 1;   // learnt clauses
-    unsigned int size                      : 30;
+    unsigned int PG                        : 1;   // Introduced throug Plaisted-Greenbaum completion
+    unsigned int size                      : 29;
     
     // skolem_clause_info ... // contains unique_consequence
     
@@ -137,6 +138,7 @@ vector* qcnf_get_occs_of_lit(QCNF* qcnf, Lit lit);
 
 void qcnf_add_lit(QCNF*, int lit);
 Clause* qcnf_close_clause(QCNF*);
+Clause* qcnf_new_clause(QCNF* qcnf, int_vector* literals);
 
 // Scopes
 unsigned qcnf_scope_init(QCNF*, int_vector* vars); // Attention: vars may be disallocated.
@@ -180,10 +182,12 @@ typedef enum {
 
 void qcnf_undo_op(void* qcnf,char,void*);
 
-Clause* qcnf_new_clause(QCNF* qcnf, int_vector* literals);
+
 
 void qcnf_register_clause(QCNF*, Clause*);
 void qcnf_unregister_clause(QCNF*, Clause*);
 bool qcnf_remove_literal(QCNF*, Clause*, Lit);
+
+void qcnf_plaisted_greenbaum_completion(QCNF* qcnf);
 
 #endif /* qcnf_h */

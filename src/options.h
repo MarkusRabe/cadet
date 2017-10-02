@@ -49,6 +49,7 @@ typedef struct {
     bool case_splits;
     
     // Optimizations
+    bool plaisted_greenbaum_completion;
     bool miniscoping;
     bool find_smallest_reason;
     bool minimize_conflicts;

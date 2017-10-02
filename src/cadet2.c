@@ -835,7 +835,9 @@ cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
     V1("Number of clauses: %u\n", vector_count(qcnf->clauses));
     V1("Number of scopes: %u\n", vector_count(qcnf->scopes));
 
-    qcnf_plaisted_greenbaum_completion(qcnf);
+    if (options->plaisted_greenbaum_completion) {
+        qcnf_plaisted_greenbaum_completion(qcnf);
+    }
     
     C2* c2 = c2_init_qcnf(qcnf, options);
 

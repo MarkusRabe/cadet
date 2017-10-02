@@ -38,9 +38,10 @@ Options* default_options() {
     o->certificate_aiger_mode = aiger_ascii_mode;
 
     // Case splits
-    o->case_splits = true;
+    o->case_splits = false;
 
     // Optimizations
+    o->plaisted_greenbaum_completion = true;
     o->miniscoping = false;
     o->find_smallest_reason = true;
     o->minimize_conflicts = true;

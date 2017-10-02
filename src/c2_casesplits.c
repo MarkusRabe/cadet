@@ -24,10 +24,10 @@ void c2_case_split_backtracking_heuristics(C2* c2) {
         if (! c) {
             continue;
         }
-        if (c->original) {
+        if (c->original) { // assumes original clauses are in the front of the clause vector :/
             break;
         }
-        if (c->size > 3 && skolem_get_unique_consequence(c2->skolem, c) == 0) {
+        if (c->size > 5 && skolem_get_unique_consequence(c2->skolem, c) == 0 && c->PG == 0) {
             qcnf_unregister_clause(c2->qcnf, c);
         } else {
             kept += 1;

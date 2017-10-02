@@ -31,6 +31,7 @@ void print_usage(const char* name) {
                                     "\t--cegar_only\t\tUse CEGAR strategy exclusively.\n"
                                     "\t--case_splits \t\tCase distinctions (default off) \n"
                                     "\t--functional-synthesis\tFunctional synthesis. I.e. compute skolem functions for UNSAT instances.\n"
+                                    "\t--pg\t\t\tPlaisted Greenbaum completion (default on).\n"
                                     "\t--sat_by_qbf\t\tUse QBF engine also for propositional problems. Uses SAT solver by default.\n"
                                     "\t--miniscoping \t\tEnables miniscoping \n"
                                     "\t--miniscoping_info \tPrint additional info on miniscoping (default off)\n"
@@ -226,6 +227,8 @@ int main(int argc, const char* argv[]) {
                         options->use_qbf_engine_also_for_propositional_problems = ! options->use_qbf_engine_also_for_propositional_problems;
                     } else if (strcmp(argv[i], "--delay_conflicts") == 0) {
                         options->delay_conflict_checks = ! options->delay_conflict_checks;
+                    } else if (strcmp(argv[i], "--pg") == 0) {
+                        options->plaisted_greenbaum_completion = ! options->plaisted_greenbaum_completion;
                     } else {
                         LOG_ERROR("Unknown long argument '%s'", argv[i]);
                         print_usage(argv[0]);

@@ -387,6 +387,7 @@ Clause* qcnf_new_clause(QCNF* qcnf, int_vector* literals) {
     c->clause_id = qcnf_get_smallest_free_clause_id(qcnf);
     c->original = true;
     c->consistent_with_originals = true;
+    c->PG = false;
     c->size = int_vector_count(literals);
     for (unsigned i = 0; i < c->size; i++) {
         int lit = int_vector_get(literals, i);

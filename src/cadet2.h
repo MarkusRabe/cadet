@@ -63,6 +63,7 @@ struct C2_Magic_Values {
     size_t major_restart_frequency;
     size_t replenish_frequency;
     unsigned num_restarts_before_Jeroslow_Wang;
+    unsigned keeping_clauses_threshold;
     
     // Magic constants for case splits
     unsigned num_restarts_before_case_splits;

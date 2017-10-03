@@ -96,6 +96,7 @@ C2* c2_init_qcnf(QCNF* qcnf, Options* options) {
     c2->next_major_restart = c2->magic.major_restart_frequency;
     c2->magic.num_restarts_before_Jeroslow_Wang = options->easy_debugging_mode_c2 ? 0 : 3;
     c2->magic.num_restarts_before_case_splits = options->easy_debugging_mode_c2 ? 0 : 3;
+    c2->magic.keeping_clauses_threshold = 3;
 
     // Magic constants for case splits
     c2->magic.skolem_success_horizon = (float) 0.9; // >0.0 && <1.0
@@ -691,6 +692,10 @@ void c2_restart_heuristics(C2* c2) {
     if (c2->next_major_restart == c2->restarts_since_last_major) {
         c2->restarts_since_last_major = 0;
         c2->next_restart = c2->magic.initial_restart; // resets restart frequency
+        
+        c2_delete_learnt_clauses_greater_than(c2, c2->magic.keeping_clauses_threshold);
+        c2->magic.keeping_clauses_threshold += 1;
+        
         
         V1("Major restart. Resetting all activity values to 0 and some random ones to 1.\n");
         for (unsigned i = 0; i < var_vector_count(c2->qcnf->vars); i++) {

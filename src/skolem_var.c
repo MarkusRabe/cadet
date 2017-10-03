@@ -94,6 +94,7 @@ void skolem_enlarge_skolem_var_vector(Skolem* s, unsigned var_id) {
     sv.conflict_potential = s->magic.initial_conflict_potential;
     sv.reason_for_constant = INT_MAX;
     sv.dlvl_for_constant = 0;
+    sv.universal = qcnf_is_universal(s->qcnf, var_id);
     
     // add this sv to the var_vector
     while (skolem_var_vector_count(s->infos) <= var_id) {

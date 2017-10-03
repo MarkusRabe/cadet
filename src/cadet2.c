@@ -981,6 +981,8 @@ void c2_new_variable(C2* c2, unsigned var_id) {
 }
 
 void c2_new_clause(C2* c2, Clause* c) {
+    assert(c->clause_id <= vector_count(c2->qcnf->clauses));
+    assert(c != NULL);
     c2->result = CADET_RESULT_UNKNOWN;
     examples_new_clause(c2->examples, c);
     skolem_new_clause(c2->skolem, c);

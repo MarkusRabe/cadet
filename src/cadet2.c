@@ -27,12 +27,14 @@
 void c2_init_clauses_and_variables(C2* c2) {
     // initialize the initially deterministic variables; these are usually the universals
     for (unsigned i = 1; i < var_vector_count(c2->qcnf->vars); i++) {
-        c2_new_variable(c2, i);
+        if (qcnf_var_exists(c2->qcnf, i)) {
+            c2_new_variable(c2, i);
+        }
     }
     // search for unit clauses and clauses with unique consequence
     for (unsigned i = 0; i < vector_count(c2->qcnf->clauses); i++) {
         Clause* c = vector_get(c2->qcnf->clauses, i);
-        if (c) {c2_new_clause(c2, c);}
+        if (c != NULL) {c2_new_clause(c2, c);}
     }
 }
 

@@ -696,20 +696,16 @@ void c2_restart_heuristics(C2* c2) {
         c2_delete_learnt_clauses_greater_than(c2, c2->magic.keeping_clauses_threshold);
         c2->magic.keeping_clauses_threshold += 1;
         
-        
-        V1("Major restart. Resetting all activity values to 0 and some random ones to 1.\n");
-        for (unsigned i = 0; i < var_vector_count(c2->qcnf->vars); i++) {
-            c2_set_activity(c2, i, 0.0f);
-        }
-        assert(c2->activity_factor == 1.0f);
-        // bump the activities of some random vars
-//        for (unsigned i = 1; i <= 100 && i < var_vector_count(c2->qcnf->vars); i++) {
-//            unsigned random_var_id = (unsigned) (1 + (rand() % ((int)var_vector_count(c2->qcnf->vars) - 1)));
-//            assert(random_var_id > 0 && random_var_id <= var_vector_count(c2->qcnf->vars));
-//            if (qcnf_var_exists(c2->qcnf, random_var_id)) {
-//                c2_increase_activity(c2, random_var_id, 1.0f/(float) i);
+        V1("\n\nMajor restart \n");
+//        for (unsigned i = 0; i < var_vector_count(c2->qcnf->vars); i++) {
+//            if (qcnf_var_exists(c2->qcnf, i) && qcnf_is_existential(c2->qcnf, i)) {
+//                c2_set_activity(c2, i, 0.0f);
+//                if (rand() % 10 == 0) {
+//                    c2_increase_activity(c2, i, 1.0f);
+//                }
 //            }
 //        }
+        assert(c2->activity_factor == 1.0f);
 
         c2->next_major_restart = (size_t) (c2->next_major_restart * c2->magic.restart_factor);
     }

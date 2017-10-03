@@ -9,7 +9,7 @@
 #include "cadet2.h"
 #include "log.h"
 
-void c2_delete_learnt_clauses_greater_than(C2* c2, unsigned threshold) {
+void c2_delete_learnt_clauses_greater_than(C2* c2, unsigned max_size) {
     unsigned kept = 0;
     unsigned deleted = 0;
     for (int i = (int) vector_count(c2->qcnf->clauses) - 1; i >= 0; i--) {
@@ -20,7 +20,7 @@ void c2_delete_learnt_clauses_greater_than(C2* c2, unsigned threshold) {
         if (c->original) { // assumes original clauses are in the front of the clause vector :/
             break;
         }
-        if (c->size > threshold && skolem_get_unique_consequence(c2->skolem, c) == 0 && c->PG == 0) {
+        if (c->size > max_size && skolem_get_unique_consequence(c2->skolem, c) == 0 && c->PG == 0) {
             qcnf_delete_clause(c2->qcnf, c);
             deleted += 1;
         } else {

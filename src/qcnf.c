@@ -891,56 +891,84 @@ void qcnf_plaisted_greenbaum_completion(QCNF* qcnf) {
         Var* v = var_vector_get(qcnf->vars, i);
         if (v->var_id != 0 && ! v->is_universal) {
             
-            bool added_long_clause = false;
+            int only_binary_polarity = 0;
+            unsigned add_long_clause_cost = UINT_MAX;
+            
+            int single_occurrence_polarity = 0;
+            unsigned add_binary_clauses_cost = UINT_MAX;
             
             for (int polarity = -1; polarity < 2; polarity += 2) {
                 Lit this = polarity * (Lit) v->var_id;
+                
                 if (qcnf_occus_only_in_binary_clauses(qcnf, this)) {
-                    added_long_clause = true;
-                    
-                    vector* occs = qcnf_get_occs_of_lit(qcnf, this);
-                    for (unsigned j = 0; j < vector_count(occs); j++) {
-                        Clause* c = vector_get(occs, j);
-                        assert(c->size == 2);
-                        Lit other = qcnf_get_other_lit(qcnf, c, this);
-                        qcnf_add_lit(qcnf, - other);
+                    vector* binary_occs = qcnf_get_occs_of_lit(qcnf, this);
+                    unsigned cost = vector_count(binary_occs);
+                    if (cost <= add_long_clause_cost) {
+                        only_binary_polarity = polarity;
+                        add_long_clause_cost = cost;
                     }
-                    qcnf_add_lit(qcnf, -this);
-                    Clause* new = qcnf_close_clause(qcnf);
-                    if (new) {
-//                        qcnf_print_clause(new, stdout);
-                        added_non_binary += 1;
-                        new->original = 0;
-                        new->consistent_with_originals = 1;
-                        new->PG = 1;
+                }
+                
+                vector* occs = qcnf_get_occs_of_lit(qcnf, this);
+                if (vector_count(occs) == 1) {
+                    Clause* only_occ = vector_get(occs, 0);
+                    unsigned cost = only_occ->size;
+                    if (cost < add_binary_clauses_cost) {
+                        single_occurrence_polarity = polarity;
+                        add_binary_clauses_cost = cost;
                     }
                 }
             }
             
+//            if (! only_binary_polarity && ! single_occurrence_polarity) {
+//                continue;
+//            }
+            assert(! only_binary_polarity || add_long_clause_cost < UINT_MAX);
+            assert(! single_occurrence_polarity || add_binary_clauses_cost < UINT_MAX);
             
-            if (!added_long_clause) { // check if any polarity occcurs just once, then add binaries
-                for (int polarity = -1; polarity < 2; polarity += 2) {
-                    Lit this = polarity * (Lit) v->var_id;
-                    vector* occs = qcnf_get_occs_of_lit(qcnf, this);
-                    if (vector_count(occs) == 1) {
-                        Clause* c = (Clause*) vector_get(occs, 0);
-                        for (unsigned j = 0; j < c->size; j++) {
-                            Lit l = c->occs[j];
-                            if (lit_to_var(l) != v->var_id) {
-                                qcnf_add_lit(qcnf, -l);
-                                qcnf_add_lit(qcnf, - this);
-                                Clause* new = qcnf_close_clause(qcnf);
-                                if (new) {
-//                                    qcnf_print_clause(new, stdout);
-                                    added_binary += 1;
-                                    new->original = 0;
-                                    new->consistent_with_originals = 1;
-                                    new->PG = 1;
-                                }
-                            }
+            if (add_long_clause_cost < add_binary_clauses_cost) {
+                assert(only_binary_polarity);
+                Lit this = only_binary_polarity * (Lit) v->var_id;
+                
+                vector* occs = qcnf_get_occs_of_lit(qcnf, this);
+                for (unsigned j = 0; j < vector_count(occs); j++) {
+                    Clause* c = vector_get(occs, j);
+                    assert(c->size == 2);
+                    Lit other = qcnf_get_other_lit(qcnf, c, this);
+                    qcnf_add_lit(qcnf, - other);
+                }
+                qcnf_add_lit(qcnf, -this);
+                Clause* new = qcnf_close_clause(qcnf);
+                if (new) {
+                    // qcnf_print_clause(new, stdout);
+                    added_non_binary += 1;
+                    new->original = 0;
+                    new->consistent_with_originals = 1;
+                    new->PG = 1;
+                }
+            } else if (add_binary_clauses_cost < add_long_clause_cost) {
+                assert(single_occurrence_polarity);
+                Lit this = single_occurrence_polarity * (Lit) v->var_id;
+                vector* occs = qcnf_get_occs_of_lit(qcnf, this);
+                assert(vector_count(occs) == 1);
+                
+                Clause* c = (Clause*) vector_get(occs, 0);
+                for (unsigned j = 0; j < c->size; j++) {
+                    Lit l = c->occs[j];
+                    if (lit_to_var(l) != v->var_id) {
+                        qcnf_add_lit(qcnf, -l);
+                        qcnf_add_lit(qcnf, - this);
+                        Clause* new = qcnf_close_clause(qcnf);
+                        if (new) {
+                            // qcnf_print_clause(new, stdout);
+                            added_binary += 1;
+                            new->original = 0;
+                            new->consistent_with_originals = 1;
+                            new->PG = 1;
                         }
                     }
                 }
+                
             }
         }
     }

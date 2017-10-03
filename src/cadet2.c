@@ -703,13 +703,13 @@ void c2_restart_heuristics(C2* c2) {
         }
         assert(c2->activity_factor == 1.0f);
         // bump the activities of some random vars
-        for (unsigned i = 1; i <= 100 && i < var_vector_count(c2->qcnf->vars); i++) {
-            unsigned random_var_id = (unsigned) (1 + (rand() % ((int)var_vector_count(c2->qcnf->vars) - 1)));
-            assert(random_var_id > 0 && random_var_id <= var_vector_count(c2->qcnf->vars));
-            if (qcnf_var_exists(c2->qcnf, random_var_id)) {
-                c2_increase_activity(c2, random_var_id, 1.0f/(float) i);
-            }
-        }
+//        for (unsigned i = 1; i <= 100 && i < var_vector_count(c2->qcnf->vars); i++) {
+//            unsigned random_var_id = (unsigned) (1 + (rand() % ((int)var_vector_count(c2->qcnf->vars) - 1)));
+//            assert(random_var_id > 0 && random_var_id <= var_vector_count(c2->qcnf->vars));
+//            if (qcnf_var_exists(c2->qcnf, random_var_id)) {
+//                c2_increase_activity(c2, random_var_id, 1.0f/(float) i);
+//            }
+//        }
 
         c2->next_major_restart = (size_t) (c2->next_major_restart * c2->magic.restart_factor);
     }

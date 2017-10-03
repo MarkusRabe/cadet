@@ -99,6 +99,7 @@ struct QCNF {
     
     // Stats
     unsigned universal_reductions;
+    unsigned deleted_clauses;
 };
 
 // Constructor and Destructor

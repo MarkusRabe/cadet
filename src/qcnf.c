@@ -223,6 +223,7 @@ QCNF* qcnf_init() {
     qcnf->stack = stack_init(qcnf_undo_op);
     
     qcnf->universal_reductions = 0;
+    qcnf->deleted_clauses = 0;
     
     return qcnf;
 }
@@ -704,6 +705,7 @@ void qcnf_print_statistics(QCNF* qcnf) {
     V0("  Universal variables: %u\n", universal_var_count);
     V0("  Clauses: %u\n", vector_count(qcnf->clauses));
     V0("  Universal reductions: %u\n", qcnf->universal_reductions);
+    V0("  Deleted clauses: %u\n", qcnf->deleted_clauses);
 }
 
 //////////// INVARIANTS ///////////
@@ -859,6 +861,7 @@ bool qcnf_remove_literal(QCNF* qcnf, Clause* c, Lit l) {
 
 void qcnf_delete_clause(QCNF* qcnf, Clause* c) {
     assert(c && ! c->original);
+    qcnf->deleted_clauses += 1;
     qcnf_unregister_clause(qcnf, c);
     qcnf_free_clause(c);
 }

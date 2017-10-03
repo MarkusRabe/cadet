@@ -698,9 +698,9 @@ void c2_restart_heuristics(C2* c2) {
         
         V1("\n\nMajor restart\n");
         for (unsigned i = 0; i < var_vector_count(c2->qcnf->vars); i++) {
-            if (qcnf_var_exists(c2->qcnf, i) && qcnf_is_existential(c2->qcnf, i)) {
+            if (qcnf_var_exists(c2->qcnf, i)) {
                 c2_set_activity(c2, i, 0.0f);
-                if (rand() % 10 == 0) {
+                if (qcnf_is_existential(c2->qcnf, i) && rand() % 100 == 0) {
                     c2_increase_activity(c2, i, 1.0f);
                 }
             }

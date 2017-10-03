@@ -690,13 +690,15 @@ void c2_restart_heuristics(C2* c2) {
     c2_rescale_activity_values(c2);
     
     if (c2->next_major_restart == c2->restarts_since_last_major) {
+        V1("\n\nMajor restart\n");
+        
         c2->restarts_since_last_major = 0;
         c2->next_restart = c2->magic.initial_restart; // resets restart frequency
         
         c2_delete_learnt_clauses_greater_than(c2, c2->magic.keeping_clauses_threshold);
         c2->magic.keeping_clauses_threshold += 1;
         
-        V1("\n\nMajor restart\n");
+        V2("Resetting all variable activities to 0\n");
         for (unsigned i = 0; i < var_vector_count(c2->qcnf->vars); i++) {
             if (qcnf_var_exists(c2->qcnf, i)) {
                 c2_set_activity(c2, i, 0.0f);

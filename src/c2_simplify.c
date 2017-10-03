@@ -20,7 +20,8 @@ void c2_delete_learnt_clauses_greater_than(C2* c2, unsigned max_size) {
         if (c->original) { // assumes original clauses are in the front of the clause vector :/
             break;
         }
-        if (c->size > max_size && skolem_get_unique_consequence(c2->skolem, c) == 0 && c->PG == 0) {
+        Lit uc = skolem_get_unique_consequence(c2->skolem, c);
+        if (c->size > max_size && (uc == 0 || ! skolem_is_deterministic(c2->skolem, lit_to_var(uc))) && c->PG == 0) {
             qcnf_delete_clause(c2->qcnf, c);
             deleted += 1;
         } else {

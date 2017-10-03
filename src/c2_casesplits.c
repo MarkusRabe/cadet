@@ -17,23 +17,6 @@ void c2_case_split_backtracking_heuristics(C2* c2) {
     c2->next_restart = c2->magic.initial_restart;
     c2->next_major_restart = c2->magic.major_restart_frequency;
     c2->restarts_since_last_major = 0;
-    
-    unsigned kept = 0;
-    for (int i = (int) vector_count(c2->qcnf->clauses) - 1; i >= 0; i--) {
-        Clause* c = vector_get(c2->qcnf->clauses, (unsigned) i);
-        if (! c) {
-            continue;
-        }
-        if (c->original) { // assumes original clauses are in the front of the clause vector :/
-            break;
-        }
-        if (c->size > 5 && skolem_get_unique_consequence(c2->skolem, c) == 0 && c->PG == 0) {
-            qcnf_unregister_clause(c2->qcnf, c);
-        } else {
-            kept += 1;
-        }
-    }
-    V1("Kept %u clauses\n", kept);
 }
 
 void c2_successful_case_split_heuristics(C2* c2, int_vector* solved_cube) {

@@ -157,4 +157,6 @@ unsigned c2_minimize_clause(C2*,Clause*);
 // figuring out properties of instances:
 void c2_analysis_determine_number_of_partitions(C2* c2);
 
+void c2_delete_learnt_clauses(C2* c2);
+
 #endif /* cadet2_h */

@@ -187,7 +187,9 @@ void qcnf_undo_op(void* qcnf,char,void*);
 void qcnf_register_clause(QCNF*, Clause*);
 void qcnf_unregister_clause(QCNF*, Clause*);
 bool qcnf_remove_literal(QCNF*, Clause*, Lit);
+void qcnf_delete_clause(QCNF*, Clause*);
 
 void qcnf_plaisted_greenbaum_completion(QCNF* qcnf);
+
 
 #endif /* qcnf_h */

@@ -857,6 +857,14 @@ bool qcnf_remove_literal(QCNF* qcnf, Clause* c, Lit l) {
     return found;
 }
 
+void qcnf_delete_clause(QCNF* qcnf, Clause* c) {
+    assert(c && ! c->original);
+    qcnf_unregister_clause(qcnf, c);
+    qcnf_free_clause(c);
+}
+
+
+
 bool qcnf_occus_only_in_binary_clauses(QCNF* qcnf, Lit lit) {
     vector* occs = qcnf_get_occs_of_lit(qcnf, lit);
     for (unsigned i = 0; i < vector_count(occs); i++) {

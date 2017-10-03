@@ -45,6 +45,7 @@
 		287C3B131E399C7A00F7096A /* c2_casesplits.c in Sources */ = {isa = PBXBuildFile; fileRef = 287C3B111E399C7A00F7096A /* c2_casesplits.c */; };
 		287C3B161E3C01FE00F7096A /* skolem_var.c in Sources */ = {isa = PBXBuildFile; fileRef = 287C3B141E3C01FE00F7096A /* skolem_var.c */; };
 		287C3B1B1E3C2D5500F7096A /* val_vector.c in Sources */ = {isa = PBXBuildFile; fileRef = 287C3B191E3C2D5500F7096A /* val_vector.c */; };
+		28C6FD981F831DC3008D109C /* c2_simplify.c in Sources */ = {isa = PBXBuildFile; fileRef = 28C6FD961F831DC3008D109C /* c2_simplify.c */; };
 		28DA30F41DFFDD2600EABCA6 /* skolem_dependencies.c in Sources */ = {isa = PBXBuildFile; fileRef = 28DA30F21DFFDD2600EABCA6 /* skolem_dependencies.c */; };
 		28EBA5511DE19539003D21EB /* int_vector.c in Sources */ = {isa = PBXBuildFile; fileRef = 28EBA54F1DE19539003D21EB /* int_vector.c */; };
 		28EBA5541DE195DD003D21EB /* skolem_var_vector.c in Sources */ = {isa = PBXBuildFile; fileRef = 28EBA5521DE195DD003D21EB /* skolem_var_vector.c */; };
@@ -141,6 +142,7 @@
 		287C3B151E3C01FE00F7096A /* skolem_var.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = skolem_var.h; path = src/skolem_var.h; sourceTree = "<group>"; };
 		287C3B191E3C2D5500F7096A /* val_vector.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = val_vector.c; path = src/val_vector.c; sourceTree = "<group>"; };
 		287C3B1A1E3C2D5500F7096A /* val_vector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = val_vector.h; path = src/val_vector.h; sourceTree = "<group>"; };
+		28C6FD961F831DC3008D109C /* c2_simplify.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = c2_simplify.c; path = src/c2_simplify.c; sourceTree = "<group>"; };
 		28D2C38A1DDAA95E000E9C51 /* cadet */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = cadet; sourceTree = BUILT_PRODUCTS_DIR; };
 		28DA30F21DFFDD2600EABCA6 /* skolem_dependencies.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = skolem_dependencies.c; path = src/skolem_dependencies.c; sourceTree = "<group>"; };
 		28DA30F31DFFDD2600EABCA6 /* skolem_dependencies.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = skolem_dependencies.h; path = src/skolem_dependencies.h; sourceTree = "<group>"; };
@@ -290,6 +292,7 @@
 				28FA8D2E1E10ACBC00A43B7B /* c2_validate.c */,
 				28FA8D2F1E10ACBC00A43B7B /* c2_validate.h */,
 				28261B911F71872D006974DC /* c2_clause_minimization.c */,
+				28C6FD961F831DC3008D109C /* c2_simplify.c */,
 			);
 			name = cadet2_ext;
 			sourceTree = "<group>";
@@ -410,6 +413,7 @@
 				28675A471DDAA9D000951212 /* bit_vector.c in Sources */,
 				284EED781ED3B65600581801 /* lglib.c in Sources */,
 				28FA8D361E14F4E900A43B7B /* c2_cegar.c in Sources */,
+				28C6FD981F831DC3008D109C /* c2_simplify.c in Sources */,
 				28675A4C1DDAA9D000951212 /* conflict_analysis.c in Sources */,
 				287C3B161E3C01FE00F7096A /* skolem_var.c in Sources */,
 				28675A491DDAA9D000951212 /* cadet2.c in Sources */,

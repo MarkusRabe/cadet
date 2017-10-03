@@ -690,7 +690,7 @@ void c2_restart_heuristics(C2* c2) {
     c2_rescale_activity_values(c2);
     
     if (c2->next_major_restart == c2->restarts_since_last_major) {
-        V1("\n\nMajor restart\n");
+        V1("\nMajor restart\n");
         
         c2->restarts_since_last_major = 0;
         c2->next_restart = c2->magic.initial_restart; // resets restart frequency

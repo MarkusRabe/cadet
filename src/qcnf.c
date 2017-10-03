@@ -979,8 +979,8 @@ void qcnf_plaisted_greenbaum_completion(QCNF* qcnf) {
                         }
                     }
                 }
-                
             }
+            
         }
     }
     V1("Plaisted-Greenbaum completion added %u binary and %u non-binary clauses.\n", added_binary, added_non_binary);

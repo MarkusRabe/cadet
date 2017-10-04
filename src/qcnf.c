@@ -892,6 +892,40 @@ Lit qcnf_get_other_lit(QCNF* qcnf, Clause* c, Lit lit) {
     return 0;
 }
 
+
+// Detects equivalences
+bool qcnf_occus_in_xor_halfdef(QCNF* qcnf, Lit this) {
+    vector* occs = qcnf_get_occs_of_lit(qcnf, this);
+    if (vector_count(occs) != 2) {
+        return false;
+    }
+    Clause* first = vector_get(occs, 0);
+    Clause* second = vector_get(occs, 1);
+    if (first->size != 3 || second->size != 3) {
+        return false;
+    }
+    assert(qcnf_contains_literal(first,  this));
+    assert(qcnf_contains_literal(second, this));
+    for (unsigned i = 0; i < first->size; i++) {
+        Lit lit = first->occs[i];
+        if (lit != this && ! qcnf_contains_literal(second, - lit)) {
+            false;
+        }
+    }
+    return true;
+}
+
+bool qcnf_close_PG_clause(QCNF* qcnf) {
+    Clause* new = qcnf_close_clause(qcnf);
+    if (new) {
+        // qcnf_print_clause(new, stdout);
+        new->original = 0;
+        new->consistent_with_originals = 1;
+        new->PG = 1;
+    }
+    return new != NULL;
+}
+
 /* Plaisted-Greenbaum is a Tseitin-like encoding that omits some clauses.
  * This function adds the missing clauses without changing the truth of the formula.
  * This may help to improve determinicity propagation.
@@ -899,6 +933,7 @@ Lit qcnf_get_other_lit(QCNF* qcnf, Clause* c, Lit lit) {
 void qcnf_plaisted_greenbaum_completion(QCNF* qcnf) {
     unsigned added_binary = 0;
     unsigned added_non_binary = 0;
+    unsigned added_xor = 0;
     for (unsigned i = 0; i < var_vector_count(qcnf->vars); i++) {
         Var* v = var_vector_get(qcnf->vars, i);
         if (v->var_id != 0 && ! v->is_universal) {
@@ -908,6 +943,9 @@ void qcnf_plaisted_greenbaum_completion(QCNF* qcnf) {
             
             int single_occurrence_polarity = 0;
             unsigned add_binary_clauses_cost = UINT_MAX;
+            
+            int xor_halfdef_polarity = 0;
+            unsigned complete_xor_cost = 0;
             
             for (int polarity = -1; polarity < 2; polarity += 2) {
                 Lit this = polarity * (Lit) v->var_id;
@@ -930,15 +968,21 @@ void qcnf_plaisted_greenbaum_completion(QCNF* qcnf) {
                         add_binary_clauses_cost = cost;
                     }
                 }
+                
+                if (qcnf_occus_in_xor_halfdef(qcnf, this)) {
+                    vector* occs = qcnf_get_occs_of_lit(qcnf, this);
+                    unsigned cost = vector_count(occs);
+                    if (cost <= complete_xor_cost) {
+                        xor_halfdef_polarity = polarity;
+                        complete_xor_cost = cost;
+                    }
+                }
             }
             
-//            if (! only_binary_polarity && ! single_occurrence_polarity) {
-//                continue;
-//            }
             assert(! only_binary_polarity || add_long_clause_cost < UINT_MAX);
             assert(! single_occurrence_polarity || add_binary_clauses_cost < UINT_MAX);
             
-            if (add_long_clause_cost < add_binary_clauses_cost) {
+            if (add_long_clause_cost < UINT_MAX && add_long_clause_cost < add_binary_clauses_cost) {
                 assert(only_binary_polarity);
                 Lit this = only_binary_polarity * (Lit) v->var_id;
                 
@@ -950,15 +994,10 @@ void qcnf_plaisted_greenbaum_completion(QCNF* qcnf) {
                     qcnf_add_lit(qcnf, - other);
                 }
                 qcnf_add_lit(qcnf, -this);
-                Clause* new = qcnf_close_clause(qcnf);
-                if (new) {
-                    // qcnf_print_clause(new, stdout);
-                    added_non_binary += 1;
-                    new->original = 0;
-                    new->consistent_with_originals = 1;
-                    new->PG = 1;
-                }
-            } else if (add_binary_clauses_cost < add_long_clause_cost) {
+                if (qcnf_close_PG_clause(qcnf)) {added_non_binary += 1;}
+            }
+            
+            if (add_binary_clauses_cost < UINT_MAX && add_binary_clauses_cost <= add_long_clause_cost) {
                 assert(single_occurrence_polarity);
                 Lit this = single_occurrence_polarity * (Lit) v->var_id;
                 vector* occs = qcnf_get_occs_of_lit(qcnf, this);
@@ -970,22 +1009,40 @@ void qcnf_plaisted_greenbaum_completion(QCNF* qcnf) {
                     if (lit_to_var(l) != v->var_id) {
                         qcnf_add_lit(qcnf, -l);
                         qcnf_add_lit(qcnf, - this);
-                        Clause* new = qcnf_close_clause(qcnf);
-                        if (new) {
-                            // qcnf_print_clause(new, stdout);
-                            added_binary += 1;
-                            new->original = 0;
-                            new->consistent_with_originals = 1;
-                            new->PG = 1;
+                        if (qcnf_close_PG_clause(qcnf)) {added_binary += 1;}
+                    }
+                }
+            }
+            
+            // Detect half-definitions of equivalence/ite/xor gates.
+            // Pattern: (l x1 x2) (l -x1 -x2) being the only two clauses for literal
+            if (false &&
+                add_binary_clauses_cost == UINT_MAX &&
+                add_long_clause_cost == UINT_MAX &&
+                xor_halfdef_polarity != 0) {
+                Lit this = xor_halfdef_polarity * (Lit) v->var_id;
+                vector* occs = qcnf_get_occs_of_lit(qcnf, this);
+                for (unsigned j = 0; j < vector_count(occs); j++) {
+                    unsigned countdown_to_flip = j; // flip the j-th occurrence different than 'this'
+                    Clause* c = vector_get(occs, j);
+                    for (unsigned k = 0 ; k < c->size; k++) {
+                        if (c->occs[k] != this) {
+                            if (countdown_to_flip == 0) {
+                                qcnf_add_lit(qcnf, - c->occs[k]);
+                            } else {
+                                qcnf_add_lit(qcnf,   c->occs[k]);
+                                countdown_to_flip -= 1;
+                            }
+                            qcnf_add_lit(qcnf, - this);
+                            if (qcnf_close_PG_clause(qcnf)) {added_xor += 1;}
                         }
                     }
                 }
             }
             
+            
+            
         }
     }
-    V1("Plaisted-Greenbaum completion added %u binary and %u non-binary clauses.\n", added_binary, added_non_binary);
+    V1("Plaisted-Greenbaum completion added %u binary and %u non-binary and %u xor clauses.\n", added_binary, added_non_binary, added_xor);
 }
-
-
-

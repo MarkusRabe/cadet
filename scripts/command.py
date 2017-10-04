@@ -51,3 +51,9 @@ class Command(object):
             thread.join()
             raise KeyboardInterrupt
         return self.status, self.output, self.error
+        
+        
+# Calls a program and returns (exit_code, output, error)
+def call(cmd, timeout=None):
+    cmd = Command(cmd)
+    return cmd.run(timeout, shell=True, preexec_fn=os.setsid) # http://stackoverflow.com/questions/4789837/how-to-terminate-a-python-subprocess-launched-with-shell-true

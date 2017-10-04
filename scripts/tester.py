@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from reporting import log, log_progress, cyan, red, green, yellow
-from command import Command
+from command import call
 
 testcase_result = {}
 profiling_db = dict()
@@ -183,12 +183,6 @@ def write_csv(file_handle, benchmark):
                     row.extend(['', ''])
         
         file_handle.write('{}\n'.format(';'.join(row)))
-
-# Calls a program and returns (exit_code, output, error)
-def call(cmd, timeout=None):
-    cmd = Command(cmd)
-    return cmd.run(ARGS.timeout, shell=True, preexec_fn=os.setsid) # http://stackoverflow.com/questions/4789837/how-to-terminate-a-python-subprocess-launched-with-shell-true
-
 
 def worker_loop(job_queue, result_queue, process_id):
     signal.signal(signal.SIGINT, signal.SIG_IGN)

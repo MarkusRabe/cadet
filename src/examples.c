@@ -8,6 +8,7 @@
 
 #include "examples.h"
 #include "log.h"
+#include "mersenne_twister.h"
 
 #include <assert.h>
 
@@ -193,7 +194,7 @@ PartialAssignment* examples_add_assignment_from_skolem(Examples* e, Skolem* s) {
                 if (qcnf_var_exists(e->qcnf, i) && qcnf_is_universal(e->qcnf, i)) {
                     int val = skolem_get_value_for_conflict_analysis(s, (Lit) i);
                     if (val == 0) {
-                        val = (rand() % 2) * 2 - 1;
+                        val = (genrand_int31() % 2) * 2 - 1;
                     }
                     assert(val == -1 || val == 1);
                     partial_assignment_assign_value(pa, val * (Lit) i);
@@ -230,7 +231,7 @@ PartialAssignment* examples_add_random_assignment(Examples* e) {
         if (! partial_assignment_is_conflicted(pa)) {
             for (unsigned i = 1; i < var_vector_count(e->qcnf->vars); i++) {
                 if (qcnf_var_exists(e->qcnf, i) && qcnf_is_universal(e->qcnf, i)) {
-                    int val = (rand() % 2) * 2 - 1;
+                    int val = (genrand_int31() % 2) * 2 - 1;
                     assert(val == -1 || val == 1);
                     partial_assignment_assign_value(pa, val * (Lit) i);
                 }

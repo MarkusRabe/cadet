@@ -10,6 +10,7 @@
 #include "log.h"
 #include "c2_traces.h"
 #include "c2_cegar.h"
+#include "mersenne_twister.h"
 
 #include <math.h>
 
@@ -136,7 +137,7 @@ Lit c2_case_split_pick_literal(C2* c2) {
             float combined_quality = combined_factor * (float) (propagations_pos * propagations_neg + propagations_pos + propagations_neg);
             if (combined_quality > max_total) {
                 lit = (propagations_pos > propagations_neg ? 1 : - 1) * (Lit) v->var_id;
-                if (rand() % 30 == 0) {
+                if (genrand_int31() % 30 == 0) {
                     V1("Randomly flipped case split literal.\n");
                     lit = -lit;
                 }
@@ -378,7 +379,7 @@ void c2_case_splits_successful_case_completion(C2* c2) {
     unsigned i = 0;
     while (! vacuous && c2->result == CADET_RESULT_UNKNOWN) {
         
-        if (rand() % 20 == 0) {
+        if (genrand_int31() % 20 == 0) {
             break;
         }
         

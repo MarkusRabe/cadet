@@ -35,5 +35,5 @@ void c2_delete_learnt_clauses_greater_than(C2* c2, unsigned max_size) {
             kept += 1;
         }
     }
-    V1("Kept %u; deleted %u clauses\n", kept, deleted);
+    V1("  Kept %u; deleted %u clauses\n", kept, deleted);
 }

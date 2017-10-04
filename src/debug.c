@@ -9,6 +9,8 @@
 #include "debug.h"
 #include "log.h"
 #include "statistics.h"
+#include "mersenne_twister.h"
+
 #include <assert.h>
 
 
@@ -38,7 +40,7 @@ void debug_fuzz_for_incompleteness(C2* c2, unsigned num_trials) {
         // take a random assignment
         for (unsigned i = 0; i < int_vector_count(assignment); i++) {
             Var* v = vector_get(universals, i);
-            int val = rand()%2 ? 1 : -1;
+            int val = genrand_int31()%2 ? 1 : -1;
 //            int val = v->var_id == 5 ? -1 : 1;
             int_vector_set(assignment, i, val);
             Lit l = skolem_get_satsolver_lit(c2->skolem, val * (int)v->var_id);

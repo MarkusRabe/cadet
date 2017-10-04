@@ -19,6 +19,7 @@
 #include "skolem_dependencies.h"
 #include "c2_cegar.h"
 #include "satsolver.h"
+#include "mersenne_twister.h"
 
 #include <math.h>
 #include <stdint.h>
@@ -800,7 +801,7 @@ cadet_res c2_sat(C2* c2) {
                     if (! c) {
                         continue;
                     }
-                    if (c->original || rand() % 100 == 0) {
+                    if (c->original || genrand_int31() % 100 == 0) {
                         break;
                     }
                     if (skolem_get_unique_consequence(c2->skolem, c) == 0) {

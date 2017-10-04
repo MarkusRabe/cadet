@@ -6,10 +6,12 @@
 //  Copyright © 2015 Saarland University. All rights reserved.
 //
 
-#include <stdbool.h>
 #include "heap.h"
 #include "assert.h"
 #include "log.h"
+#include "mersenne_twister.h"
+
+#include <stdbool.h>
 
 heap* heap_init (heap_comparator compare) {
     heap* h = malloc(sizeof(heap));
@@ -108,7 +110,7 @@ void heap_test() {
     heap* h = heap_init(cmp);
     
     for (unsigned i = 0; i < 10; i++) {
-        int elem = rand() % 42 - 21;
+        int elem = genrand_int31() % 42 - 21;
         V2("%d ", elem);
         heap_push(h, (void*) (long) elem);
     }

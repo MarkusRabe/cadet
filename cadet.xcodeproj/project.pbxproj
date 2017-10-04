@@ -46,6 +46,7 @@
 		287C3B161E3C01FE00F7096A /* skolem_var.c in Sources */ = {isa = PBXBuildFile; fileRef = 287C3B141E3C01FE00F7096A /* skolem_var.c */; };
 		287C3B1B1E3C2D5500F7096A /* val_vector.c in Sources */ = {isa = PBXBuildFile; fileRef = 287C3B191E3C2D5500F7096A /* val_vector.c */; };
 		28C6FD981F831DC3008D109C /* c2_simplify.c in Sources */ = {isa = PBXBuildFile; fileRef = 28C6FD961F831DC3008D109C /* c2_simplify.c */; };
+		28C6FD9B1F846390008D109C /* mersenne_twister.c in Sources */ = {isa = PBXBuildFile; fileRef = 28C6FD991F846390008D109C /* mersenne_twister.c */; };
 		28DA30F41DFFDD2600EABCA6 /* skolem_dependencies.c in Sources */ = {isa = PBXBuildFile; fileRef = 28DA30F21DFFDD2600EABCA6 /* skolem_dependencies.c */; };
 		28EBA5511DE19539003D21EB /* int_vector.c in Sources */ = {isa = PBXBuildFile; fileRef = 28EBA54F1DE19539003D21EB /* int_vector.c */; };
 		28EBA5541DE195DD003D21EB /* skolem_var_vector.c in Sources */ = {isa = PBXBuildFile; fileRef = 28EBA5521DE195DD003D21EB /* skolem_var_vector.c */; };
@@ -143,6 +144,8 @@
 		287C3B191E3C2D5500F7096A /* val_vector.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = val_vector.c; path = src/val_vector.c; sourceTree = "<group>"; };
 		287C3B1A1E3C2D5500F7096A /* val_vector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = val_vector.h; path = src/val_vector.h; sourceTree = "<group>"; };
 		28C6FD961F831DC3008D109C /* c2_simplify.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = c2_simplify.c; path = src/c2_simplify.c; sourceTree = "<group>"; };
+		28C6FD991F846390008D109C /* mersenne_twister.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = mersenne_twister.c; path = src/mersenne_twister.c; sourceTree = "<group>"; };
+		28C6FD9A1F846390008D109C /* mersenne_twister.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = mersenne_twister.h; path = src/mersenne_twister.h; sourceTree = "<group>"; };
 		28D2C38A1DDAA95E000E9C51 /* cadet */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = cadet; sourceTree = BUILT_PRODUCTS_DIR; };
 		28DA30F21DFFDD2600EABCA6 /* skolem_dependencies.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = skolem_dependencies.c; path = src/skolem_dependencies.c; sourceTree = "<group>"; };
 		28DA30F31DFFDD2600EABCA6 /* skolem_dependencies.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = skolem_dependencies.h; path = src/skolem_dependencies.h; sourceTree = "<group>"; };
@@ -189,6 +192,8 @@
 		28675A651DDAAA0600951212 /* datastructures */ = {
 			isa = PBXGroup;
 			children = (
+				28C6FD991F846390008D109C /* mersenne_twister.c */,
+				28C6FD9A1F846390008D109C /* mersenne_twister.h */,
 				28675A3D1DDAA9D000951212 /* undo_stack.c */,
 				28675A3E1DDAA9D000951212 /* undo_stack.h */,
 				28675A2C1DDAA9D000951212 /* pqueue.c */,
@@ -401,6 +406,7 @@
 				28F4A9531E29C0D30090BB67 /* satsolver_picosat_assumptions.c in Sources */,
 				28EBA5571DE19BFC003D21EB /* var_vector.c in Sources */,
 				284EED791ED3B65600581801 /* lglopts.c in Sources */,
+				28C6FD9B1F846390008D109C /* mersenne_twister.c in Sources */,
 				28675A6C1DDAAB2600951212 /* log.c in Sources */,
 				28675A5E1DDAA9D000951212 /* set.c in Sources */,
 				28FA8D301E10ACBC00A43B7B /* c2_validate.c in Sources */,

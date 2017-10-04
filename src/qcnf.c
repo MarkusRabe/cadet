@@ -945,7 +945,7 @@ void qcnf_plaisted_greenbaum_completion(QCNF* qcnf) {
             unsigned add_binary_clauses_cost = UINT_MAX;
             
             int xor_halfdef_polarity = 0;
-            unsigned complete_xor_cost = 0;
+            unsigned complete_xor_cost = UINT_MAX;
             
             for (int polarity = -1; polarity < 2; polarity += 2) {
                 Lit this = polarity * (Lit) v->var_id;

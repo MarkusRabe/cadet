@@ -107,7 +107,7 @@ void cegar_update_interface(Skolem* s) {
     cegar->interface_vars = int_vector_init();
     for (unsigned i = 0; i < vector_count(s->qcnf->clauses); i++) {
         Clause* c = vector_get(s->qcnf->clauses, i);
-        if (!c) {
+        if (!c || ! c->original) {
             continue;
         }
         unsigned uc_var = lit_to_var(skolem_get_unique_consequence(s, c));

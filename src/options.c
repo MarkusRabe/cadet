@@ -41,7 +41,7 @@ Options* default_options() {
     o->case_splits = false;
 
     // Optimizations
-    o->plaisted_greenbaum_completion = true;
+    o->plaisted_greenbaum_completion = false; // pure literal detection is better
     o->miniscoping = false;
     o->find_smallest_reason = true;
     o->minimize_conflicts = true;

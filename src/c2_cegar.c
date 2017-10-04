@@ -68,6 +68,15 @@ void cegar_universal_activity_decay(Cegar* cegar, unsigned var_id) {
 //    }
 }
 
+void cegar_remember_original_satlit(Skolem* s, unsigned var_id) {
+    assert(skolem_is_deterministic(s, var_id));
+    assert(s->stack->push_count == 0);
+    int satlit_pos = skolem_get_satsolver_lit(s,   (Lit) var_id);
+    int satlit_neg = skolem_get_satsolver_lit(s, - (Lit) var_id);
+    map_add(s->cegar->original_satlits,   (Lit) var_id, (void*) (long) satlit_pos);
+    map_add(s->cegar->original_satlits, - (Lit) var_id, (void*) (long) satlit_neg);
+}
+
 void cegar_update_interface(Skolem* s) {
     
     Cegar* cegar = s->cegar;
@@ -119,12 +128,7 @@ void cegar_update_interface(Skolem* s) {
         Lit interface_lit = int_vector_get(cegar->interface_vars, i);
         assert(interface_lit > 0); // not required for correctness, just a sanity check
         unsigned interface_var = lit_to_var(interface_lit);
-        assert(skolem_is_deterministic(s, interface_var));
-        int satlit_pos = skolem_get_satsolver_lit(s,   interface_lit);
-        int satlit_neg = skolem_get_satsolver_lit(s, - interface_lit);
-//        assert(satlit != s->satlit_true && satlit != - s->satlit_true);
-        map_add(cegar->original_satlits,   interface_lit, (void*) (long) satlit_pos);
-        map_add(cegar->original_satlits, - interface_lit, (void*) (long) satlit_neg);
+        cegar_remember_original_satlit(s, interface_var);
     }
     
     V1("Interface vars: (%u in total) ... ", int_vector_count(cegar->interface_vars));
@@ -262,6 +266,13 @@ void cegar_new_cube(Skolem* s, int_vector* cube) {
         } else {
             V3("%d ", - lit);
         }
+        
+        if (! map_contains(s->cegar->original_satlits, lit)) {
+            // Stupid bug: after replenishing the sat solvers, the interface might shift and old cubes are not on the interface any more.
+            abortif(s->stack->push_count != 0, "This is a new bug");
+            cegar_remember_original_satlit(s, lit_to_var(lit));
+        }
+        
         int satlit = (int) (long) map_get(s->cegar->original_satlits, lit);
 //        int satlit = skolem_get_satsolver_lit(s, lit); // doesn't work, as the universal variables could be updated to be constant after case split assumptions
         satsolver_add(s->skolem, satlit);

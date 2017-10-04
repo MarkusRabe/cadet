@@ -362,7 +362,6 @@ bool skolem_clause_satisfied_when_in_doubt(Skolem* s, Clause* c, Lit lit) {
  * Disregarding clauses that are satisfied whenever a UC of -lit fires.
  */
 bool skolem_is_lit_pure(Skolem* s, Lit lit) {
-    if (! s->options->propagate_pure_literals) {return false;}
     vector* occs = qcnf_get_occs_of_lit(s->qcnf, lit);
     for (unsigned i = 0; i < vector_count(occs); i++) {
         Clause* c = vector_get(occs, i);
@@ -519,7 +518,6 @@ bool skolem_is_locally_conflicted(Skolem* s, unsigned var_id) {
 
 void skolem_propagate_determinicity(Skolem* s, unsigned var_id) {
     assert(!skolem_is_conflicted(s));
-    V4("Propagating determinicity for var %u\n", var_id);
     
     if (skolem_is_deterministic(s, var_id)) {
         return;
@@ -528,6 +526,8 @@ void skolem_propagate_determinicity(Skolem* s, unsigned var_id) {
         abortif(s->mode != SKOLEM_MODE_RECORD_POTENTIAL_CONFLICTS,"Universal ended up in determinicity propagation queue. This should not happen in normal mode.");
         return;
     }
+    
+    V4("Checking determinicity for var %u\n", var_id);
     
     Var* v = var_vector_get(s->qcnf->vars, var_id);
     assert(v->var_id == var_id);
@@ -572,6 +572,9 @@ void skolem_propagate_determinicity(Skolem* s, unsigned var_id) {
 }
 
 void skolem_propagate_pure_variable(Skolem* s, unsigned var_id) {
+    if (! s->options->pure_literals) {
+        return;
+    }
     if (skolem_is_deterministic(s, var_id)) {
         return;
     }

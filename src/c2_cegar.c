@@ -131,6 +131,7 @@ void cegar_update_interface(Skolem* s) {
         cegar_remember_original_satlit(s, interface_var);
     }
     
+    V1("Deterministic vars: %zu\n", s->deterministic_variables);
     V1("Interface vars: (%u in total) ... ", int_vector_count(cegar->interface_vars));
     if (debug_verbosity >= VERBOSITY_HIGH || (debug_verbosity >= VERBOSITY_LOW && int_vector_count(cegar->interface_vars) < 20)) {
         int_vector_print(cegar->interface_vars);

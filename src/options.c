@@ -47,7 +47,7 @@ Options* default_options() {
     o->minimize_conflicts = true;
     o->preprocess = false;
     o->delete_clauses_on_restarts = false;
-    o->propagate_pure_literals = true;
+    o->pure_literals = true;
     o->enhanced_pure_literals = false;
 
     // Printing

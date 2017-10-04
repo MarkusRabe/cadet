@@ -36,7 +36,7 @@ void print_usage(const char* name) {
                                     "\t--miniscoping \t\tEnables miniscoping \n"
                                     "\t--miniscoping_info \tPrint additional info on miniscoping (default off)\n"
                                     "\t--minimize_conflicts \tConflict minimization (default off) \n"
-                                    "\t--delay_conflicts\tDelay conflict checks and instead check conflicted variables in bulk.\n"
+                                    "\t--pure_literals\t\tUse pure literal detection (default on).\n"
                                 "  Visualization options\n"
                                     "\t--trace_learnt_clauses\tPrint (colored) learnt clauses; independent of verbosity.\n"
                                     "\t--trace_for_visualization\tPrint trace of solver states at every conflict point.\n"
@@ -229,6 +229,8 @@ int main(int argc, const char* argv[]) {
                         options->delay_conflict_checks = ! options->delay_conflict_checks;
                     } else if (strcmp(argv[i], "--pg") == 0) {
                         options->plaisted_greenbaum_completion = ! options->plaisted_greenbaum_completion;
+                    } else if (strcmp(argv[i], "--pure_literals") == 0) {
+                        options->pure_literals = ! options->pure_literals;
                     } else {
                         LOG_ERROR("Unknown long argument '%s'", argv[i]);
                         print_usage(argv[0]);

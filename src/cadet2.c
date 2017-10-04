@@ -757,7 +757,7 @@ cadet_res c2_sat(C2* c2) {
     }
     
     c2_initial_propagation(c2);
-
+    
     if (c2_is_in_conflcit(c2)) {
         c2->result = CADET_RESULT_UNSAT;
         return c2->result;

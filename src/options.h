@@ -55,7 +55,7 @@ typedef struct {
     bool minimize_conflicts;
     bool preprocess;
     bool delete_clauses_on_restarts;
-    bool propagate_pure_literals;
+    bool pure_literals;
     bool enhanced_pure_literals;
     bool failed_literals;
     

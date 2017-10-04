@@ -158,6 +158,9 @@ bool cegar_var_needs_to_be_set(Cegar* cegar, unsigned var_id) {
     int_vector* additional_assignments_var = int_vector_init();
     for (unsigned i = 0; i < vector_count(occs); i++) {
         Clause* c = vector_get(occs, i);
+        if (! c->original) {
+            continue;
+        }
         bool c_satisfied_without = false;
         int can_be_satisfied_by_unset = 0;
         for (unsigned j = 0; j < c->size; j++) {

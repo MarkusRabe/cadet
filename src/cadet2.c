@@ -758,9 +758,6 @@ cadet_res c2_sat(C2* c2) {
     
     c2_initial_propagation(c2);
     
-    V1("Deterministic vars: %zu\n", c2->skolem->deterministic_variables);
-    exit(42);
-    
     if (c2_is_in_conflcit(c2)) {
         c2->result = CADET_RESULT_UNSAT;
         return c2->result;

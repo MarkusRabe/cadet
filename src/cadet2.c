@@ -842,6 +842,8 @@ cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
         qcnf_plaisted_greenbaum_completion(qcnf);
     }
     
+    qcnf_blocked_clause_detection(qcnf);
+    
     C2* c2 = c2_init_qcnf(qcnf, options);
 
     c2_sat(c2);

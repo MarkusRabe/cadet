@@ -107,7 +107,7 @@ void cegar_update_interface(Skolem* s) {
     cegar->interface_vars = int_vector_init();
     for (unsigned i = 0; i < vector_count(s->qcnf->clauses); i++) {
         Clause* c = vector_get(s->qcnf->clauses, i);
-        if (!c || ! c->original) {
+        if (!c || ! c->original || c->blocked) {
             continue;
         }
         unsigned uc_var = lit_to_var(skolem_get_unique_consequence(s, c));
@@ -159,7 +159,7 @@ bool cegar_var_needs_to_be_set(Cegar* cegar, unsigned var_id) {
     int_vector* additional_assignments_var = int_vector_init();
     for (unsigned i = 0; i < vector_count(occs); i++) {
         Clause* c = vector_get(occs, i);
-        if (! c->original) {
+        if (! c->original || c->blocked) {
             continue;
         }
         bool c_satisfied_without = false;

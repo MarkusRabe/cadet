@@ -46,7 +46,7 @@ struct Clause {
 
     unsigned int original                  : 1;
     unsigned int consistent_with_originals : 1;   // learnt clauses
-    unsigned int PG                        : 1;   // Introduced throug Plaisted-Greenbaum completion
+    unsigned int blocked                   : 1;   // See blocked clause elimination
     unsigned int size                      : 29;
     
     // skolem_clause_info ... // contains unique_consequence
@@ -100,6 +100,7 @@ struct QCNF {
     // Stats
     unsigned universal_reductions;
     unsigned deleted_clauses;
+    unsigned blocked_clauses;
 };
 
 // Constructor and Destructor
@@ -125,7 +126,7 @@ int qcnf_contains_variable(Clause*,Var*); // 0 if not contained, otherwise retur
 //int qcnf_maximal_qlvl(QCNF*,Clause*);
 //int qcnf_minimal_qlvl(QCNF*,Clause*);
 bool qcnf_is_duplicate(QCNF*,Clause*);
-bool qcnf_is_resolvent_tautological(Clause*, Clause*, unsigned var_id);
+bool qcnf_is_resolvent_tautological(QCNF*, Clause*, Clause*, unsigned var_id);
 bool qcnf_antecedent_subsubsumed(QCNF*, Clause* c1, Clause* c2, unsigned var_id); // does c1 subsume c2 excluding occurrences of var_id?
 
 
@@ -191,6 +192,6 @@ bool qcnf_remove_literal(QCNF*, Clause*, Lit);
 void qcnf_delete_clause(QCNF*, Clause*);
 
 void qcnf_plaisted_greenbaum_completion(QCNF* qcnf);
-
+void qcnf_blocked_clause_detection(QCNF* qcnf);
 
 #endif /* qcnf_h */

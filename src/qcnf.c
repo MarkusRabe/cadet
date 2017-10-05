@@ -222,8 +222,10 @@ QCNF* qcnf_init() {
     
     qcnf->stack = stack_init(qcnf_undo_op);
     
+    // Statistics
     qcnf->universal_reductions = 0;
     qcnf->deleted_clauses = 0;
+    qcnf->blocked_clauses = 0;
     
     return qcnf;
 }
@@ -387,7 +389,7 @@ Clause* qcnf_new_clause(QCNF* qcnf, int_vector* literals) {
     c->clause_id = qcnf_get_smallest_free_clause_id(qcnf);
     c->original = true;
     c->consistent_with_originals = true;
-    c->PG = false;
+    c->blocked = false;
     c->size = int_vector_count(literals);
     for (unsigned i = 0; i < c->size; i++) {
         int lit = int_vector_get(literals, i);
@@ -757,10 +759,21 @@ void qcnf_check_invariants(QCNF* qcnf) {
     }
 }
 
-bool qcnf_is_resolvent_tautological(Clause* c1, Clause* c2, unsigned var_id) {
+unsigned qcnf_get_scope(QCNF* qcnf, unsigned var_id) {
+    assert(var_id != 0);
+    Var* v = var_vector_get(qcnf->vars, var_id);
+    assert(v->var_id == var_id);
+    return v->scope_id;
+}
+
+bool qcnf_is_resolvent_tautological(QCNF* qcnf, Clause* c1, Clause* c2, unsigned var_id) {
     assert(qcnf_contains_literal(c1, (Lit) var_id) && qcnf_contains_literal(c2, - (Lit) var_id) || (qcnf_contains_literal(c2, (Lit) var_id) || qcnf_contains_literal(c1, - (Lit) var_id)));
+    assert(!qcnf_is_DQBF(qcnf)); // otherwise scope comparison below breaks
+    unsigned this_scope = qcnf_get_scope(qcnf, var_id);
     for (unsigned i = 0; i < c1->size; i++) {
-        if (lit_to_var(c1->occs[i]) != var_id && qcnf_contains_literal(c2, - c1->occs[i])) {
+        Lit other_lit = c1->occs[i];
+        unsigned other_scope = qcnf_get_scope(qcnf, lit_to_var(other_lit));
+        if (lit_to_var(other_lit) != var_id && this_scope <= other_scope && qcnf_contains_literal(c2, - other_lit)) {
             return true;
         }
     }
@@ -921,7 +934,7 @@ Clause* qcnf_close_PG_clause(QCNF* qcnf) {
         // qcnf_print_clause(new, stdout);
         new->original = 0;
         new->consistent_with_originals = 1;
-        new->PG = 1;
+        new->blocked = 1;
     }
     return new;
 }
@@ -1043,4 +1056,39 @@ void qcnf_plaisted_greenbaum_completion(QCNF* qcnf) {
         }
     }
     V1("Plaisted-Greenbaum completion added %u binary and %u non-binary and %u xor clauses.\n", added_binary, added_non_binary, added_xor);
+}
+
+bool qcnf_is_blocked(QCNF* qcnf, Clause* c) {
+    for (unsigned i = 0; i < c->size; i++) {
+        Lit pivot = c->occs[i];
+        if (qcnf_is_universal(qcnf, lit_to_var(pivot))) {
+            continue;
+        }
+        bool literal_is_blocked = true;
+        vector* occs = qcnf_get_occs_of_lit(qcnf, - pivot);
+        for (unsigned j = 0; j < vector_count(occs); j++) {
+            Clause* other = vector_get(occs, j);
+            if ( ! qcnf_is_resolvent_tautological(qcnf, c, other, lit_to_var(pivot))) {
+                literal_is_blocked = false;
+                break;
+            }
+        }
+        if (literal_is_blocked) {
+            return true;
+        }
+        
+    }
+    return false;
+}
+
+void qcnf_blocked_clause_detection(QCNF* qcnf) {
+    for (unsigned i = 0; i < vector_count(qcnf->clauses); i++) {
+        Clause* c = vector_get(qcnf->clauses, i);
+        if (c && qcnf_is_blocked(qcnf, c)) {
+            c->blocked = 1;
+            qcnf->blocked_clauses += 1;
+            qcnf_unregister_clause(qcnf, c);
+        }
+    }
+    V1("Removed %u blocked clauses.\n", qcnf->blocked_clauses);
 }

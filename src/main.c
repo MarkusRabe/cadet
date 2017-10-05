@@ -31,12 +31,13 @@ void print_usage(const char* name) {
                                     "\t--cegar_only\t\tUse CEGAR strategy exclusively.\n"
                                     "\t--case_splits \t\tCase distinctions (default off) \n"
                                     "\t--functional-synthesis\tFunctional synthesis. I.e. compute skolem functions for UNSAT instances.\n"
-                                    "\t--pg\t\t\tPlaisted Greenbaum completion (default on).\n"
+                                    "\t--pg\t\t\tPlaisted Greenbaum completion (default off).\n"
                                     "\t--sat_by_qbf\t\tUse QBF engine also for propositional problems. Uses SAT solver by default.\n"
                                     "\t--miniscoping \t\tEnables miniscoping \n"
                                     "\t--miniscoping_info \tPrint additional info on miniscoping (default off)\n"
-                                    "\t--minimize_conflicts \tConflict minimization (default off) \n"
-                                    "\t--pure_literals\t\tUse pure literal detection (default on).\n"
+                                    "\t--minimize_conflicts \tConflict minimization (default off)\n"
+                                    "\t--pure_literals\t\tUse pure literal detection (default on)\n"
+                                    "\t--qbce\t\t\tBlocked clause elimination (default off)\n"
                                 "  Visualization options\n"
                                     "\t--trace_learnt_clauses\tPrint (colored) learnt clauses; independent of verbosity.\n"
                                     "\t--trace_for_visualization\tPrint trace of solver states at every conflict point.\n"
@@ -204,7 +205,7 @@ int main(int argc, const char* argv[]) {
                     } else if (strcmp(argv[i], "--minimize") == 0) {
                         options->minimize_conflicts = ! options->minimize_conflicts;
                     } else if (strcmp(argv[i], "--enhanced_pure_literals") == 0) {
-                        options->enhanced_pure_literals = true;
+                        options->enhanced_pure_literals = ! options->enhanced_pure_literals;
                     } else if (strcmp(argv[i], "--miniscoping") == 0) {
                         options->miniscoping = ! options->miniscoping;
                     } else if (strcmp(argv[i], "--miniscoping_info") == 0) {
@@ -231,6 +232,9 @@ int main(int argc, const char* argv[]) {
                         options->plaisted_greenbaum_completion = ! options->plaisted_greenbaum_completion;
                     } else if (strcmp(argv[i], "--pure_literals") == 0) {
                         options->pure_literals = ! options->pure_literals;
+                        
+                    } else if (strcmp(argv[i], "--qbce") == 0) {
+                        options->qbce = ! options->qbce;
                     } else {
                         LOG_ERROR("Unknown long argument '%s'", argv[i]);
                         print_usage(argv[0]);

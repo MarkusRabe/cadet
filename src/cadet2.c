@@ -758,6 +758,17 @@ cadet_res c2_sat(C2* c2) {
     
     c2_initial_propagation(c2);
     
+    V1("Deterministic vars on dlvl 0: %zu", c2->skolem->deterministic_variables);
+    if (debug_verbosity >= VERBOSITY_HIGH) {
+        V1("    These:")
+        for (unsigned i = 0; i < var_vector_count(c2->qcnf->vars); i++) {
+            if (qcnf_var_exists(c2->qcnf, i) && qcnf_is_existential(c2->qcnf, i) && skolem_is_deterministic(c2->skolem, i)) {
+                V1(" %u", i);
+            }
+        }
+    }
+    V1("\n");
+    
     if (c2_is_in_conflcit(c2)) {
         c2->result = CADET_RESULT_UNSAT;
         return c2->result;
@@ -770,16 +781,6 @@ cadet_res c2_sat(C2* c2) {
     cegar_update_interface(c2->skolem);
     if (c2->options->cegar_only) {
         return cegar_solve_2QBF(c2, -1);
-    }
-
-    if (debug_verbosity >= VERBOSITY_HIGH) {
-        V1("Deterministic vars on dlvl 0 are:");
-        for (unsigned i = 0; i < var_vector_count(c2->qcnf->vars); i++) {
-            if (qcnf_var_exists(c2->qcnf, i) && qcnf_is_existential(c2->qcnf, i) && skolem_is_deterministic(c2->skolem, i)) {
-                V1(" %u", i);
-            }
-        }
-        V1("\n");
     }
 
     while (c2->result == CADET_RESULT_UNKNOWN) { // This loop controls the restarts
@@ -841,11 +842,12 @@ cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
     if (options->plaisted_greenbaum_completion) {
         qcnf_plaisted_greenbaum_completion(qcnf);
     }
-    
-    qcnf_blocked_clause_detection(qcnf);
+    if (options->qbce) {
+        qcnf_blocked_clause_detection(qcnf);
+    }
     
     C2* c2 = c2_init_qcnf(qcnf, options);
-
+    
     c2_sat(c2);
 
     if (debug_verbosity >= VERBOSITY_LOW) {

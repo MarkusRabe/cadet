@@ -42,13 +42,14 @@ Options* default_options() {
 
     // Optimizations
     o->plaisted_greenbaum_completion = false; // pure literal detection is better
+    o->qbce = false;
     o->miniscoping = false;
     o->find_smallest_reason = true;
     o->minimize_conflicts = true;
     o->preprocess = false;
     o->delete_clauses_on_restarts = false;
     o->pure_literals = true;
-    o->enhanced_pure_literals = false;
+    o->enhanced_pure_literals = true;
 
     // Printing
     o->print_detailed_miniscoping_stats = false;

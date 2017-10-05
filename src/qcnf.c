@@ -1088,6 +1088,20 @@ void qcnf_blocked_clause_detection(QCNF* qcnf) {
             c->blocked = 1;
             qcnf->blocked_clauses += 1;
             qcnf_unregister_clause(qcnf, c);
+            
+            V1("Clause deleted: ");
+            if(debug_verbosity >= VERBOSITY_LOW) {qcnf_print_clause(c, stdout);}
+            
+//            // this is debug code
+//            for (unsigned i = 0; i < c->size; i++) {
+//                unsigned var = lit_to_var(c->occs[i]);
+//                Var* v = var_vector_get(qcnf->vars, var);
+//                if (qcnf_is_existential(qcnf, var) && vector_count(&v->pos_occs) == 0 && vector_count(&v->neg_occs) == 0) {
+//                    V1("Deleted var %u\n", v->var_id);
+//                    deleted_vars += 1;
+//                    abortif(debug_verbosity == VERBOSITY_NONE, "Debug code still running");
+//                }
+//            }
         }
     }
     V1("Removed %u blocked clauses.\n", qcnf->blocked_clauses);

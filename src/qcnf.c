@@ -1058,25 +1058,27 @@ void qcnf_plaisted_greenbaum_completion(QCNF* qcnf) {
     V1("Plaisted-Greenbaum completion added %u binary and %u non-binary and %u xor clauses.\n", added_binary, added_non_binary, added_xor);
 }
 
+bool qcnf_is_blocked_by_lit(QCNF* qcnf, Clause* c, Lit pivot) {
+    assert(qcnf_contains_literal(c, pivot));
+    vector* occs = qcnf_get_occs_of_lit(qcnf, - pivot);
+    for (unsigned j = 0; j < vector_count(occs); j++) {
+        Clause* other = vector_get(occs, j);
+        if ( ! qcnf_is_resolvent_tautological(qcnf, c, other, lit_to_var(pivot))) {
+            return false;
+        }
+    }
+    return true;
+}
+
 bool qcnf_is_blocked(QCNF* qcnf, Clause* c) {
     for (unsigned i = 0; i < c->size; i++) {
         Lit pivot = c->occs[i];
         if (qcnf_is_universal(qcnf, lit_to_var(pivot))) {
             continue;
         }
-        bool literal_is_blocked = true;
-        vector* occs = qcnf_get_occs_of_lit(qcnf, - pivot);
-        for (unsigned j = 0; j < vector_count(occs); j++) {
-            Clause* other = vector_get(occs, j);
-            if ( ! qcnf_is_resolvent_tautological(qcnf, c, other, lit_to_var(pivot))) {
-                literal_is_blocked = false;
-                break;
-            }
-        }
-        if (literal_is_blocked) {
+        if (qcnf_is_blocked_by_lit(qcnf, c, pivot)) {
             return true;
         }
-        
     }
     return false;
 }
@@ -1091,17 +1093,6 @@ void qcnf_blocked_clause_detection(QCNF* qcnf) {
             
             V1("Clause deleted: ");
             if(debug_verbosity >= VERBOSITY_LOW) {qcnf_print_clause(c, stdout);}
-            
-//            // this is debug code
-//            for (unsigned i = 0; i < c->size; i++) {
-//                unsigned var = lit_to_var(c->occs[i]);
-//                Var* v = var_vector_get(qcnf->vars, var);
-//                if (qcnf_is_existential(qcnf, var) && vector_count(&v->pos_occs) == 0 && vector_count(&v->neg_occs) == 0) {
-//                    V1("Deleted var %u\n", v->var_id);
-//                    deleted_vars += 1;
-//                    abortif(debug_verbosity == VERBOSITY_NONE, "Debug code still running");
-//                }
-//            }
         }
     }
     V1("Removed %u blocked clauses.\n", qcnf->blocked_clauses);

@@ -193,5 +193,7 @@ void qcnf_delete_clause(QCNF*, Clause*);
 
 void qcnf_plaisted_greenbaum_completion(QCNF* qcnf);
 void qcnf_blocked_clause_detection(QCNF* qcnf);
+bool qcnf_is_blocked_by_lit(QCNF* qcnf, Clause* c, Lit pivot);
+bool qcnf_is_blocked(QCNF* qcnf, Clause* c);
 
 #endif /* qcnf_h */

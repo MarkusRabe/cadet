@@ -175,6 +175,14 @@ void skolem_update_neg_lit(Skolem* s, unsigned var_id, int neg_lit) {
         sv->neg_lit = neg_lit;
     }
 }
+void skolem_update_satlit(Skolem* s, Lit lit, int new_satlit) {
+    if (lit > 0) {
+        skolem_update_pos_lit(s, lit_to_var(lit), new_satlit);
+    } else {
+        skolem_update_neg_lit(s, lit_to_var(lit), new_satlit);
+    }
+}
+
 void skolem_update_pure_pos(Skolem* s, unsigned var_id, unsigned pure_pos) {
     assert(pure_pos == 0 || pure_pos == 1);
     skolem_enlarge_skolem_var_vector(s, var_id);

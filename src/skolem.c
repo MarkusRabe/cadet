@@ -338,6 +338,28 @@ bool skolem_check_for_local_determinicity(Skolem* s, Var* v) {
 }
 
 // Check if literal is blocking for all clauses where it is a unique consequence. See blocked clause elimination.
+bool skolem_clause_is_blocked_by_lit(Skolem* s, Clause* c, Lit lit) {
+    assert(qcnf_is_existential(s->qcnf, lit_to_var(lit)));
+    assert(qcnf_contains_literal(c, lit));
+    assert(! skolem_clause_satisfied(s, c)); // No problem, but it does not make sense to call this function
+    
+    vector* opp_occs = qcnf_get_occs_of_lit(s->qcnf, - lit);
+    if (vector_count(opp_occs) > s->magic.blocked_clause_occurrence_cutoff) {
+        return false;
+    }
+    
+    for (unsigned i = 0; i < vector_count(opp_occs); i++) {
+        Clause* other = vector_get(opp_occs, i);
+        assert(qcnf_contains_literal(other, - lit));
+        if (! skolem_clause_satisfied(s, other) && //skolem_get_unique_consequence(s, other) == - lit && 
+            ! qcnf_is_resolvent_tautological(s->qcnf, c, other, lit_to_var(lit))) {
+            return false;
+        }
+    }
+    return true;
+}
+
+// Check if literal is blocking for all clauses where it is a unique consequence. See blocked clause elimination.
 bool skolem_clause_satisfied_when_in_doubt(Skolem* s, Clause* c, Lit lit) {
     assert(qcnf_is_existential(s->qcnf, lit_to_var(lit)));
     assert(qcnf_contains_literal(c, lit));
@@ -346,10 +368,12 @@ bool skolem_clause_satisfied_when_in_doubt(Skolem* s, Clause* c, Lit lit) {
     if (vector_count(opp_occs) > s->magic.blocked_clause_occurrence_cutoff) {
         return false;
     }
+    
     for (unsigned i = 0; i < vector_count(opp_occs); i++) {
         Clause* other = vector_get(opp_occs, i);
         assert(qcnf_contains_literal(other, - lit));
-        if (skolem_get_unique_consequence(s, other) == - lit && ! skolem_clause_satisfied(s, other) && qcnf_antecedent_subsubsumed(s->qcnf, other, c, lit_to_var(lit))) {
+        if (skolem_get_unique_consequence(s, other) == - lit && ! skolem_clause_satisfied(s, other) &&
+            qcnf_antecedent_subsubsumed(s->qcnf, other, c, lit_to_var(lit))) {
             return true;
         }
     }
@@ -367,7 +391,7 @@ bool skolem_is_lit_pure(Skolem* s, Lit lit) {
         Clause* c = vector_get(occs, i);
         if ((skolem_get_unique_consequence(s, c) != lit || skolem_has_illegal_dependence(s, c) ) &&
             ! skolem_clause_satisfied(s, c)) { // std condition for pure vars
-            if (s->options->enhanced_pure_literals && skolem_clause_satisfied_when_in_doubt(s, c, lit)) {
+            if (s->options->enhanced_pure_literals && skolem_clause_is_blocked_by_lit(s, c, lit)) {
                 // can consider variable as pure, when the UCs are blocked by this literal)
                 continue;
             }

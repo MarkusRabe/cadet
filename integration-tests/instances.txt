@@ -101,7 +101,8 @@ integration-tests/tmp-47850_reduced.qdimacs | 10
 integration-tests/eerr.qdimacs | 20
 integration-tests/mvsr.qdimacs | 20
 integration-tests/mvs.qdimacs | 20
-
+integration-tests/mvsr3_reduced.qdimacs | 10
+integration-tests/frrr.qdimacs | 10
 
 [new-tests]
 integration-tests/br.qdimacs | 10

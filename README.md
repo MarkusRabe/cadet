@@ -51,7 +51,17 @@ As soon as you work with certificates you may want to install the [AIGER tool se
 
 UNSAT results are checked internally by default. You can double check them by asserting the assignment to the universals in the CNF of the QDIMACS and querying a SAT solver. 
 
-For checking SAT certificates you have two options: By default CADET produces certificates that can be checked by Certcheck, which was written by [Leander Tentrup](https://www.react.uni-saarland.de/people/tentrup.html). Certcheck comes with the distribution of [CAQE](https://www.react.uni-saarland.de/tools/caqe/). To produce certificates that are compatible with [QBFcert](\url{http://fmv.jku.at/qbfcert/}) add `--qbfcert` option to the command line. 
+For checking SAT certificates you have two options: By default CADET produces certificates that can be checked by Certcheck, which was written by [Leander Tentrup](https://www.react.uni-saarland.de/people/tentrup.html). Certcheck comes with the distribution of [CAQE](https://www.react.uni-saarland.de/tools/caqe/). To produce certificates that are compatible with [QBFcert](http://fmv.jku.at/qbfcert/) add `--qbfcert` option to the command line. 
 
 Note that QBFcert standard is only compatible with the ASCII format of the AIGER standard, so be sure that the certificate file name ends with `.aag`. Also, be aware that QBFcert certificates cannot be minimized by ABC. 
+
+## Publications
+
+[Incremental Determinization](https://www.eecs.berkeley.edu/~rabe/IncrementalDeterminizationSAT2016.pdf). Markus Rabe and Sanjit Seshia. SAT, 2016. 
+
+## Acknowledgements
+
+I am indebted to my collaborators, colleagues, and friends who inspired and supported me during this project. In particular, I want to mention Leander Tentrup who contributed some code to this project. I also want to thank Armin Biere and Will Klieber for fruitful discussions about various aspects of SAT and QBF solving. I also want to thank Armando Solar-Lezama, Baruch Sterin, S. Akshay, Supratik Chakraborty, and many others who contributed benchmarks and insights into their tools. 
+
+
 

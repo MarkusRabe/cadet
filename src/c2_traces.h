@@ -23,8 +23,9 @@ void c2_trace_for_profiling_initialize(Options*, SATSolver*);
 void c2_trace_for_profiling(C2*);
 
 
-void c2_trace_for_reinforcement_learning(C2* c2, unsigned decision_var_id, unsigned conflicts_until_next_restart);
-
+void c2_trace_for_reinforcement_learning(C2* c2, unsigned conflicts_until_next_restart, unsigned decision_var_id, int phase);
+void c2_trace_for_reinforcement_learning_update_D(Options* o, unsigned var_id, bool deterministic); // Update the member of of var_id in D. True for adding, False for removing. 
+void c2_trace_for_reinforcement_learning_print_activity(Options* o, unsigned var_id, float activity);
 
 void c2_print_universals_assignment(C2* c2); // WARNING: Calling this function may change the state of the sat solver!
 void c2_print_debug_info(C2* c2);

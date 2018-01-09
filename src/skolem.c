@@ -535,7 +535,6 @@ void skolem_propagate_determinicity(Skolem* s, unsigned var_id) {
     if (skolem_check_for_local_determinicity(s, v)) {
         V3("Var %u is deterministic.\n", var_id);
         s->statistics.propagations += 1;
-        
         skolem_update_decision_lvl(s, var_id, s->decision_lvl);
         
         if ( ! skolem_is_locally_conflicted(s, var_id)) {
@@ -592,9 +591,9 @@ void skolem_propagate_pure_variable(Skolem* s, unsigned var_id) {
     }
     if (pure_polarity != 0) {
         V3("Detected var %u as pure: %d\n", var_id, pure_polarity);
+        skolem_update_decision_lvl(s, var_id, s->decision_lvl);
         s->statistics.propagations += 1;
         s->statistics.pure_vars += 1;
-        skolem_update_decision_lvl(s, var_id, s->decision_lvl);
         if ( ! skolem_is_locally_conflicted(s, var_id)) {
             skolem_fix_lit_for_unique_antecedents(s, pure_polarity * (Lit) var_id, true, FUAM_ONLY_LEGALS);
             skolem_var si = skolem_get_info(s, var_id);
@@ -986,6 +985,7 @@ void skolem_undo(void* parent, char type, void* obj) {
             si = skolem_var_vector_get(s->infos, suu.sus.var_id);
             if (si->deterministic && (unsigned) suu.sus.val == 0) {
                 s->deterministic_variables -= 1;
+                c2_trace_for_reinforcement_learning_update_D(s->options, suu.sus.var_id, false);
             }
             si->deterministic = (unsigned) suu.sus.val;
             break;
@@ -1313,7 +1313,6 @@ void skolem_propagate_constants_over_clause(Skolem* s, Clause* c) {
             goto cleanup;
         }
         
-//         V4("Propagating variable %d.\n",unassigned_lit);
         s->statistics.propagations += 1;
         s->statistics.explicit_propagations += 1;
         

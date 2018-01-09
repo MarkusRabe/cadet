@@ -235,8 +235,20 @@ void c2_trace_for_profiling(C2* c2) {
     last_satsolver_seconds = satsolver;
 }
 
+void c2_trace_for_reinforcement_learning_print_activity(Options* o, unsigned var_id, float activity) {
+    if (o->trace_for_reinforcement_learning && activity > 1.0) {
+        LOG_PRINTF("a %u,%f\n", var_id, activity);
+    }
+}
 
-void c2_trace_for_reinforcement_learning(C2* c2, unsigned decision_var_id, unsigned conflicts_until_next_restart) {
+void c2_trace_for_reinforcement_learning_update_D(Options* o, unsigned var_id, bool deterministic) {
+    if (!o->trace_for_reinforcement_learning) {
+        return;
+    }
+    LOG_PRINTF("u %c%u\n", deterministic?'+':'-',var_id);
+}
+
+void c2_trace_for_reinforcement_learning(C2* c2, unsigned conflicts_until_next_restart, unsigned decision_var_id, int phase) {
     if (!c2->options->trace_for_reinforcement_learning) {
         return;
     }
@@ -248,7 +260,7 @@ void c2_trace_for_reinforcement_learning(C2* c2, unsigned decision_var_id, unsig
     float var_ratio = (float) uvar_num / (float) (var_num + 1);
     
     // Solver state
-    LOG_PRINTF("%u,%u,%zu,%f,%zu,%zu,%u,",
+    LOG_PRINTF("s %u,%u,%zu,%f,%zu,%zu,%u,",
                c2->restart_base_decision_lvl,
                c2->skolem->decision_lvl,
                c2->skolem->deterministic_variables,
@@ -265,7 +277,7 @@ void c2_trace_for_reinforcement_learning(C2* c2, unsigned decision_var_id, unsig
                var_ratio);
     
     // Solver statistics
-    LOG_PRINTF("%zu,%zu,%f,%f,%zu,%f,%zu,%f,%zu,%f,%zu,%f,%zu,%f,%zu,%zu,%f,%f,%zu,%f,%zu,%zu,%f,%zu\n",
+    LOG_PRINTF("%zu,%zu,%f,%f,%zu,%f,%zu,%f,%zu,%f,%zu,%f,%zu,%f,%zu,%zu,%f,%f,%zu,%f,%zu,%f,%zu,%f,%zu\n",
                c2->statistics.decisions,
                c2->statistics.conflicts,
                (float) c2->statistics.decisions / (float) (c2->statistics.conflicts + 1),
@@ -287,12 +299,13 @@ void c2_trace_for_reinforcement_learning(C2* c2, unsigned decision_var_id, unsig
                c2->skolem->statistics.explicit_propagation_conflicts,
                (float) c2->skolem->statistics.explicit_propagation_conflicts / (float) (c2->statistics.conflicts + 1),
                c2->statistics.learnt_clauses_total_length,
+               (float) c2->statistics.learnt_clauses_total_length / (float) (c2->statistics.conflicts + 1),
                c2->statistics.successful_conflict_clause_minimizations,
                (float) c2->statistics.successful_conflict_clause_minimizations / (float) (c2->statistics.learnt_clauses_total_length + 1),
                c2->statistics.cases_explored
                );
     
-    LOG_PRINTF("%u\n",decision_var_id);
+    LOG_PRINTF("d %u,%d\n", decision_var_id, phase);
     
 }
 

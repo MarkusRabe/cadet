@@ -19,6 +19,7 @@
 #include "skolem_dependencies.h"
 #include "c2_cegar.h"
 #include "satsolver.h"
+#include "c2_traces.h"
 
 #include <math.h>
 #include <stdint.h>
@@ -89,7 +90,7 @@ C2* c2_init_qcnf(QCNF* qcnf, Options* options) {
     c2->magic.conflict_var_weight = 2; // [0..5]
     c2->magic.conflict_clause_weight = 1; // [0..3]
     c2->magic.decision_var_activity_modifier = (float) 0.8; // [-3.0..2.0]
-    c2->magic.decay_rate = (float) 0.9;
+    c2->magic.decay_rate = (float) 0.99;
     c2->magic.implication_graph_variable_activity = (float) 0.5;
     c2->magic.major_restart_frequency = 15;
     c2->magic.replenish_frequency = 100;
@@ -227,6 +228,7 @@ Var* c2_pick_most_active_notdeterministic_variable(C2* c2) {
             if (v->var_id != 0) {
                 assert(v->var_id == i);
                 float v_activity = c2_get_activity(c2, v->var_id);
+                c2_trace_for_reinforcement_learning_print_activity(c2->options, v->var_id, v_activity);
                 assert(v_activity > -0.001);
                 if (decision_var_activity < v_activity) {
                     decision_var_activity = v_activity;
@@ -235,6 +237,7 @@ Var* c2_pick_most_active_notdeterministic_variable(C2* c2) {
             }
         }
     }
+    V1("Maximal activity is %f for var %u\n", decision_var_activity, decision_var==NULL?0:decision_var->var_id);
     return decision_var;
 }
 
@@ -597,7 +600,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                 c2->statistics.decisions += 1;
                 c2->decisions_since_last_conflict += 1;
 
-                c2_trace_for_reinforcement_learning(c2, decision_var->var_id, remaining_conflicts);
+                c2_trace_for_reinforcement_learning(c2, remaining_conflicts, decision_var->var_id, phase);
                 
                 // examples_decision(c2->examples, value * (Lit) decision_var_id);
                 examples_decision_consistent_with_skolem(c2->examples, c2->skolem, phase * (Lit) decision_var->var_id);

@@ -69,6 +69,7 @@ typedef struct {
     bool trace_learnt_clauses;
     bool trace_for_visualization;
     bool trace_for_profiling;
+    bool trace_for_reinforcement_learning;
     
 } Options;
 

@@ -40,6 +40,7 @@ void print_usage(const char* name) {
                                     "\t--trace_learnt_clauses\tPrint (colored) learnt clauses; independent of verbosity.\n"
                                     "\t--trace_for_visualization\tPrint trace of solver states at every conflict point.\n"
                                     "\t--trace_for_profiling\tPrint trace of learnt clauses with timestamps and SAT solver time consumption.\n"
+                                    "\t--trace_rl\t\t\t Trace reinforcement learning state-action pairs\n"
                                     "\t--print_variable_names\tReplace variable numbers by names where available\n"
                                 "  Aiger options\n"
                                     "\t--aiger_negated\t\tNegate encoding of aiger files. Can be combined with --print.\n"
@@ -213,6 +214,9 @@ int main(int argc, const char* argv[]) {
                     } else if (strcmp(argv[i], "--trace_for_visualization") == 0) {
                         options->trace_for_visualization = true;
                         options->trace_learnt_clauses = true;
+                        log_colors = false;
+                    } else if (strcmp(argv[i], "--trace_rl") == 0) {
+                        options->trace_for_reinforcement_learning = true;
                         log_colors = false;
                     } else if (strcmp(argv[i], "--trace_for_profiling") == 0) {
                         options->trace_for_profiling = true;

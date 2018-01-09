@@ -234,3 +234,66 @@ void c2_trace_for_profiling(C2* c2) {
     last_time_stamp = total_time_passed;
     last_satsolver_seconds = satsolver;
 }
+
+
+void c2_trace_for_reinforcement_learning(C2* c2, unsigned decision_var_id, unsigned conflicts_until_next_restart) {
+    if (!c2->options->trace_for_reinforcement_learning) {
+        return;
+    }
+    
+    assert(qcnf_is_2QBF(c2->qcnf));
+    
+    unsigned var_num = var_vector_count(c2->qcnf->vars);
+    unsigned uvar_num = int_vector_count(vector_get(c2->qcnf->scopes, 1));
+    float var_ratio = (float) uvar_num / (float) (var_num + 1);
+    
+    // Solver state
+    LOG_PRINTF("%u,%u,%zu,%f,%zu,%zu,%u,",
+               c2->restart_base_decision_lvl,
+               c2->skolem->decision_lvl,
+               c2->skolem->deterministic_variables,
+               (float) c2->skolem->deterministic_variables / (float) (var_num + 1),
+               c2->restarts,
+               c2->restarts_since_last_major,
+               conflicts_until_next_restart
+               );
+    
+    // Formula statistics
+    LOG_PRINTF("%u,%u,%f,",
+               var_num,
+               vector_count(c2->qcnf->clauses),
+               var_ratio);
+    
+    // Solver statistics
+    LOG_PRINTF("%zu,%zu,%f,%f,%zu,%f,%zu,%f,%zu,%f,%zu,%f,%zu,%f,%zu,%zu,%f,%f,%zu,%f,%zu,%zu,%f,%zu\n",
+               c2->statistics.decisions,
+               c2->statistics.conflicts,
+               (float) c2->statistics.decisions / (float) (c2->statistics.conflicts + 1),
+               (float) c2->statistics.decisions / (float) (c2->restarts + 1),
+               c2->skolem->statistics.propagations,
+               (float) c2->skolem->statistics.propagations / (float) (c2->statistics.decisions + 1),
+               c2->skolem->statistics.explicit_propagations,
+               (float) c2->skolem->statistics.explicit_propagations / (float) (c2->skolem->statistics.propagations + 1),
+               c2->skolem->statistics.pure_vars,
+               (float) c2->skolem->statistics.pure_vars / (float) (c2->skolem->statistics.propagations + 1),
+               c2->skolem->statistics.pure_constants,
+               (float) c2->skolem->statistics.pure_constants / (float) (c2->skolem->statistics.pure_vars + 1),
+               c2->skolem->statistics.local_determinicity_checks,
+               (float) c2->skolem->statistics.local_determinicity_checks / (float) (c2->skolem->statistics.propagations + 1),
+               c2->skolem->statistics.local_conflict_checks,
+               c2->skolem->statistics.global_conflict_checks,
+               (float) c2->skolem->statistics.global_conflict_checks / (float) (c2->skolem->statistics.local_conflict_checks + 1),
+               (float) c2->statistics.conflicts / (float) (c2->skolem->statistics.global_conflict_checks + 1),
+               c2->skolem->statistics.explicit_propagation_conflicts,
+               (float) c2->skolem->statistics.explicit_propagation_conflicts / (float) (c2->statistics.conflicts + 1),
+               c2->statistics.learnt_clauses_total_length,
+               c2->statistics.successful_conflict_clause_minimizations,
+               (float) c2->statistics.successful_conflict_clause_minimizations / (float) (c2->statistics.learnt_clauses_total_length + 1),
+               c2->statistics.cases_explored
+               );
+    
+    LOG_PRINTF("%u\n",decision_var_id);
+    
+}
+
+

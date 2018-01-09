@@ -59,7 +59,8 @@ Options* default_options() {
     o->trace_learnt_clauses = false;
     o->trace_for_visualization = false;
     o->trace_for_profiling = false;
-
+    o->trace_for_reinforcement_learning = false;
+    
     return o;
 }
 

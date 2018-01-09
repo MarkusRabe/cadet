@@ -597,6 +597,8 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                 c2->statistics.decisions += 1;
                 c2->decisions_since_last_conflict += 1;
 
+                c2_trace_for_reinforcement_learning(c2, decision_var->var_id, remaining_conflicts);
+                
                 // examples_decision(c2->examples, value * (Lit) decision_var_id);
                 examples_decision_consistent_with_skolem(c2->examples, c2->skolem, phase * (Lit) decision_var->var_id);
                 if (examples_is_conflicted(c2->examples)) {

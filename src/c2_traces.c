@@ -236,7 +236,7 @@ void c2_trace_for_profiling(C2* c2) {
 }
 
 void c2_trace_for_reinforcement_learning_print_activity(Options* o, unsigned var_id, float activity) {
-    if (o->trace_for_reinforcement_learning && activity > 1.0) {
+    if (o->trace_for_reinforcement_learning && activity > 0.5) {
         LOG_PRINTF("a %u,%f\n", var_id, activity);
     }
 }
@@ -245,7 +245,7 @@ void c2_trace_for_reinforcement_learning_update_D(Options* o, unsigned var_id, b
     if (!o->trace_for_reinforcement_learning) {
         return;
     }
-    LOG_PRINTF("u %c%u\n", deterministic?'+':'-',var_id);
+    LOG_PRINTF("u%c %u\n", deterministic?'+':'-',var_id);
 }
 
 void c2_trace_for_reinforcement_learning(C2* c2, unsigned conflicts_until_next_restart, unsigned decision_var_id, int phase) {

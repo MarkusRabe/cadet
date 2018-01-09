@@ -88,7 +88,7 @@ void conflict_analysis_schedule_causing_vars_in_work_queue(conflict_analysis* ca
         
         // activity heuristics
         if (!set_contains(ca->queue->s, (void*) (int64_t) - l)) {
-            c2_increase_activity(ca->c2, (unsigned) abs(l), ca->c2->magic.implication_graph_variable_activity);
+            c2_increase_activity(ca->c2, (unsigned) abs(l), ca->c2->magic.activity_bump_value);
         }
         
         worklist_push(ca->queue, (void*) (int64_t) - l);

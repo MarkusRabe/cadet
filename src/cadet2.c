@@ -91,7 +91,7 @@ C2* c2_init_qcnf(QCNF* qcnf, Options* options) {
     c2->magic.conflict_clause_weight = 1; // [0..3]
     c2->magic.decision_var_activity_modifier = (float) 0.8; // [-3.0..2.0]
     c2->magic.decay_rate = (float) 0.99;
-    c2->magic.implication_graph_variable_activity = (float) 0.5;
+    c2->magic.activity_bump_value = (float) 1;
     c2->magic.major_restart_frequency = 15;
     c2->magic.replenish_frequency = 100;
     c2->next_major_restart = c2->magic.major_restart_frequency;
@@ -237,7 +237,7 @@ Var* c2_pick_most_active_notdeterministic_variable(C2* c2) {
             }
         }
     }
-    V1("Maximal activity is %f for var %u\n", decision_var_activity, decision_var==NULL?0:decision_var->var_id);
+    V3("Maximal activity is %f for var %u\n", decision_var_activity, decision_var==NULL?0:decision_var->var_id);
     return decision_var;
 }
 

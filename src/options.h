@@ -76,5 +76,6 @@ typedef struct {
 Options* default_options();
 void options_print_literal_name(Options*, char* color, int lit);
 void options_set_variable_name(Options*, unsigned var_id, char* name);
+char* options_get_help();
 
 #endif /* options_h */

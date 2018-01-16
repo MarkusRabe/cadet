@@ -38,7 +38,7 @@ Options* default_options() {
     o->certificate_aiger_mode = aiger_ascii_mode;
 
     // Case splits
-    o->case_splits = true;
+    o->case_splits = false;
 
     // Optimizations
     o->miniscoping = false;
@@ -85,4 +85,52 @@ void options_set_variable_name(Options* o, unsigned var_id, char* name) {
         }
         vector_set(o->variable_names, var_id, name);
     }
+}
+
+char* options_get_help() {
+    Options* o = default_options();
+    char* options_string = malloc(sizeof(char) * 10000);
+    
+    sprintf(options_string,
+    "  General options:\n"
+    "\t-v [0-4]\t\tSet the verbosity [default %d]\n"
+    "\t-s [num]\t\tSet the seed for the random number generator\n"
+    "\t--print \t\tPrint the qdimacs file as read.\n"
+    "\t--no_colors \t\tSuppress colors in output.\n"
+    "\t-c [file]\t\tWrite certificate to specified file. File ending defines Aiger formag aag/aig.\n"
+    "\t--qbfcert\t\tWrite certificate in qbfcert-readable format. Only compatible with aag file ending.\n"
+    "\n  Options for the QBF engine\n"
+    "\t--debugging \t\tEasy debugging configuration (default %d)\n"
+    "\t--cegar\t\t\tUse CEGAR refinements in addition to clause learning (default %d)\n"
+    "\t--cegar_only\t\tUse CEGAR strategy exclusively (default %d)\n"
+    "\t--case_splits \t\tCase distinctions (default %d) \n"
+    "\t--functional-synthesis\tFunctional synthesis (default %d)\n"
+    "\t--sat_by_qbf\t\tUse QBF engine also for propositional problems (default %d)\n"
+    "\t--miniscoping \t\tEnables miniscoping (default %d)\n"
+    "\t--minimize_conflicts \tConflict minimization (default %d) \n"
+    "\n  Output options\n"
+    "\t--qdimacs_out\t\tOutput compliant with QDIMACS standard\n"
+    "\t--miniscoping_info \tPrint additional info on miniscoping (default %d)\n"
+    "\t--trace_learnt_clauses\tPrint (colored) learnt clauses; independent of verbosity.\n"
+    "\t--trace_for_visualization\tPrint trace of solver states at every conflict point.\n"
+    "\t--trace_for_profiling\tPrint trace of learnt clauses with timestamps and SAT solver time consumption.\n"
+    "\t--trace_rl\t\t\t Trace reinforcement learning state-action pairs\n"
+    "\t--print_variable_names\tReplace variable numbers by names where available\n"
+    "\n  Aiger options\n"
+    "\t--aiger_negated\t\tNegate encoding of aiger files. Can be combined with --print.\n"
+    "\t--aiger_controllable_inputs [string] Set prefix of controllable inputs of AIGER files (default 'pi_')\n"
+    "\n",
+    debug_verbosity,
+    o->easy_debugging_mode_c2,
+    o->cegar,
+    o->cegar_only,
+    o->case_splits,
+    o->functional_synthesis,
+    o->use_qbf_engine_also_for_propositional_problems,
+    o->miniscoping,
+    o->minimize_conflicts,
+    o->print_detailed_miniscoping_stats
+    );
+    
+    return options_string;
 }

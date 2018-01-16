@@ -15,39 +15,7 @@
 #include <string.h>
 
 void print_usage(const char* name) {
-    const char* options_string =
-                                "  General options:\n"
-                                    "\t-v [0-4]\t\tSet the verbosity [default 0]\n"
-                                    "\t-s [num]\t\tSet the seed for the random number generator\n"
-                                    "\t--print \t\tPrint the qdimacs file as read.\n"
-                                    "\t--no_colors \t\tSuppress colors in output.\n"
-                                    "\t-c [file]\t\tWrite certificate to specified file. File ending defines Aiger formag aag/aig.\n"
-                                    "\t--qbfcert\t\tWrite certificate in qbfcert-readable format. Only compatible with aag file ending.\n"
-                                    "\t--qdimacs_out\t\tOutput compliant with QDIMACS standard\n"
-                                    "\n"
-                                "  Options for the QBF engine\n"
-                                    "\t--debugging \t\tEasy debugging configuration (default off)\n"
-                                    "\t--cegar\t\t\tUse CEGAR strategy in addition to incremental determinization (default off).\n"
-                                    "\t--cegar_only\t\tUse CEGAR strategy exclusively.\n"
-                                    "\t--case_splits \t\tCase distinctions (default off) \n"
-                                    "\t--functional-synthesis\tFunctional synthesis. I.e. compute skolem functions for UNSAT instances.\n"
-                                    "\t--sat_by_qbf\t\tUse QBF engine also for propositional problems. Uses SAT solver by default.\n"
-                                    "\t--miniscoping \t\tEnables miniscoping \n"
-                                    "\t--miniscoping_info \tPrint additional info on miniscoping (default off)\n"
-                                    "\t--minimize_conflicts \tConflict minimization (default off) \n"
-                                    "\t--delay_conflicts\tDelay conflict checks and instead check conflicted variables in bulk.\n"
-                                "  Visualization options\n"
-                                    "\t--trace_learnt_clauses\tPrint (colored) learnt clauses; independent of verbosity.\n"
-                                    "\t--trace_for_visualization\tPrint trace of solver states at every conflict point.\n"
-                                    "\t--trace_for_profiling\tPrint trace of learnt clauses with timestamps and SAT solver time consumption.\n"
-                                    "\t--trace_rl\t\t\t Trace reinforcement learning state-action pairs\n"
-                                    "\t--print_variable_names\tReplace variable numbers by names where available\n"
-                                "  Aiger options\n"
-                                    "\t--aiger_negated\t\tNegate encoding of aiger files. Can be combined with --print.\n"
-                                    "\t--aiger_controllable_inputs [string] Set prefix of controllable inputs of AIGER files (default 'pi_')\n"
-                                    "\n"
-                                    ;
-  printf("Usage: %s [options] file\n\n  The file can be in QDIMACS or AIGER format. Files can be compressed with gzip (ending in .gz or .gzip). \n\n%s\n", name, options_string);
+    printf("Usage: %s [options] file\n\n  The file can be in QDIMACS or AIGER format. Files can be compressed with gzip (ending in .gz or .gzip). \n\n%s\n", name, options_get_help());
 }
 
 int main(int argc, const char* argv[]) {

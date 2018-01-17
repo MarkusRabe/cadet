@@ -15,7 +15,7 @@
 #include <string.h>
 
 void print_usage(const char* name) {
-    printf("Usage: %s [options] file\n\n  The file can be in QDIMACS or AIGER format. Files can be compressed with gzip (ending in .gz or .gzip). \n\n%s\n", name, options_get_help());
+    printf("Usage: %s [options] file\n\n  The file can be in QDIMACS or AIGER format. Files can be compressed with gzip\n  (ending in .gz or .gzip). \n\n%s\n", name, options_get_help());
 }
 
 int main(int argc, const char* argv[]) {
@@ -155,7 +155,7 @@ int main(int argc, const char* argv[]) {
                         options->easy_debugging_mode_c2 = true;
                     } else if (strcmp(argv[i], "--aiger_controllable_inputs") == 0) {
                         if (i + 1 >= argc) {
-                            LOG_ERROR("Missing string for argument --aiger_controllable_inputs\n");
+                            LOG_ERROR("Missing string for argument --aiger_ci\n");
                             print_usage(argv[0]);
                             return 1;
                         }
@@ -179,7 +179,7 @@ int main(int argc, const char* argv[]) {
                         options->print_detailed_miniscoping_stats = ! options->print_detailed_miniscoping_stats;
                     } else if (strcmp(argv[i], "--trace_learnt_clauses") == 0) {
                         options->trace_learnt_clauses = ! options->trace_learnt_clauses;
-                    } else if (strcmp(argv[i], "--trace_for_visualization") == 0) {
+                    } else if (strcmp(argv[i], "--trace_for_vis") == 0) {
                         options->trace_for_visualization = true;
                         options->trace_learnt_clauses = true;
                         log_colors = false;

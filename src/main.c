@@ -23,7 +23,6 @@ int main(int argc, const char* argv[]) {
     // default
     Options* options = default_options();
     const char *file_name = NULL;
-    long verbosity = 0;
     long seed = SEED;
     FILE* file;
     
@@ -93,29 +92,8 @@ int main(int argc, const char* argv[]) {
                         print_usage(argv[0]);
                         return 1;
                     }
-                    verbosity = strtol(argv[i+1], NULL, 0);
-                    switch (verbosity) {
-                        case 0:
-                            debug_verbosity = VERBOSITY_NONE;
-                            break;
-                        case 1:
-                            debug_verbosity = VERBOSITY_LOW;
-                            break;
-                        case 2:
-                            debug_verbosity = VERBOSITY_MEDIUM;
-                            break;
-                        case 3:
-                            debug_verbosity = VERBOSITY_HIGH;
-                            break;
-                        case 4:
-                            debug_verbosity = VERBOSITY_ALL;
-                            break;
-                            
-                        default:
-                            printf("Error: illegal verbosity number %ld\n", verbosity);
-                            print_usage(argv[0]);
-                            return 1;
-                    }
+                    debug_verbosity = (int) strtol(argv[i+1], NULL, 0);
+                    abortif(debug_verbosity < 0 || debug_verbosity > 4, "Verbosity must be in [0,4]. Argument was: %s", argv[i+1]);
                     i++;
                     
                     break;

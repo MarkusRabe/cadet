@@ -20,6 +20,7 @@
 #include "c2_cegar.h"
 #include "satsolver.h"
 #include "c2_traces.h"
+#include "c2_rl.h"
 
 #include <math.h>
 #include <stdint.h>
@@ -228,7 +229,7 @@ Var* c2_pick_most_active_notdeterministic_variable(C2* c2) {
             if (v->var_id != 0) {
                 assert(v->var_id == i);
                 float v_activity = c2_get_activity(c2, v->var_id);
-                c2_trace_for_reinforcement_learning_print_activity(c2->options, v->var_id, v_activity);
+                c2_rl_print_activity(c2->options, v->var_id, v_activity);
                 assert(v_activity > -0.001);
                 if (decision_var_activity < v_activity) {
                     decision_var_activity = v_activity;
@@ -512,6 +513,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                     examples_redo(c2->examples, c2->skolem, new_example);
                 }
                 
+                c2_rl_learnt_clause(c2->options, learnt_clause);
                 c2_log_clause(c2, learnt_clause);
                 c2_new_clause(c2, learnt_clause);
 
@@ -565,10 +567,26 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
             } // Else continue picking a decision variable. Avoids runnint into a loop where case distinction is tried but nothing happens.
 
             assert(!skolem_can_propagate(c2->skolem));
-
+            
+            
             // regular decision
-            Var* decision_var = c2_pick_most_active_notdeterministic_variable(c2);
-
+            Var* decision_var = NULL;
+            int phase = 1;
+            
+            if (c2->options->trace_for_reinforcement_learning) {
+                c2_rl_print_state(c2, remaining_conflicts, decision_var->var_id, phase);
+                int d = c2_rl_get_decision();
+                if (d != 0) {
+                    phase = d>0 ? 1 : -1;
+                    decision_var = var_vector_get(c2->qcnf->vars, lit_to_var(d));
+                    abortif(decision_var->is_universal, "Cannot select universal variable as decision var");
+                    abortif(skolem_is_deterministic(c2->skolem, decision_var->var_id), "Cannot select deterministic variable as decision var.");
+                }
+            } else {
+                // normal decision
+                decision_var = c2_pick_most_active_notdeterministic_variable(c2);
+            }
+            
             if (decision_var == NULL) { // no variable could be found
                 if (int_vector_count(c2->skolem->potentially_conflicted_variables) == 0) {
                     assert(c2->result == CADET_RESULT_UNKNOWN);
@@ -576,13 +594,13 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                     return c2->result;
                 } else {
                     skolem_global_conflict_check(c2->skolem, false);
+                    continue;
                 }
 
             } else { // take a decision
                 assert(!skolem_is_conflicted(c2->skolem));
-
-                int phase = 1;
-                if (c2->restarts >= c2->magic.num_restarts_before_Jeroslow_Wang) {
+                
+                if (c2->restarts >= c2->magic.num_restarts_before_Jeroslow_Wang && !c2->options->trace_for_reinforcement_learning) {
 
                     float pos_JW_weight = c2_Jeroslow_Wang_log_weight(&decision_var->pos_occs);
                     float neg_JW_weight = c2_Jeroslow_Wang_log_weight(&decision_var->neg_occs);
@@ -599,8 +617,6 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
 
                 c2->statistics.decisions += 1;
                 c2->decisions_since_last_conflict += 1;
-
-                c2_trace_for_reinforcement_learning(c2, remaining_conflicts, decision_var->var_id, phase);
                 
                 // examples_decision(c2->examples, value * (Lit) decision_var_id);
                 examples_decision_consistent_with_skolem(c2->examples, c2->skolem, phase * (Lit) decision_var->var_id);

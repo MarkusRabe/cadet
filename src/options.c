@@ -114,7 +114,7 @@ char* options_get_help() {
     "\t--trace_learnt_clauses\tPrint (colored) learnt clauses.\n"
     "\t--trace_for_vis\t\tPrint trace of solver states at every conflict point.\n"
     "\t--trace_for_profiling\tPrint trace of learnt clauses with timestamps\n\t\t\t\tand SAT solver time consumption.\n"
-    "\t--trace_rl\t\tTrace reinforcement learning state-action pairs\n"
+    "\t--rl\t\t\tReinforcement learning mode: print state-action pairs,\n\t\t\t\tread decisions.\n"
     "\t--print_variable_names\tReplace variable numbers by names where available\n"
     "\n  Aiger options\n"
     "\t--aiger_negated\t\tNegate encoding of aiger files.\n\t\t\t\tCan be combined with --print.\n"

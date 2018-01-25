@@ -13,6 +13,7 @@
 #include "util.h"
 #include "c2_traces.h"
 #include "c2_cegar.h"
+#include "c2_rl.h"
 
 #include <math.h>
 #include <assert.h>
@@ -985,7 +986,7 @@ void skolem_undo(void* parent, char type, void* obj) {
             si = skolem_var_vector_get(s->infos, suu.sus.var_id);
             if (si->deterministic && (unsigned) suu.sus.val == 0) {
                 s->deterministic_variables -= 1;
-                c2_trace_for_reinforcement_learning_update_D(s->options, suu.sus.var_id, false);
+                c2_rl_update_D(s->options, suu.sus.var_id, false);
             }
             si->deterministic = (unsigned) suu.sus.val;
             break;

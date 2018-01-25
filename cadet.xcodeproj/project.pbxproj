@@ -45,6 +45,7 @@
 		287C3B131E399C7A00F7096A /* c2_casesplits.c in Sources */ = {isa = PBXBuildFile; fileRef = 287C3B111E399C7A00F7096A /* c2_casesplits.c */; };
 		287C3B161E3C01FE00F7096A /* skolem_var.c in Sources */ = {isa = PBXBuildFile; fileRef = 287C3B141E3C01FE00F7096A /* skolem_var.c */; };
 		287C3B1B1E3C2D5500F7096A /* val_vector.c in Sources */ = {isa = PBXBuildFile; fileRef = 287C3B191E3C2D5500F7096A /* val_vector.c */; };
+		28C1C17F20197A000094DB4E /* c2_rl.c in Sources */ = {isa = PBXBuildFile; fileRef = 28C1C17E20197A000094DB4E /* c2_rl.c */; };
 		28DA30F41DFFDD2600EABCA6 /* skolem_dependencies.c in Sources */ = {isa = PBXBuildFile; fileRef = 28DA30F21DFFDD2600EABCA6 /* skolem_dependencies.c */; };
 		28EBA5511DE19539003D21EB /* int_vector.c in Sources */ = {isa = PBXBuildFile; fileRef = 28EBA54F1DE19539003D21EB /* int_vector.c */; };
 		28EBA5541DE195DD003D21EB /* skolem_var_vector.c in Sources */ = {isa = PBXBuildFile; fileRef = 28EBA5521DE195DD003D21EB /* skolem_var_vector.c */; };
@@ -141,6 +142,8 @@
 		287C3B151E3C01FE00F7096A /* skolem_var.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = skolem_var.h; path = src/skolem_var.h; sourceTree = "<group>"; };
 		287C3B191E3C2D5500F7096A /* val_vector.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = val_vector.c; path = src/val_vector.c; sourceTree = "<group>"; };
 		287C3B1A1E3C2D5500F7096A /* val_vector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = val_vector.h; path = src/val_vector.h; sourceTree = "<group>"; };
+		28C1C17D20197A000094DB4E /* c2_rl.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = c2_rl.h; path = src/c2_rl.h; sourceTree = "<group>"; };
+		28C1C17E20197A000094DB4E /* c2_rl.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = c2_rl.c; path = src/c2_rl.c; sourceTree = "<group>"; };
 		28D2C38A1DDAA95E000E9C51 /* cadet */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = cadet; sourceTree = BUILT_PRODUCTS_DIR; };
 		28DA30F21DFFDD2600EABCA6 /* skolem_dependencies.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = skolem_dependencies.c; path = src/skolem_dependencies.c; sourceTree = "<group>"; };
 		28DA30F31DFFDD2600EABCA6 /* skolem_dependencies.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = skolem_dependencies.h; path = src/skolem_dependencies.h; sourceTree = "<group>"; };
@@ -287,6 +290,8 @@
 				28FA8D351E14F4E900A43B7B /* c2_cegar.h */,
 				287C3B0E1E396B7600F7096A /* c2_traces.c */,
 				287C3B0F1E396B7600F7096A /* c2_traces.h */,
+				28C1C17E20197A000094DB4E /* c2_rl.c */,
+				28C1C17D20197A000094DB4E /* c2_rl.h */,
 				28FA8D2E1E10ACBC00A43B7B /* c2_validate.c */,
 				28FA8D2F1E10ACBC00A43B7B /* c2_validate.h */,
 				28261B911F71872D006974DC /* c2_clause_minimization.c */,
@@ -437,6 +442,7 @@
 				28DA30F41DFFDD2600EABCA6 /* skolem_dependencies.c in Sources */,
 				28675A461DDAA9D000951212 /* aiger.c in Sources */,
 				28675A611DDAA9D000951212 /* undo_stack.c in Sources */,
+				28C1C17F20197A000094DB4E /* c2_rl.c in Sources */,
 				28675A451DDAA9D000951212 /* aiger_utils.c in Sources */,
 				28675A631DDAA9D000951212 /* util.c in Sources */,
 				28675A591DDAA9D000951212 /* qcnf.c in Sources */,

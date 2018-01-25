@@ -161,7 +161,7 @@ int main(int argc, const char* argv[]) {
                         options->trace_for_visualization = true;
                         options->trace_learnt_clauses = true;
                         log_colors = false;
-                    } else if (strcmp(argv[i], "--trace_rl") == 0) {
+                    } else if (strcmp(argv[i], "--rl") == 0) {
                         options->trace_for_reinforcement_learning = true;
                         log_colors = false;
                     } else if (strcmp(argv[i], "--trace_for_profiling") == 0) {

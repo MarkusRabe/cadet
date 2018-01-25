@@ -35,7 +35,7 @@ void c2_rl_learnt_clause(Options* o, Clause* c) {
     LOG_PRINTF("\n");
 }
 
-void c2_rl_print_state(C2* c2, unsigned conflicts_until_next_restart, unsigned decision_var_id, int phase) {
+void c2_rl_print_state(C2* c2, unsigned conflicts_until_next_restart) {
     if (!c2->options->trace_for_reinforcement_learning) {
         return;
     }
@@ -92,6 +92,9 @@ void c2_rl_print_state(C2* c2, unsigned conflicts_until_next_restart, unsigned d
                c2->statistics.cases_explored
                );
     
+}
+
+void c2_rl_print_decision(Options* o, unsigned decision_var_id, int phase) {
     LOG_PRINTF("d %u,%d\n", decision_var_id, phase);
 }
 

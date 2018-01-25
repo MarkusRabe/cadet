@@ -574,14 +574,16 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
             int phase = 1;
             
             if (c2->options->trace_for_reinforcement_learning) {
-                c2_rl_print_state(c2, remaining_conflicts, decision_var->var_id, phase);
+                c2_rl_print_state(c2, remaining_conflicts);
                 int d = c2_rl_get_decision();
                 if (d != 0) {
                     phase = d>0 ? 1 : -1;
                     decision_var = var_vector_get(c2->qcnf->vars, lit_to_var(d));
                     abortif(decision_var->is_universal, "Cannot select universal variable as decision var");
                     abortif(skolem_is_deterministic(c2->skolem, decision_var->var_id), "Cannot select deterministic variable as decision var.");
+                    c2_rl_print_decision(c2->options, decision_var->var_id, phase);
                 }
+                
             } else {
                 // normal decision
                 decision_var = c2_pick_most_active_notdeterministic_variable(c2);

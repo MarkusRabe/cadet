@@ -14,7 +14,8 @@
 #include "cadet2.h"
 #include <stdio.h>
 
-void c2_rl_print_state(C2* c2, unsigned conflicts_until_next_restart, unsigned decision_var_id, int phase);
+void c2_rl_print_state(C2* c2, unsigned conflicts_until_next_restart);
+void c2_rl_print_decision(Options* o, unsigned decision_var_id, int phase);
 void c2_rl_update_D(Options* o, unsigned var_id, bool deterministic); // Update the member of of var_id in D. True for adding, False for removing.
 void c2_rl_learnt_clause(Options* o, Clause* c);
 void c2_rl_print_activity(Options* o, unsigned var_id, float activity);

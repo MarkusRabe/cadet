@@ -91,7 +91,6 @@ void c2_rl_print_state(C2* c2, unsigned conflicts_until_next_restart) {
                (float) c2->statistics.successful_conflict_clause_minimizations / (float) (c2->statistics.learnt_clauses_total_length + 1),
                c2->statistics.cases_explored
                );
-    
 }
 
 void c2_rl_print_decision(Options* o, unsigned decision_var_id, int phase) {
@@ -102,6 +101,8 @@ void c2_rl_print_decision(Options* o, unsigned decision_var_id, int phase) {
 char *buffer = NULL;
 
 int c2_rl_get_decision() {
+    fflush(stdout); // flush stdout to make sure listening processes get the full state before printing a decision
+    
     size_t bufsize = 32;
     
     if (buffer == NULL) {

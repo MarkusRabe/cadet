@@ -111,7 +111,7 @@ int c2_rl_get_decision() {
             exit(1);
         }
     }
-    ssize_t characters = getline(&buffer, &bufsize, stdin);
+    long characters = getline(&buffer, &bufsize, stdin);
     abortif(characters == 0, "Could not read number from stdin");
     
     char *s = buffer;

@@ -164,11 +164,6 @@ int main(int argc, const char* argv[]) {
                     } else if (strcmp(argv[i], "--rl") == 0) {
                         options->trace_for_reinforcement_learning = true;
                         log_colors = false;
-                        if (options->cegar) {
-                            LOG_WARNING("CEGAR should be deactivated for Reinforcement learning. Deactivating it now.");
-                            options->cegar = false;
-                        }
-                        
                     } else if (strcmp(argv[i], "--trace_for_profiling") == 0) {
                         options->trace_for_profiling = true;
                     } else if (strcmp(argv[i], "--print_variable_names") == 0) {

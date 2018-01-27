@@ -49,6 +49,7 @@ C2* c2_init_qcnf(QCNF* qcnf, Options* options) {
     c2->state = C2_READY;
     c2->result = CADET_RESULT_UNKNOWN;
     c2->restarts = 0;
+    c2->major_restarts = 0;
     c2->restarts_since_last_major = 0;
     c2->restart_base_decision_lvl = 0;
     c2->activity_factor = (float) 1.0;
@@ -712,10 +713,11 @@ void c2_restart_heuristics(C2* c2) {
     c2_rescale_activity_values(c2);
     
     if (c2->next_major_restart == c2->restarts_since_last_major) {
+        c2->major_restarts += 1;
         c2->restarts_since_last_major = 0;
         c2->next_restart = c2->magic.initial_restart; // resets restart frequency
         
-        V1("Major restart. Resetting all activity values to 0 and some random ones to 1.\n");
+        V1("Major restart no %zu. Resetting all activity values to 0 and some random ones to 1.\n", c2->major_restarts);
         for (unsigned i = 0; i < var_vector_count(c2->qcnf->vars); i++) {
             c2_set_activity(c2, i, 0.0f);
         }

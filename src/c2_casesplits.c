@@ -27,7 +27,7 @@ void c2_case_split_backtracking_heuristics(C2* c2) {
         if (c->original) {
             break;
         }
-        if (c->size > 3 && skolem_get_unique_consequence(c2->skolem, c) == 0) {
+        if (c->size > 2+(c2->major_restarts/2) && skolem_get_unique_consequence(c2->skolem, c) == 0) {
             qcnf_unregister_clause(c2->qcnf, c);
         } else {
             kept += 1;
@@ -121,7 +121,7 @@ Lit c2_case_split_pick_literal(C2* c2) {
     float max_total = 0.0;
     float cost_factor_of_max = 0.0;
     Lit lit = 0;
-    for (unsigned i = 0; i < int_vector_count(c2->skolem->cegar->interface_vars); i++) {
+    for (unsigned i = 1; i < int_vector_count(c2->skolem->cegar->interface_vars); i++) {
         unsigned var_id = (unsigned) int_vector_get(c2->skolem->cegar->interface_vars, i);
         assert(int_vector_get(c2->skolem->cegar->interface_vars, i) > 0);
 //    for (unsigned i = 1; i < var_vector_count(c2->qcnf->vars); i++) {
@@ -150,7 +150,7 @@ Lit c2_case_split_pick_literal(C2* c2) {
                 ((float) 1.0
                     + (float) c2_get_activity(c2, v->var_id))
                 * cost_factor;
-            float combined_quality = combined_factor * (float) (propagations_pos * propagations_neg + propagations_pos + propagations_neg);
+            float combined_quality = combined_factor * (float) (propagations_pos * propagations_neg + propagations_pos + propagations_neg + 1);
             if (combined_quality > max_total) {
                 lit = (propagations_pos > propagations_neg ? 1 : - 1) * (Lit) v->var_id;
                 if (rand() % 30 == 0) {
@@ -260,11 +260,12 @@ bool c2_case_split(C2* c2) {
     
     assert(!skolem_can_propagate(c2->skolem));
 
+    c2_case_splits_reset_countdown(c2);
+    
     //    Lit most_notorious_literal = c2_pick_most_notorious_literal(c2);
     Lit most_notorious_literal = c2_case_split_pick_literal(c2);
     if (most_notorious_literal != 0) {
         c2_case_splits_make_assumption(c2, most_notorious_literal);
-        c2_case_splits_reset_countdown(c2);
         return true;
     } else {
         V1("Case split not successful; no literal available for case split.\n");

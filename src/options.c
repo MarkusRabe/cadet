@@ -59,7 +59,7 @@ Options* default_options() {
     o->trace_learnt_clauses = false;
     o->trace_for_visualization = false;
     o->trace_for_profiling = false;
-    o->trace_for_reinforcement_learning = false;
+    o->reinforcement_learning = false;
     
     return o;
 }
@@ -100,6 +100,7 @@ char* options_get_help() {
     "\t-c [file]\t\tWrite certificate to specified file. File ending\n\t\t\t\tdefines Aiger formag aag/aig.\n"
     "\t--qbfcert\t\tWrite certificate in qbfcert-readable format.\n\t\t\t\tOnly compatible with aag file ending.\n"
     "\n  Options for the QBF engine\n"
+    "\t--rl\t\t\tReinforcement learning mode: print state-action pairs,\n\t\t\t\tread decisions (default %d).\n"
     "\t--debugging \t\tEasy debugging configuration (default %d)\n"
     "\t--cegar\t\t\tUse CEGAR refinements in addition to clause learning\n\t\t\t\t(default %d)\n"
     "\t--cegar_only\t\tUse CEGAR strategy exclusively (default %d)\n"
@@ -114,13 +115,13 @@ char* options_get_help() {
     "\t--trace_learnt_clauses\tPrint (colored) learnt clauses.\n"
     "\t--trace_for_vis\t\tPrint trace of solver states at every conflict point.\n"
     "\t--trace_for_profiling\tPrint trace of learnt clauses with timestamps\n\t\t\t\tand SAT solver time consumption.\n"
-    "\t--rl\t\t\tReinforcement learning mode: print state-action pairs,\n\t\t\t\tread decisions.\n"
     "\t--print_variable_names\tReplace variable numbers by names where available\n"
     "\n  Aiger options\n"
     "\t--aiger_negated\t\tNegate encoding of aiger files.\n\t\t\t\tCan be combined with --print.\n"
     "\t--aiger_ci [string]\tSet prefix of controllable inputs of\n\t\t\t\tAIGER files (default 'pi_')\n"
     "\n",
     debug_verbosity,
+    o->reinforcement_learning,
     o->easy_debugging_mode_c2,
     o->cegar,
     o->cegar_only,

@@ -12,20 +12,20 @@
 #include <stdio.h>
 
 void c2_rl_print_activity(Options* o, unsigned var_id, float activity) {
-    if (o->trace_for_reinforcement_learning && activity > 0.5) {
+    if (o->reinforcement_learning && activity > 0.5) {
         LOG_PRINTF("a %u,%f\n", var_id, activity);
     }
 }
 
 void c2_rl_update_D(Options* o, unsigned var_id, bool deterministic) {
-    if (!o->trace_for_reinforcement_learning) {
+    if (!o->reinforcement_learning) {
         return;
     }
     LOG_PRINTF("u%c %u\n", deterministic?'+':'-',var_id);
 }
 
 void c2_rl_learnt_clause(Options* o, Clause* c) {
-    if (!o->trace_for_reinforcement_learning) {
+    if (!o->reinforcement_learning) {
         return;
     }
     LOG_PRINTF("c");
@@ -36,14 +36,15 @@ void c2_rl_learnt_clause(Options* o, Clause* c) {
 }
 
 void c2_rl_print_state(C2* c2, unsigned conflicts_until_next_restart) {
-    if (!c2->options->trace_for_reinforcement_learning) {
+    if (!c2->options->reinforcement_learning) {
         return;
     }
     
     assert(qcnf_is_2QBF(c2->qcnf));
     
     unsigned var_num = var_vector_count(c2->qcnf->vars);
-    unsigned uvar_num = int_vector_count(vector_get(c2->qcnf->scopes, 1));
+    Scope* s = vector_get(c2->qcnf->scopes, 1);
+    unsigned uvar_num = int_vector_count(s->vars);
     float var_ratio = (float) uvar_num / (float) (var_num + 1);
     
     // Solver state
@@ -99,12 +100,9 @@ void c2_rl_print_decision(Options* o, unsigned decision_var_id, int phase) {
 
 
 char *buffer = NULL;
+size_t bufsize = 32;
 
-int c2_rl_get_decision() {
-    fflush(stdout); // flush stdout to make sure listening processes get the full state before printing a decision
-    
-    size_t bufsize = 32;
-    
+char* c2_rl_readline() {
     if (buffer == NULL) {
         buffer = (char *)malloc(bufsize * sizeof(char));
         if( buffer == NULL) {
@@ -114,11 +112,21 @@ int c2_rl_get_decision() {
     }
     long characters = getline(&buffer, &bufsize, stdin);
     abortif(characters == 0, "Could not read number from stdin");
+    return buffer;
+}
+
+int c2_rl_get_decision() {
+    fflush(stdout); // flush stdout to make sure listening processes get the full state before printing a decision
+    char *s = c2_rl_readline();
     
-    char *s = buffer;
-    char *end;
+    if (s[0] == 'r') {
+        
+        return 0;
+    }
+    
+    char *end = NULL;
     long ret = LONG_MIN;
-    ret = strtol(s, &end, 10);
+    ret = strtol(s, &end, 10); // convert to an integer, base 10, end pointer indicates last character read.
 //    LOG_PRINTF("The number(unsigned long integer) is %ld\n", ret);
     abortif(*s == '\0', "String could not be read.");
     abortif(*end != '\0' && *end != '\n', "String not terminated by \\0 or \\n");
@@ -128,3 +136,24 @@ int c2_rl_get_decision() {
     return (int) ret;
 }
 
+cadet_res c2_rl_run_c2(Options* o) {
+    while (true) {
+        char *file_name = c2_rl_readline();
+        
+        // scan for end, should be terminated with newline
+        char *end = file_name;
+        int i = 0; int maxlen = 1000;
+        while (i < maxlen) {
+            if (*end == '\n') *end = '\0';
+            if (*end == '\0') break;
+            end += 1;
+            i += 1;
+        }
+        abortif(i >= maxlen, "File name too long.");
+        
+        LOG_PRINTF("\n");
+        FILE* file = open_possibly_zipped_file(file_name);
+        c2_solve_qdimacs(file,o);
+    }
+    return CADET_RESULT_UNKNOWN;
+}

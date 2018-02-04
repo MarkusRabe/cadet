@@ -31,7 +31,7 @@ void* create_solver_from_qdimacs(FILE* file) {
     
     void* solver = qipasir_init();
     
-    char c;
+    int c;
     int var = -1;
     bool neg = false;
     int qlvl = 0;

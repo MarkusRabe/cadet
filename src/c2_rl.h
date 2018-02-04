@@ -21,4 +21,6 @@ void c2_rl_learnt_clause(Options* o, Clause* c);
 void c2_rl_print_activity(Options* o, unsigned var_id, float activity);
 int c2_rl_get_decision();
 
+cadet_res c2_rl_run_c2(Options*);
+
 #endif /* c2_rl_h */

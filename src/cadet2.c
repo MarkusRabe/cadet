@@ -492,6 +492,8 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                                 return c2->result;
                             case CADET_RESULT_UNKNOWN:
                                 break;
+                            default:
+                                abortif(true, "Unexpected value seen for cadet_res");
                         }
                         
                         if (c2->skolem->cegar->recent_average_cube_size >= c2->skolem->cegar->magic.cegar_effectiveness_threshold
@@ -569,25 +571,26 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
 
             assert(!skolem_can_propagate(c2->skolem));
             
-            
             // regular decision
             Var* decision_var = NULL;
             int phase = 1;
             
-            if (c2->options->trace_for_reinforcement_learning) {
+            // scan for decision variable also done in RL mode, to detect SAT
+            decision_var = c2_pick_most_active_notdeterministic_variable(c2);
+            
+            if (decision_var != NULL && c2->options->reinforcement_learning) {
                 c2_rl_print_state(c2, remaining_conflicts);
                 int d = c2_rl_get_decision();
-                if (d != 0) {
+                if (d == 0) {
+                    c2->result = CADET_RESULT_ABORT_RL;
+                    return c2->result;
+                } else {
                     phase = d>0 ? 1 : -1;
                     decision_var = var_vector_get(c2->qcnf->vars, lit_to_var(d));
                     abortif(decision_var->is_universal, "Cannot select universal variable as decision var");
                     abortif(skolem_is_deterministic(c2->skolem, decision_var->var_id), "Cannot select deterministic variable as decision var.");
                     c2_rl_print_decision(c2->options, decision_var->var_id, phase);
                 }
-                
-            } else {
-                // normal decision
-                decision_var = c2_pick_most_active_notdeterministic_variable(c2);
             }
             
             if (decision_var == NULL) { // no variable could be found
@@ -603,7 +606,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
             } else { // take a decision
                 assert(!skolem_is_conflicted(c2->skolem));
                 
-                if (c2->restarts >= c2->magic.num_restarts_before_Jeroslow_Wang && !c2->options->trace_for_reinforcement_learning) {
+                if (c2->restarts >= c2->magic.num_restarts_before_Jeroslow_Wang && !c2->options->reinforcement_learning) {
 
                     float pos_JW_weight = c2_Jeroslow_Wang_log_weight(&decision_var->pos_occs);
                     float neg_JW_weight = c2_Jeroslow_Wang_log_weight(&decision_var->neg_occs);
@@ -848,7 +851,7 @@ cadet_res c2_sat(C2* c2) {
  */
 cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
     QCNF* qcnf = create_qcnf_from_file(f, options);
-    fclose(f);
+    if (f != stdin) {fclose(f);}
     abortif(!qcnf,"Failed to create QCNF.");
 
     if (options->print_qdimacs) {
@@ -884,6 +887,8 @@ cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
                 printf("s cnf 0\n");
             }
             break;
+        case CADET_RESULT_ABORT_RL:
+            break; // do nothing, just output result, caller has to handle this case
     }
 
     if (c2->result == CADET_RESULT_SAT && c2->options->certify_SAT) {
@@ -921,7 +926,9 @@ cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
         }
     }
 
-    return c2->result;
+    cadet_res res = c2->result;
+    c2_free(c2);
+    return res;
 }
 
 void c2_push(C2* c2) {

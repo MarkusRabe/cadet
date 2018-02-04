@@ -21,6 +21,8 @@ typedef enum {
 
 typedef struct {
     
+    bool reinforcement_learning; // take decisions through stdin; trace state
+    
     // Use a configuration of CADET 2 that is easier to debug than the performance-oriented configuration
     bool easy_debugging_mode_c2;
     
@@ -69,8 +71,6 @@ typedef struct {
     bool trace_learnt_clauses;
     bool trace_for_visualization;
     bool trace_for_profiling;
-    bool trace_for_reinforcement_learning;
-    
 } Options;
 
 Options* default_options();

@@ -101,7 +101,6 @@ vector* qcnf_get_occs_of_lit(QCNF* qcnf, Lit lit) {
 // DOMAINS
 
 unsigned qcnf_scope_init(QCNF* qcnf, int_vector* vars) {
-    assert(qcnf_is_DQBF(qcnf));
     assert(int_vector_is_strictly_sorted(vars));
     
     Scope* scope = malloc(sizeof(Scope));
@@ -243,11 +242,11 @@ Var* qcnf_new_var(QCNF* qcnf, bool is_universal, unsigned scope_id, unsigned var
     V4("Introducing new variable %u to qlvl %u, universal: %d\n", var_id, scope_id, is_universal);
     
     while (scope_id >= vector_count(qcnf->scopes)) {
-        vector_add(qcnf->scopes, int_vector_init());
+        qcnf_scope_init(qcnf, int_vector_init());
     }
     if (is_universal) {
-        int_vector* scope = vector_get(qcnf->scopes, scope_id);
-        int_vector_add(scope, (int) var_id);
+        Scope* scope = vector_get(qcnf->scopes, scope_id);
+        int_vector_add(scope->vars, (int) var_id);
     }
     
     // update the qcnf state // TODO: this is undoable!
@@ -473,9 +472,7 @@ void qcnf_free(QCNF* qcnf) {
         qcnf_free_clause(vector_get(qcnf->clauses, i));
     }
     vector_free(qcnf->clauses);
-    
     stack_free(qcnf->stack);
-    
     var_vector_free(qcnf->vars); // also deallocates the variables
     
     for (unsigned i = 0 ; i < vector_count(qcnf->scopes); i++) {

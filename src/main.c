@@ -6,6 +6,7 @@
 #include "util.h"
 #include "cadet2.h"
 #include "heap.h"
+#include "c2_rl.h"
 //#include "qipasir.h"
 //#include "qipasir_parser.h"
 
@@ -162,7 +163,7 @@ int main(int argc, const char* argv[]) {
                         options->trace_learnt_clauses = true;
                         log_colors = false;
                     } else if (strcmp(argv[i], "--rl") == 0) {
-                        options->trace_for_reinforcement_learning = true;
+                        options->reinforcement_learning = true;
                         log_colors = false;
                     } else if (strcmp(argv[i], "--trace_for_profiling") == 0) {
                         options->trace_for_profiling = true;
@@ -209,35 +210,7 @@ int main(int argc, const char* argv[]) {
         file = stdin;
     } else {
         V0("Processing file \"%s\".\n", file_name);
-        const char* ext = get_filename_ext(file_name);
-        size_t extlen = strlen(ext);
-        V4("Detected file name extension %s\n", ext);
-        if ( (extlen == 2 && strcmp("gz", ext) == 0) || (extlen == 4 && strcmp("gzip", ext) == 0) ) {
-#ifdef __APPLE__
-            char* unzip_tool_name = "gzcat ";
-#endif
-#ifdef __linux__
-            char* unzip_tool_name = "zcat ";
-#endif
-#ifdef _WIN32
-            abort(); // please use a proper operating system
-#endif
-            
-            char* cmd = malloc(strlen(unzip_tool_name) + strlen(file_name) + 5);
-            sprintf(cmd, "%s '%s'", unzip_tool_name, file_name);
-            file = popen(cmd, "r");
-            free(cmd);
-            if (!file) {
-                LOG_ERROR("Cannot open gzipped file with zcat via popen. File may not exist.\n");
-                return 1;
-            }
-        } else {
-            file = fopen(file_name, "r");
-            if (!file) {
-                LOG_ERROR("Cannot open file \"%s\", does not exist?\n", file_name);
-                return 1;
-            }
-        }
+        file = open_possibly_zipped_file(file_name);
     }
     
     V0("CADET %s\n", VERSION);
@@ -245,6 +218,10 @@ int main(int argc, const char* argv[]) {
 //    void* solver = create_solver_from_qdimacs(file);
 //    int res = qipasir_solve(solver);
 //    return res == 0 ? 30 : res; // unknown result according to ipasir is not the same as unknown result otherwise.
-
-    return c2_solve_qdimacs(file,options);
+    
+    if (!options->reinforcement_learning) {
+        return c2_solve_qdimacs(file,options);
+    } else {
+        return c2_rl_run_c2(options);
+    }
 }

@@ -637,7 +637,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
 
         }
     }
-
+    
     abortif(c2->result != CADET_RESULT_UNKNOWN, "Expected going into restart but result is not unknown.");
     c2_backtrack_to_decision_lvl(c2, c2->restart_base_decision_lvl);
     return c2->result; // results in a restart

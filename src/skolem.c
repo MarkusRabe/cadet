@@ -143,6 +143,21 @@ void skolem_new_clause(Skolem* s, Clause* c) {
     }
 }
 
+double skolem_size_of_active_set(Skolem* s) {
+    unsigned total = 0;
+    unsigned not_satisfied = 0;
+    for (unsigned i = 0; i < vector_count(s->qcnf->clauses); i++) {
+        Clause* c = vector_get(s->qcnf->clauses, i);
+        if (c) {
+            total += 1;
+            if (skolem_clause_satisfied(s, c)) {
+                not_satisfied += 1;
+            }
+        }
+    }
+    return (double) not_satisfied / (double) total;
+}
+
 bool skolem_is_initially_deterministic(Skolem* s, unsigned var_id) {
     Var* v = var_vector_get(s->qcnf->vars, var_id);
     return v->scope_id < (v->is_universal ? s->u_initially_deterministic : s->e_initially_deterministic);

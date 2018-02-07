@@ -185,3 +185,8 @@ void c2_cert_AIG_certificate(C2* c2) {
         abortif(!write_success, "Could not write to file for aiger certificate (file name '%s').",c2->options->certificate_file_name);
     }
 }
+
+bool c2_cert_check_SAT(C2* c2) {
+    NOT_IMPLEMENTED();
+    return false;
+}

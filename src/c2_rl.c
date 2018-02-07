@@ -8,8 +8,38 @@
 
 #include "c2_rl.h"
 #include "log.h"
+#include "statistics.h"
+#include "float_vector.h"
 
 #include <stdio.h>
+
+typedef struct {
+    Stats* stats;
+    float_vector* rewards;
+    float_vector* runtimes;
+} RL;
+
+RL* rl = NULL;
+
+void rl_init() {
+    assert(rl == NULL);
+    rl = malloc(sizeof(RL));
+    rl->stats = statistics_init(10000);
+    rl->rewards = float_vector_init();
+    rl->runtimes = float_vector_init();
+}
+
+void rl_add_reward(unsigned dec_idx, float value) { // for current decision
+    float_vector_set(rl->rewards, dec_idx, float_vector_get(rl->rewards, dec_idx) + value);
+}
+
+void rl_free() {
+    statistics_free(rl->stats);
+    float_vector_free(rl->rewards);
+    float_vector_free(rl->runtimes);
+    free(rl);
+    rl = NULL;
+}
 
 void c2_rl_print_activity(Options* o, unsigned var_id, float activity) {
     if (o->reinforcement_learning && activity > 0.5) {
@@ -116,13 +146,14 @@ char* c2_rl_readline() {
 }
 
 int c2_rl_get_decision() {
+    double seconds_since_last_decision = 0.0;
+    if (statistics_timer_is_running(rl->stats)) {
+        seconds_since_last_decision = statistics_stop_and_record_timer(rl->stats);
+        float_vector_add(rl->runtimes, (float) seconds_since_last_decision);
+    }
+    
     fflush(stdout); // flush stdout to make sure listening processes get the full state before printing a decision
     char *s = c2_rl_readline();
-    
-    if (s[0] == 'r') {
-        
-        return 0;
-    }
     
     char *end = NULL;
     long ret = LONG_MIN;
@@ -133,11 +164,26 @@ int c2_rl_get_decision() {
     assert(ret != LONG_MIN);
     assert(ret <= INT_MAX);
     assert(ret >= INT_MIN);
+    
+    if (ret != 0) {
+        statistics_start_timer(rl->stats);
+        float_vector_add(rl->rewards, 0.0);
+    }
+    
     return (int) ret;
+}
+
+void c2_rl_print_rewards() {
+    LOG_PRINTF("rewards");
+    for (unsigned i = 0; i < float_vector_count(rl->rewards); i++) {
+        LOG_PRINTF(" %f", float_vector_get(rl->rewards, i));
+    }
+    LOG_PRINTF("\n");
 }
 
 cadet_res c2_rl_run_c2(Options* o) {
     while (true) {
+        rl_init();
         char *file_name = c2_rl_readline();
         
         // scan for end, should be terminated with newline
@@ -153,7 +199,20 @@ cadet_res c2_rl_run_c2(Options* o) {
         
         LOG_PRINTF("\n");
         FILE* file = open_possibly_zipped_file(file_name);
-        c2_solve_qdimacs(file,o);
+        cadet_res res = c2_solve_qdimacs(file,o);
+        
+        if (res == CADET_RESULT_SAT || res == CADET_RESULT_UNSAT) {
+            rl_add_reward(float_vector_count(rl->rewards)  - 1, 1);
+        }
+        
+        assert(float_vector_count(rl->rewards) == float_vector_count(rl->runtimes));
+        for (unsigned i = 0; i < float_vector_count(rl->rewards); i++) {
+            float seconds_since_last_decision = float_vector_get(rl->runtimes, i);
+            rl_add_reward(i, - seconds_since_last_decision * (float) 0.1);
+        }
+        
+        c2_rl_print_rewards();
+        rl_free();
     }
     return CADET_RESULT_UNKNOWN;
 }

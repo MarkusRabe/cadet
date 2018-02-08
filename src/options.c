@@ -111,6 +111,10 @@ char* options_get_help() {
     "\t--sat_by_qbf\t\tUse QBF engine also for propositional problems\n\t\t\t\t(default %d)\n"
     "\t--miniscoping \t\tEnables miniscoping (default %d)\n"
     "\t--minimize_conflicts \tConflict minimization (default %d) \n"
+    "\t--pure_literals\t\tUse pure literal detection (default %d)\n"
+//    "\t--enhanced_pure_literals\tUse enhanced pure literal detection (default %d)\n"
+//    "\t--qbce\t\t\tBlocked clause elimination (default %d)\n"
+//    "\t--pg\t\t\tPlaisted Greenbaum completion (default %d).\n"
     "\n  Output options\n"
     "\t--qdimacs_out\t\tOutput compliant with QDIMACS standard\n"
     "\t--miniscoping_info \tPrint additional info on miniscoping (default %d)\n"
@@ -132,6 +136,10 @@ char* options_get_help() {
     o->use_qbf_engine_also_for_propositional_problems,
     o->miniscoping,
     o->minimize_conflicts,
+    o->pure_literals,
+//    o->enhanced_pure_literals,
+//    o->qbce,
+//    o->plaisted_greenbaum_completion,
     o->print_detailed_miniscoping_stats
     );
     

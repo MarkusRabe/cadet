@@ -133,6 +133,7 @@ char *buffer = NULL;
 size_t bufsize = 32;
 
 char* c2_rl_readline() {
+    fflush(stdout); // flush stdout to make sure listening processes get the full state before printing a decision
     if (buffer == NULL) {
         buffer = (char *)malloc(bufsize * sizeof(char));
         if( buffer == NULL) {
@@ -152,7 +153,6 @@ int c2_rl_get_decision() {
         float_vector_add(rl->runtimes, (float) seconds_since_last_decision);
     }
     
-    fflush(stdout); // flush stdout to make sure listening processes get the full state before printing a decision
     char *s = c2_rl_readline();
     
     char *end = NULL;

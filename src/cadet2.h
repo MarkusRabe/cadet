@@ -58,7 +58,7 @@ struct C2_Magic_Values {
     float conflict_clause_weight;
     float long_clause_death_rate_on_restart_per_literal;
     float decision_var_activity_modifier;
-    float implication_graph_variable_activity;
+    float activity_bump_value;
     float decay_rate;
     size_t major_restart_frequency;
     size_t replenish_frequency;
@@ -86,6 +86,7 @@ struct C2 {
     c2_state state;
     cadet_res result;
     size_t restarts;
+    size_t major_restarts;
     size_t restarts_since_last_major;
     unsigned next_restart;
     size_t next_major_restart;

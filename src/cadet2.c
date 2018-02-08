@@ -20,6 +20,8 @@
 #include "c2_cegar.h"
 #include "satsolver.h"
 #include "mersenne_twister.h"
+#include "c2_traces.h"
+#include "c2_rl.h"
 
 #include <math.h>
 #include <stdint.h>
@@ -50,6 +52,7 @@ C2* c2_init_qcnf(QCNF* qcnf, Options* options) {
     c2->state = C2_READY;
     c2->result = CADET_RESULT_UNKNOWN;
     c2->restarts = 0;
+    c2->major_restarts = 0;
     c2->restarts_since_last_major = 0;
     c2->restart_base_decision_lvl = 0;
     c2->activity_factor = (float) 1.0;
@@ -92,8 +95,8 @@ C2* c2_init_qcnf(QCNF* qcnf, Options* options) {
     c2->magic.conflict_var_weight = 2; // [0..5]
     c2->magic.conflict_clause_weight = 1; // [0..3]
     c2->magic.decision_var_activity_modifier = (float) 0.8; // [-3.0..2.0]
-    c2->magic.decay_rate = (float) 0.9;
-    c2->magic.implication_graph_variable_activity = (float) 0.5;
+    c2->magic.decay_rate = (float) 0.99;
+    c2->magic.activity_bump_value = (float) 1;
     c2->magic.major_restart_frequency = 15;
     c2->magic.replenish_frequency = 100;
     c2->next_major_restart = c2->magic.major_restart_frequency;
@@ -231,6 +234,7 @@ Var* c2_pick_most_active_notdeterministic_variable(C2* c2) {
             if (v->var_id != 0) {
                 assert(v->var_id == i);
                 float v_activity = c2_get_activity(c2, v->var_id);
+                c2_rl_print_activity(c2->options, v->var_id, v_activity);
                 assert(v_activity > -0.001);
                 if (decision_var_activity < v_activity) {
                     decision_var_activity = v_activity;
@@ -239,6 +243,7 @@ Var* c2_pick_most_active_notdeterministic_variable(C2* c2) {
             }
         }
     }
+    V3("Maximal activity is %f for var %u\n", decision_var_activity, decision_var==NULL?0:decision_var->var_id);
     return decision_var;
 }
 
@@ -491,6 +496,8 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                                 return c2->result;
                             case CADET_RESULT_UNKNOWN:
                                 break;
+                            default:
+                                abortif(true, "Unexpected value seen for cadet_res");
                         }
                         
                         if (c2->skolem->cegar->recent_average_cube_size >= c2->skolem->cegar->magic.cegar_effectiveness_threshold
@@ -513,6 +520,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                     examples_redo(c2->examples, c2->skolem, new_example);
                 }
                 
+                c2_rl_learnt_clause(c2->options, learnt_clause);
                 c2_log_clause(c2, learnt_clause);
                 c2_new_clause(c2, learnt_clause);
 
@@ -566,10 +574,29 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
             } // Else continue picking a decision variable. Avoids runnint into a loop where case distinction is tried but nothing happens.
 
             assert(!skolem_can_propagate(c2->skolem));
-
+            
             // regular decision
-            Var* decision_var = c2_pick_most_active_notdeterministic_variable(c2);
-
+            Var* decision_var = NULL;
+            int phase = 1;
+            
+            // scan for decision variable also done in RL mode, to detect SAT
+            decision_var = c2_pick_most_active_notdeterministic_variable(c2);
+            
+            if (decision_var != NULL && c2->options->reinforcement_learning) {
+                c2_rl_print_state(c2, remaining_conflicts);
+                int d = c2_rl_get_decision();
+                if (d == 0) {
+                    c2->result = CADET_RESULT_ABORT_RL;
+                    return c2->result;
+                } else {
+                    phase = d>0 ? 1 : -1;
+                    decision_var = var_vector_get(c2->qcnf->vars, lit_to_var(d));
+                    abortif(decision_var->is_universal, "Cannot select universal variable as decision var");
+                    abortif(skolem_is_deterministic(c2->skolem, decision_var->var_id), "Cannot select deterministic variable as decision var.");
+                    c2_rl_print_decision(c2->options, decision_var->var_id, phase);
+                }
+            }
+            
             if (decision_var == NULL) { // no variable could be found
                 if (int_vector_count(c2->skolem->potentially_conflicted_variables) == 0) {
                     assert(c2->result == CADET_RESULT_UNKNOWN);
@@ -577,13 +604,13 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                     return c2->result;
                 } else {
                     skolem_global_conflict_check(c2->skolem, false);
+                    continue;
                 }
 
             } else { // take a decision
                 assert(!skolem_is_conflicted(c2->skolem));
-
-                int phase = 1;
-                if (c2->restarts >= c2->magic.num_restarts_before_Jeroslow_Wang) {
+                
+                if (c2->restarts >= c2->magic.num_restarts_before_Jeroslow_Wang && !c2->options->reinforcement_learning) {
 
                     float pos_JW_weight = c2_Jeroslow_Wang_log_weight(&decision_var->pos_occs);
                     float neg_JW_weight = c2_Jeroslow_Wang_log_weight(&decision_var->neg_occs);
@@ -600,7 +627,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
 
                 c2->statistics.decisions += 1;
                 c2->decisions_since_last_conflict += 1;
-
+                
                 // examples_decision(c2->examples, value * (Lit) decision_var_id);
                 examples_decision_consistent_with_skolem(c2->examples, c2->skolem, phase * (Lit) decision_var->var_id);
                 if (examples_is_conflicted(c2->examples)) {
@@ -614,7 +641,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
 
         }
     }
-
+    
     abortif(c2->result != CADET_RESULT_UNKNOWN, "Expected going into restart but result is not unknown.");
     c2_backtrack_to_decision_lvl(c2, c2->restart_base_decision_lvl);
     return c2->result; // results in a restart
@@ -693,15 +720,16 @@ void c2_restart_heuristics(C2* c2) {
     c2_rescale_activity_values(c2);
     
     if (c2->next_major_restart == c2->restarts_since_last_major) {
-        V1("\nMajor restart\n");
-        
+
+        c2->major_restarts += 1;
         c2->restarts_since_last_major = 0;
         c2->next_restart = c2->magic.initial_restart; // resets restart frequency
         
         c2_delete_learnt_clauses_greater_than(c2, c2->magic.keeping_clauses_threshold);
         c2->magic.keeping_clauses_threshold += 1;
         
-        V2("Resetting all variable activities to 0\n");
+        V1("Major restart no %zu. Resetting all activity values to 0 and some random ones to 1.\n", c2->major_restarts);
+        
         for (unsigned i = 0; i < var_vector_count(c2->qcnf->vars); i++) {
             if (qcnf_var_exists(c2->qcnf, i)) {
                 c2_set_activity(c2, i, 0.0f);
@@ -827,7 +855,7 @@ cadet_res c2_sat(C2* c2) {
  */
 cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
     QCNF* qcnf = create_qcnf_from_file(f, options);
-    fclose(f);
+    if (f != stdin) {fclose(f);}
     abortif(!qcnf,"Failed to create QCNF.");
 
     if (options->print_qdimacs) {
@@ -870,6 +898,8 @@ cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
                 printf("s cnf 0\n");
             }
             break;
+        case CADET_RESULT_ABORT_RL:
+            break; // do nothing, just output result, caller has to handle this case
     }
 
     if (c2->result == CADET_RESULT_SAT && c2->options->certify_SAT) {
@@ -910,7 +940,9 @@ cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
         }
     }
 
-    return c2->result;
+    cadet_res res = c2->result;
+    c2_free(c2);
+    return res;
 }
 
 void c2_push(C2* c2) {

@@ -82,11 +82,9 @@ struct Skolem {
     Options* options;
     QCNF* qcnf;
     
-    
     // Dependent objects
     SATSolver* skolem;
     Cegar* cegar;
-    
     
     // Core Skolem state and data structures
     unsigned decision_lvl;
@@ -157,6 +155,7 @@ int skolem_get_constant_value(Skolem*, Lit);
 bool skolem_is_initially_deterministic(Skolem* s, unsigned var_id);
 bool skolem_lit_satisfied(Skolem* s, Lit lit);
 bool skolem_clause_satisfied(Skolem* s, Clause* c);
+double skolem_size_of_active_set(Skolem* s);
 
 bool skolem_can_propagate(Skolem*);
 void skolem_propagate(Skolem*);

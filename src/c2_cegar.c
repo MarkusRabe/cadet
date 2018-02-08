@@ -204,7 +204,7 @@ bool cegar_var_needs_to_be_set(Cegar* cegar, unsigned var_id) {
 }
 
 void cegar_free(Cegar* c) {
-    satsolver_free(c->exists_solver);
+    if (c->exists_solver) {satsolver_free(c->exists_solver);}
     if (c->interface_vars) {int_vector_free(c->interface_vars);}
     if (c->interface_activities) {float_vector_free(c->interface_activities);}
     if (c->original_satlits) {map_free(c->original_satlits);}

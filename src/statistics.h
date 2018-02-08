@@ -29,7 +29,8 @@ void statistic_add_value(Stats* s, double v);
 void statistics_print(Stats* s);
 // For using it as a timer:
 void statistics_start_timer(Stats* s);
-void statistics_stop_and_record_timer(Stats* s);
+double statistics_stop_and_record_timer(Stats* s);
+bool statistics_timer_is_running(Stats* s);
 void statistics_free(Stats*);
 
 #endif /* defined(__caqe__statistics__) */

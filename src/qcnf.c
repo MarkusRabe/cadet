@@ -101,7 +101,6 @@ vector* qcnf_get_occs_of_lit(QCNF* qcnf, Lit lit) {
 // DOMAINS
 
 unsigned qcnf_scope_init(QCNF* qcnf, int_vector* vars) {
-    assert(qcnf_is_DQBF(qcnf));
     assert(int_vector_is_strictly_sorted(vars));
     
     Scope* scope = malloc(sizeof(Scope));
@@ -234,7 +233,7 @@ Var* qcnf_new_var(QCNF* qcnf, bool is_universal, unsigned scope_id, unsigned var
     abortif(var_id == 0, "Variables must be greater than 0");
     abortif(qcnf_var_exists(qcnf, var_id), "Tried to create variable %u, but variable with this ID exists already.", var_id);
     abortif(scope_id > INT16_MAX, "Too many quantifiers, only %d quantifier levels supported.", INT16_MAX);
-    abortif(scope_id == 0 && is_universal, "Variables in scope 0 cannot be universal");
+    abortif(scope_id == 0 && is_universal, "Variables in scope 0 cannot be universal. Scope 0 is reserved for constants.");
     if (scope_id > 10000) {
         LOG_WARNING("Huge scope ID detected (>10000).");
     }
@@ -243,10 +242,14 @@ Var* qcnf_new_var(QCNF* qcnf, bool is_universal, unsigned scope_id, unsigned var
     }
     abortif(qcnf_is_DQBF(qcnf) && scope_id >= vector_count(qcnf->scopes), "Scope IDs must be initialized before usage for DQBF.");
     
-    V4("Introducing new variable %u to qlvl %u, universal: %d\n",var_id, scope_id, is_universal);
+    V4("Introducing new variable %u to qlvl %u, universal: %d\n", var_id, scope_id, is_universal);
     
     while (scope_id >= vector_count(qcnf->scopes)) {
-        vector_add(qcnf->scopes, NULL);
+        qcnf_scope_init(qcnf, int_vector_init());
+    }
+    if (is_universal) {
+        Scope* scope = vector_get(qcnf->scopes, scope_id);
+        int_vector_add(scope->vars, (int) var_id);
     }
     
     // update the qcnf state // TODO: this is undoable!
@@ -475,9 +478,7 @@ void qcnf_free(QCNF* qcnf) {
         qcnf_free_clause(vector_get(qcnf->clauses, i));
     }
     vector_free(qcnf->clauses);
-    
     stack_free(qcnf->stack);
-    
     var_vector_free(qcnf->vars); // also deallocates the variables
     
     for (unsigned i = 0 ; i < vector_count(qcnf->scopes); i++) {

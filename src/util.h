@@ -2,14 +2,16 @@
 #define UTIL_H
 
 #include <stdbool.h>
+#include <stdio.h>
 
 #define SEED 0
 #define VERSION "v2.3"
 
 typedef enum {
-    CADET_RESULT_SAT     = 10,
-    CADET_RESULT_UNSAT   = 20,
-    CADET_RESULT_UNKNOWN = 30
+    CADET_RESULT_SAT      = 10,
+    CADET_RESULT_UNSAT    = 20,
+    CADET_RESULT_UNKNOWN  = 30,
+    CADET_RESULT_ABORT_RL = 40
 } cadet_res;
 
 // initializes the array 'permutation' wit h a random permutation of the indices of the item_array, which is assumed to beterminated by a 0 entry. Returns the size of item_array (i.e. the incdex of the 0 entry). 
@@ -27,5 +29,6 @@ int compare_integers_abs(const void * a, const void * b);
 double get_seconds();
 
 const char* get_filename_ext(const char* filename);
+FILE* open_possibly_zipped_file(const char* file_name);
 
 #endif

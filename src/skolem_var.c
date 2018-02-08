@@ -9,7 +9,8 @@
 #include "skolem_var.h"
 #include "skolem.h"
 #include "log.h"
-
+#include "c2_traces.h"
+#include "c2_rl.h"
 
 struct DEPENDENCECY_UPDATE;
 typedef struct DEPENDENCECY_UPDATE DEPENDENCECY_UPDATE;
@@ -133,6 +134,7 @@ void skolem_update_decision_lvl(Skolem* s, unsigned var_id, unsigned dlvl) {
     skolem_enlarge_skolem_var_vector(s, var_id);
     skolem_var* sv = skolem_var_vector_get(s->infos, var_id);
     assert(sv->decision_lvl == 0); // we currently want decision levels to set just once, because it also serves as the information when the variable first became deterministic
+    
     if (dlvl != sv->decision_lvl) {
         V4("Setting decision lvl %d for var %u\n", dlvl, var_id);
         union skolem_undo_union suu;
@@ -148,6 +150,8 @@ void skolem_undo_decision_lvl(Skolem* s, void* data) {
     suu.ptr = data;
     skolem_var* sv = skolem_var_vector_get(s->infos, suu.sus.var_id);
     sv->decision_lvl = (unsigned) suu.sus.val;
+    
+    c2_rl_update_D(s->options, suu.sus.var_id, false);
 }
 
 void skolem_update_pos_lit(Skolem* s, unsigned var_id, int pos_lit) {
@@ -215,6 +219,7 @@ void skolem_update_deterministic(Skolem* s, unsigned var_id, unsigned determinis
     skolem_var* sv = skolem_var_vector_get(s->infos, var_id);
     if (deterministic && ! sv->deterministic) {
         s->deterministic_variables += 1;
+        c2_rl_update_D(s->options, var_id, true);
     }
     if (deterministic != sv->deterministic) {
         V4("Setting deterministic %d for var %u\n", deterministic, var_id);

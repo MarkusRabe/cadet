@@ -13,6 +13,7 @@
 #include "util.h"
 #include "c2_traces.h"
 #include "c2_cegar.h"
+#include "c2_rl.h"
 
 #include <math.h>
 #include <assert.h>
@@ -140,6 +141,21 @@ void skolem_new_clause(Skolem* s, Clause* c) {
     if (c->size == 1) {
         worklist_push(s->clauses_to_check, c);
     }
+}
+
+double skolem_size_of_active_set(Skolem* s) {
+    unsigned total = 0;
+    unsigned not_satisfied = 0;
+    for (unsigned i = 0; i < vector_count(s->qcnf->clauses); i++) {
+        Clause* c = vector_get(s->qcnf->clauses, i);
+        if (c) {
+            total += 1;
+            if (skolem_clause_satisfied(s, c)) {
+                not_satisfied += 1;
+            }
+        }
+    }
+    return (double) not_satisfied / (double) total;
 }
 
 bool skolem_is_initially_deterministic(Skolem* s, unsigned var_id) {
@@ -562,7 +578,6 @@ void skolem_propagate_determinicity(Skolem* s, unsigned var_id) {
     if (skolem_check_for_local_determinicity(s, v)) {
         V3("Var %u is deterministic.\n", var_id);
         s->statistics.propagations += 1;
-        
         skolem_update_decision_lvl(s, var_id, s->decision_lvl);
         
         if ( ! skolem_is_locally_conflicted(s, var_id)) {
@@ -622,9 +637,9 @@ void skolem_propagate_pure_variable(Skolem* s, unsigned var_id) {
     }
     if (pure_polarity != 0) {
         V3("Detected var %u as pure: %d\n", var_id, pure_polarity);
+        skolem_update_decision_lvl(s, var_id, s->decision_lvl);
         s->statistics.propagations += 1;
         s->statistics.pure_vars += 1;
-        skolem_update_decision_lvl(s, var_id, s->decision_lvl);
         if ( ! skolem_is_locally_conflicted(s, var_id)) {
             skolem_fix_lit_for_unique_antecedents(s, pure_polarity * (Lit) var_id, true, FUAM_ONLY_LEGALS);
             skolem_var si = skolem_get_info(s, var_id);
@@ -1016,6 +1031,7 @@ void skolem_undo(void* parent, char type, void* obj) {
             si = skolem_var_vector_get(s->infos, suu.sus.var_id);
             if (si->deterministic && (unsigned) suu.sus.val == 0) {
                 s->deterministic_variables -= 1;
+                c2_rl_update_D(s->options, suu.sus.var_id, false);
             }
             si->deterministic = (unsigned) suu.sus.val;
             break;
@@ -1343,7 +1359,6 @@ void skolem_propagate_constants_over_clause(Skolem* s, Clause* c) {
             goto cleanup;
         }
         
-//         V4("Propagating variable %d.\n",unassigned_lit);
         s->statistics.propagations += 1;
         s->statistics.explicit_propagations += 1;
         

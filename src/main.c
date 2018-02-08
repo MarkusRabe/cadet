@@ -6,6 +6,7 @@
 #include "util.h"
 #include "cadet2.h"
 #include "heap.h"
+#include "c2_rl.h"
 //#include "qipasir.h"
 //#include "qipasir_parser.h"
 
@@ -15,41 +16,7 @@
 #include <string.h>
 
 void print_usage(const char* name) {
-    const char* options_string =
-                                "  General options:\n"
-                                    "\t-v [0-4]\t\tSet the verbosity [default 0]\n"
-                                    "\t-s [num]\t\tSet the seed for the random number generator\n"
-                                    "\t--print \t\tPrint the qdimacs file as read.\n"
-                                    "\t--no_colors \t\tSuppress colors in output.\n"
-                                    "\t-c [file]\t\tWrite certificate to specified file. File ending defines Aiger formag aag/aig.\n"
-                                    "\t--qbfcert\t\tWrite certificate in qbfcert-readable format. Only compatible with aag file ending.\n"
-                                    "\t--qdimacs_out\t\tOutput compliant with QDIMACS standard\n"
-                                    "\n"
-                                "  Options for the QBF engine\n"
-                                    "\t--debugging \t\tEasy debugging configuration (default off)\n"
-                                    "\t--cegar\t\t\tUse CEGAR strategy in addition to incremental determinization (default off).\n"
-                                    "\t--cegar_only\t\tUse CEGAR strategy exclusively.\n"
-                                    "\t--case_splits \t\tCase distinctions (default off) \n"
-                                    "\t--functional-synthesis\tFunctional synthesis. I.e. compute skolem functions for UNSAT instances.\n"
-                                    "\t--pg\t\t\tPlaisted Greenbaum completion (default off).\n"
-                                    "\t--sat_by_qbf\t\tUse QBF engine also for propositional problems. Uses SAT solver by default.\n"
-                                    "\t--miniscoping \t\tEnables miniscoping \n"
-                                    "\t--miniscoping_info \tPrint additional info on miniscoping (default off)\n"
-                                    "\t--minimize_conflicts \tConflict minimization (default off)\n"
-                                    "\t--pure_literals\t\tUse pure literal detection (default on)\n"
-                                    "\t--enhanced_pure_literals\tUse enhanced pure literal detection (default off)\n"
-                                    "\t--qbce\t\t\tBlocked clause elimination (default off)\n"
-                                "  Visualization options\n"
-                                    "\t--trace_learnt_clauses\tPrint (colored) learnt clauses; independent of verbosity.\n"
-                                    "\t--trace_for_visualization\tPrint trace of solver states at every conflict point.\n"
-                                    "\t--trace_for_profiling\tPrint trace of learnt clauses with timestamps and SAT solver time consumption.\n"
-                                    "\t--print_variable_names\tReplace variable numbers by names where available\n"
-                                "  Aiger options\n"
-                                    "\t--aiger_negated\t\tNegate encoding of aiger files. Can be combined with --print.\n"
-                                    "\t--aiger_controllable_inputs [string] Set prefix of controllable inputs of AIGER files (default 'pi_')\n"
-                                    "\n"
-                                    ;
-  printf("Usage: %s [options] file\n\n  The file can be in QDIMACS or AIGER format. Files can be compressed with gzip (ending in .gz or .gzip). \n\n%s\n", name, options_string);
+    printf("Usage: %s [options] file\n\n  The file can be in QDIMACS or AIGER format. Files can be compressed with gzip\n  (ending in .gz or .gzip). \n\n%s\n", name, options_get_help());
 }
 
 int main(int argc, const char* argv[]) {
@@ -57,7 +24,6 @@ int main(int argc, const char* argv[]) {
     // default
     Options* options = default_options();
     const char *file_name = NULL;
-    long verbosity = 0;
     long seed = SEED;
     FILE* file;
     
@@ -127,29 +93,8 @@ int main(int argc, const char* argv[]) {
                         print_usage(argv[0]);
                         return 1;
                     }
-                    verbosity = strtol(argv[i+1], NULL, 0);
-                    switch (verbosity) {
-                        case 0:
-                            debug_verbosity = VERBOSITY_NONE;
-                            break;
-                        case 1:
-                            debug_verbosity = VERBOSITY_LOW;
-                            break;
-                        case 2:
-                            debug_verbosity = VERBOSITY_MEDIUM;
-                            break;
-                        case 3:
-                            debug_verbosity = VERBOSITY_HIGH;
-                            break;
-                        case 4:
-                            debug_verbosity = VERBOSITY_ALL;
-                            break;
-                            
-                        default:
-                            printf("Error: illegal verbosity number %ld\n", verbosity);
-                            print_usage(argv[0]);
-                            return 1;
-                    }
+                    debug_verbosity = (int) strtol(argv[i+1], NULL, 0);
+                    abortif(debug_verbosity < 0 || debug_verbosity > 4, "Verbosity must be in [0,4]. Argument was: %s", argv[i+1]);
                     i++;
                     
                     break;
@@ -189,7 +134,7 @@ int main(int argc, const char* argv[]) {
                         options->easy_debugging_mode_c2 = true;
                     } else if (strcmp(argv[i], "--aiger_controllable_inputs") == 0) {
                         if (i + 1 >= argc) {
-                            LOG_ERROR("Missing string for argument --aiger_controllable_inputs\n");
+                            LOG_ERROR("Missing string for argument --aiger_ci\n");
                             print_usage(argv[0]);
                             return 1;
                         }
@@ -211,9 +156,12 @@ int main(int argc, const char* argv[]) {
                         options->print_detailed_miniscoping_stats = ! options->print_detailed_miniscoping_stats;
                     } else if (strcmp(argv[i], "--trace_learnt_clauses") == 0) {
                         options->trace_learnt_clauses = ! options->trace_learnt_clauses;
-                    } else if (strcmp(argv[i], "--trace_for_visualization") == 0) {
+                    } else if (strcmp(argv[i], "--trace_for_vis") == 0) {
                         options->trace_for_visualization = true;
                         options->trace_learnt_clauses = true;
+                        log_colors = false;
+                    } else if (strcmp(argv[i], "--rl") == 0) {
+                        options->reinforcement_learning = true;
                         log_colors = false;
                     } else if (strcmp(argv[i], "--trace_for_profiling") == 0) {
                         options->trace_for_profiling = true;
@@ -270,35 +218,7 @@ int main(int argc, const char* argv[]) {
         file = stdin;
     } else {
         V0("Processing file \"%s\".\n", file_name);
-        const char* ext = get_filename_ext(file_name);
-        size_t extlen = strlen(ext);
-        V4("Detected file name extension %s\n", ext);
-        if ( (extlen == 2 && strcmp("gz", ext) == 0) || (extlen == 4 && strcmp("gzip", ext) == 0) ) {
-#ifdef __APPLE__
-            char* unzip_tool_name = "gzcat ";
-#endif
-#ifdef __linux__
-            char* unzip_tool_name = "zcat ";
-#endif
-#ifdef _WIN32
-            abort(); // please use a proper operating system
-#endif
-            
-            char* cmd = malloc(strlen(unzip_tool_name) + strlen(file_name) + 5);
-            sprintf(cmd, "%s '%s'", unzip_tool_name, file_name);
-            file = popen(cmd, "r");
-            free(cmd);
-            if (!file) {
-                LOG_ERROR("Cannot open gzipped file with zcat via popen. File may not exist.\n");
-                return 1;
-            }
-        } else {
-            file = fopen(file_name, "r");
-            if (!file) {
-                LOG_ERROR("Cannot open file \"%s\", does not exist?\n", file_name);
-                return 1;
-            }
-        }
+        file = open_possibly_zipped_file(file_name);
     }
     
     V0("CADET %s\n", VERSION);
@@ -306,6 +226,10 @@ int main(int argc, const char* argv[]) {
 //    void* solver = create_solver_from_qdimacs(file);
 //    int res = qipasir_solve(solver);
 //    return res == 0 ? 30 : res; // unknown result according to ipasir is not the same as unknown result otherwise.
-
-    return c2_solve_qdimacs(file,options);
+    
+    if (!options->reinforcement_learning) {
+        return c2_solve_qdimacs(file,options);
+    } else {
+        return c2_rl_run_c2(options);
+    }
 }

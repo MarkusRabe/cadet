@@ -40,8 +40,6 @@ int debug_verbosity;
 bool log_qdimacs_compliant;
 bool log_colors;
 bool log_silent;
-//asdfbool print_full_variable_names; // whenever available
-
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"

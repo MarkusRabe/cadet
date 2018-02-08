@@ -14,12 +14,6 @@
 
 #include <math.h>
 
-void c2_case_split_backtracking_heuristics(C2* c2) {
-    c2->next_restart = c2->magic.initial_restart;
-    c2->next_major_restart = c2->magic.major_restart_frequency;
-    c2->restarts_since_last_major = 0;
-}
-
 void c2_successful_case_split_heuristics(C2* c2, int_vector* solved_cube) {
     if (c2->case_split_depth < 20) { // prevent tinitiny increments, NaN-hell, etc
         float activity_bump = (float) ((double) 1.0 / pow(2.0, (double) c2->case_split_depth));
@@ -47,7 +41,8 @@ void c2_backtrack_case_split(C2* c2) {
     assert(int_vector_count(c2->case_split_stack) == 0);
     
     // Check learnt clauses for unique consequences ... the last backtracking may have removed the unique consequences
-    // Can probably be removed once we can add items to deeper levels of the undo-list
+    // Can probably be removed once we can add items to deeper levels of the undo-list;
+    // TODO: this is terrible code
     for (unsigned i = vector_count(c2->qcnf->clauses); i > 0; i--) {
         Clause* c = vector_get(c2->qcnf->clauses, i-1);
         if (c) {
@@ -63,7 +58,9 @@ void c2_backtrack_case_split(C2* c2) {
     skolem_propagate(c2->skolem);
     abortif(skolem_is_conflicted(c2->skolem), "Conflicted after backtracking case split.");
     
-    c2_case_split_backtracking_heuristics(c2);
+    c2->next_restart = c2->magic.initial_restart;
+    c2->next_major_restart = c2->magic.major_restart_frequency;
+    c2->restarts_since_last_major = 0;
 }
 
 // Returns the number of propagations for this assumption
@@ -86,7 +83,7 @@ unsigned c2_case_split_probe(C2* c2, Lit lit) {
         c2->skolem->mode = SKOLEM_MODE_STANDARD;
         
         if (skolem_is_conflicted(c2->skolem)) {
-            V1("Skolem conflict with assumed constant %u: %d\n", lit, c2->skolem->conflict_var_id);
+            V1("Skolem conflict with assumed constant %d: %d\n", lit, c2->skolem->conflict_var_id);
             c2->statistics.failed_literals_conflicts++;
             case_split_decision_metric = UINT_MAX; //ensure the variable is chosen
         } else {
@@ -105,7 +102,7 @@ Lit c2_case_split_pick_literal(C2* c2) {
     float max_total = 0.0;
     float cost_factor_of_max = 0.0;
     Lit lit = 0;
-    for (unsigned i = 0; i < int_vector_count(c2->skolem->cegar->interface_vars); i++) {
+    for (unsigned i = 1; i < int_vector_count(c2->skolem->cegar->interface_vars); i++) {
         unsigned var_id = (unsigned) int_vector_get(c2->skolem->cegar->interface_vars, i);
         assert(int_vector_get(c2->skolem->cegar->interface_vars, i) > 0);
 //    for (unsigned i = 1; i < var_vector_count(c2->qcnf->vars); i++) {
@@ -134,7 +131,7 @@ Lit c2_case_split_pick_literal(C2* c2) {
                 ((float) 1.0
                     + (float) c2_get_activity(c2, v->var_id))
                 * cost_factor;
-            float combined_quality = combined_factor * (float) (propagations_pos * propagations_neg + propagations_pos + propagations_neg);
+            float combined_quality = combined_factor * (float) (propagations_pos * propagations_neg + propagations_pos + propagations_neg + 1);
             if (combined_quality > max_total) {
                 lit = (propagations_pos > propagations_neg ? 1 : - 1) * (Lit) v->var_id;
                 if (genrand_int31() % 30 == 0) {
@@ -244,11 +241,12 @@ bool c2_case_split(C2* c2) {
     
     assert(!skolem_can_propagate(c2->skolem));
 
+    c2_case_splits_reset_countdown(c2);
+    
     //    Lit most_notorious_literal = c2_pick_most_notorious_literal(c2);
     Lit most_notorious_literal = c2_case_split_pick_literal(c2);
     if (most_notorious_literal != 0) {
         c2_case_splits_make_assumption(c2, most_notorious_literal);
-        c2_case_splits_reset_countdown(c2);
         return true;
     } else {
         V1("Case split not successful; no literal available for case split.\n");

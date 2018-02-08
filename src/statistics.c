@@ -34,13 +34,18 @@ void statistics_start_timer(Stats* s) {
     s->clock_is_running = true;
 }
 
-void statistics_stop_and_record_timer(Stats* s) {
+double statistics_stop_and_record_timer(Stats* s) {
     if (! s->clock_is_running) {
-        return;
+        return 0.0;
     }
     double diff = get_seconds() - s->time_stamp;
     statistic_add_value(s, diff);
     s->clock_is_running = false;
+    return diff;
+}
+
+bool statistics_timer_is_running(Stats* s) {
+    return s->clock_is_running;
 }
 
 void statistic_add_value(Stats* s, double v) {

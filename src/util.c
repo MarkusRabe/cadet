@@ -1,5 +1,6 @@
 
 #include "util.h"
+#include "log.h"
 
 #include <stdlib.h>
 #include <sys/time.h>
@@ -30,12 +31,6 @@ double get_seconds() {
     return (double) (tv.tv_usec) / 1000000 + (double) (tv.tv_sec);
 }
 
-const char* get_filename_ext(const char* filename) {
-    const char* dot = strrchr(filename, '.');
-    if(!dot || dot == filename) return "";
-    return dot + 1;
-}
-
 int hash6432shift(void* k) {
     assert(sizeof(unsigned long long) == 8);
     assert(sizeof(void*) == 8);
@@ -58,4 +53,38 @@ int hash32shiftmult(int key) {
     key = key * c2;
     key = key ^ (key >> 15);
     return key;
+}
+
+const char* get_filename_ext(const char* filename) {
+    const char* dot = strrchr(filename, '.');
+    if(!dot || dot == filename) return "";
+    return dot + 1;
+}
+
+FILE* open_possibly_zipped_file(const char* file_name) {
+    FILE* file = NULL;
+    const char* ext = get_filename_ext(file_name);
+    size_t extlen = strlen(ext);
+    V4("Detected file name extension %s\n", ext);
+    if ( (extlen == 2 && strcmp("gz", ext) == 0) || (extlen == 4 && strcmp("gzip", ext) == 0) ) {
+#ifdef __APPLE__
+        char* unzip_tool_name = "gzcat ";
+#endif
+#ifdef __linux__
+        char* unzip_tool_name = "zcat ";
+#endif
+#ifdef _WIN32
+        abort(); // please use a proper operating system
+#endif
+        
+        char* cmd = malloc(strlen(unzip_tool_name) + strlen(file_name) + 5);
+        sprintf(cmd, "%s '%s'", unzip_tool_name, file_name);
+        file = popen(cmd, "r");
+        free(cmd);
+        abortif(!file, "Cannot open gzipped file with zcat via popen. File may not exist.");
+    } else {
+        file = fopen(file_name, "r");
+        abortif(!file, "Cannot open file \"%s\", does not exist?", file_name);
+    }
+    return file;
 }

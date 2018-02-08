@@ -28,8 +28,8 @@ struct Skolem;
 typedef struct Skolem Skolem;
 struct skolem_var;
 typedef struct skolem_var skolem_var;
-struct Cegar;
-typedef struct Cegar Cegar;
+struct Domain;
+typedef struct Domain Domain;
 
 bool skolem_is_total(skolem_var*); // pos_lit == neg_lit && pos_lit != 0
 bool skolem_is_top(skolem_var*); // pos_lit == 0 && neg_lit == 0
@@ -84,7 +84,7 @@ struct Skolem {
     
     // Dependent objects
     SATSolver* skolem;
-    Cegar* cegar;
+    Domain* domain;
     
     // Core Skolem state and data structures
     unsigned decision_lvl;

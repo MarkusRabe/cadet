@@ -17,7 +17,7 @@
 #include "c2_traces.h"
 #include "c2_casesplits.h"
 #include "skolem_dependencies.h"
-#include "c2_cegar.h"
+#include "domain.h"
 #include "satsolver.h"
 #include "mersenne_twister.h"
 #include "c2_traces.h"
@@ -483,8 +483,8 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                 // Update CEGAR abstraction
                 if (c2->options->cegar && c2->skolem->state == SKOLEM_STATE_SKOLEM_CONFLICT) {
                     
-                    for (unsigned i = 0; i < c2->skolem->cegar->magic.max_cegar_iterations_per_learnt_clause; i++) {
-                        switch (cegar_build_abstraction_for_assignment(c2)) {
+                    for (unsigned i = 0; i < c2->skolem->domain->cegar_magic.max_cegar_iterations_per_learnt_clause; i++) {
+                        switch (domain_do_cegar_for_conflicting_assignment(c2)) {
                             case CADET_RESULT_SAT:
                                 abortif(true, "CEGAR abstraction cannot conclude CADET_RESULT_SAT here because it is still inside the global conflict check assumptions.");
                                 c2->state = C2_READY;
@@ -500,7 +500,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                                 abortif(true, "Unexpected value seen for cadet_res");
                         }
                         
-                        if (c2->skolem->cegar->recent_average_cube_size >= c2->skolem->cegar->magic.cegar_effectiveness_threshold
+                        if (c2->skolem->domain->cegar_stats.recent_average_cube_size >= c2->skolem->domain->cegar_magic.cegar_effectiveness_threshold
                             || satsolver_sat(c2->skolem->skolem) == SATSOLVER_UNSATISFIABLE) {
                             // simply continue; cannot conclude SAT, because check relied on assumptions in global conflict check
                              break;
@@ -547,7 +547,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                         int lit = learnt_clause->occs[i];
                         int_vector_set(cube, i, lit);
                     }
-                    cegar_new_cube(c2->skolem, cube);
+                    domain_new_cube(c2->skolem, cube);
                     continue;
                 }
 
@@ -681,28 +681,28 @@ void c2_replenish_skolem_satsolver(C2* c2) {
     c2_initial_propagation(c2); // (re-)establishes dlvl 0
     abortif(c2->state != C2_READY, "Conflicted after replenishing.");
     
-    cegar_update_interface(c2->skolem);
+    domain_update_interface(c2->skolem);
     
-    assert(vector_count(old_skolem->cegar->solved_cubes) == 0 || c2->options->cegar || c2->options->case_splits);
+    assert(vector_count(old_skolem->domain->solved_cubes) == 0 || c2->options->cegar || c2->options->case_splits);
     
     // Copy the cubes that we have solved already.
-    for (unsigned i = 0; i < vector_count(old_skolem->cegar->solved_cubes); i++) {
-        int_vector* cube = (int_vector*) vector_get(old_skolem->cegar->solved_cubes, i);
+    for (unsigned i = 0; i < vector_count(old_skolem->domain->solved_cubes); i++) {
+        int_vector* cube = (int_vector*) vector_get(old_skolem->domain->solved_cubes, i);
         int_vector* cube_copy = int_vector_copy(cube);
-        cegar_new_cube(c2->skolem, cube_copy);
+        domain_new_cube(c2->skolem, cube_copy);
     }
     
     // Replace the new interace activities by the old ones
-    float_vector_free(c2->skolem->cegar->interface_activities);
-    c2->skolem->cegar->interface_activities = old_skolem->cegar->interface_activities;
-    old_skolem->cegar->interface_activities = NULL;
+    float_vector_free(c2->skolem->domain->interface_activities);
+    c2->skolem->domain->interface_activities = old_skolem->domain->interface_activities;
+    old_skolem->domain->interface_activities = NULL;
     
     c2->skolem->statistics = old_skolem->statistics;
     
-    c2->skolem->cegar->successful_minimizations = old_skolem->cegar->successful_minimizations;
-    c2->skolem->cegar->additional_assignments_num = old_skolem->cegar->additional_assignments_num;
-    c2->skolem->cegar->successful_minimizations_by_additional_assignments = old_skolem->cegar->successful_minimizations;
-    c2->skolem->cegar->recent_average_cube_size = old_skolem->cegar->recent_average_cube_size;
+    c2->skolem->domain->cegar_stats.successful_minimizations = old_skolem->domain->cegar_stats.successful_minimizations;
+    c2->skolem->domain->cegar_stats.additional_assignments_num = old_skolem->domain->cegar_stats.additional_assignments_num;
+    c2->skolem->domain->cegar_stats.successful_minimizations_by_additional_assignments = old_skolem->domain->cegar_stats.successful_minimizations;
+    c2->skolem->domain->cegar_stats.recent_average_cube_size = old_skolem->domain->cegar_stats.recent_average_cube_size;
     
     skolem_free(old_skolem);
     
@@ -806,9 +806,9 @@ cadet_res c2_sat(C2* c2) {
         c2_analysis_determine_number_of_partitions(c2);
     }
     
-    cegar_update_interface(c2->skolem);
+    domain_update_interface(c2->skolem);
     if (c2->options->cegar_only) {
-        return cegar_solve_2QBF(c2, -1);
+        return domain_solve_2QBF_by_cegar(c2, -1);
     }
 
     while (c2->result == CADET_RESULT_UNKNOWN) { // This loop controls the restarts
@@ -845,6 +845,12 @@ cadet_res c2_sat(C2* c2) {
                 }
             }
         }
+        
+//        if (c2->statistics.conflicts > 1000) {
+//            LOG_WARNING("Switching cegar on after >1000 conflicts to save time during generation of problems for RL. Remove for normal operation.\n");
+//            c2->options->cegar = true;
+//            break;
+//        }
     }
 
     return c2->result;
@@ -916,8 +922,8 @@ cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
                 break;
             case C2_CEGAR_CONFLICT:
                 V1("  UNSAT via Cegar conflict.\n");
-                c2_print_qdimacs_certificate(c2, c2->skolem, cegar_get_val);
-                abortif(! c2_cert_check_UNSAT(c2->qcnf, c2->skolem, cegar_get_val), "Check failed! UNSAT result could not be certified.");
+                c2_print_qdimacs_certificate(c2, c2->skolem, domain_get_cegar_val);
+                abortif(! c2_cert_check_UNSAT(c2->qcnf, c2->skolem, domain_get_cegar_val), "Check failed! UNSAT result could not be certified.");
 //                abortif(c2->options->functional_synthesis, "Should not reach UNSAT output in functional synthesis mode.");
                 V1("Result verified.\n");
                 break;

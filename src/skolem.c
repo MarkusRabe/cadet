@@ -12,7 +12,7 @@
 #include "log.h"
 #include "util.h"
 #include "c2_traces.h"
-#include "c2_cegar.h"
+#include "domain.h"
 #include "c2_rl.h"
 
 #include <math.h>
@@ -28,7 +28,7 @@ Skolem* skolem_init(QCNF* qcnf, Options* o,
     Skolem* s = malloc(sizeof(Skolem));
     s->options = o;
     s->qcnf = qcnf;
-    s->cegar = cegar_init(qcnf);
+    s->domain = domain_init(qcnf);
     s->u_initially_deterministic = u_initially_deterministic;
     s->e_initially_deterministic = e_initially_deterministic;
     
@@ -97,7 +97,7 @@ Skolem* skolem_init(QCNF* qcnf, Options* o,
 }
 
 void skolem_free(Skolem* s) {
-    if (s->cegar) {cegar_free(s->cegar); s->cegar = NULL;}
+    if (s->domain) {domain_free(s->domain); s->domain = NULL;}
     satsolver_free(s->skolem);
     skolem_var_vector_free(s->infos);
     pqueue_free(s->determinicity_queue);

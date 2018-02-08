@@ -9,7 +9,7 @@
 #include "c2_casesplits.h"
 #include "log.h"
 #include "c2_traces.h"
-#include "c2_cegar.h"
+#include "domain.h"
 #include "mersenne_twister.h"
 
 #include <math.h>
@@ -21,10 +21,10 @@ void c2_successful_case_split_heuristics(C2* c2, int_vector* solved_cube) {
         V1("Activity bump: %f\n", activity_bump);
         for (unsigned i = 0; i < int_vector_count(solved_cube); i++) {
             unsigned var_id = lit_to_var(int_vector_get(solved_cube, i));
-            cegar_add_universal_activity(c2->skolem->cegar, var_id, activity_bump);
+            domain_add_interface_activity(c2->skolem->domain, var_id, activity_bump);
         }
 //        unsigned last_var_id = lit_to_var(int_vector_get(solved_cube, int_vector_count(solved_cube) - 1));
-//        cegar_add_universal_activity(c2->skolem->cegar, last_var_id, activity_bump);
+//        domain_add_interface_activity(c2->skolem->cegar, last_var_id, activity_bump);
     }
 }
 
@@ -102,9 +102,9 @@ Lit c2_case_split_pick_literal(C2* c2) {
     float max_total = 0.0;
     float cost_factor_of_max = 0.0;
     Lit lit = 0;
-    for (unsigned i = 1; i < int_vector_count(c2->skolem->cegar->interface_vars); i++) {
-        unsigned var_id = (unsigned) int_vector_get(c2->skolem->cegar->interface_vars, i);
-        assert(int_vector_get(c2->skolem->cegar->interface_vars, i) > 0);
+    for (unsigned i = 1; i < int_vector_count(c2->skolem->domain->interface_vars); i++) {
+        unsigned var_id = (unsigned) int_vector_get(c2->skolem->domain->interface_vars, i);
+        assert(int_vector_get(c2->skolem->domain->interface_vars, i) > 0);
 //    for (unsigned i = 1; i < var_vector_count(c2->qcnf->vars); i++) {
 //        unsigned var_id = i;
         Var* v = var_vector_get(c2->qcnf->vars, var_id);
@@ -125,7 +125,7 @@ Lit c2_case_split_pick_literal(C2* c2) {
             
             assert(propagations_pos < 1000000 && propagations_neg < 1000000); // avoid overflows
             
-            float cost_factor = (float) 1 + (float) 20.0 * /*sqrtf*/(cegar_get_universal_activity(c2->skolem->cegar, v->var_id));
+            float cost_factor = (float) 1 + (float) 20.0 * /*sqrtf*/(domain_get_interface_activity(c2->skolem->domain, v->var_id));
             
             float combined_factor =
                 ((float) 1.0
@@ -158,7 +158,7 @@ bool c2_case_splits_make_assumption(C2* c2, Lit lit) {
     
     satsolver_assume(c2->skolem->skolem, skolem_get_satsolver_lit(c2->skolem, lit));
     
-    cegar_universal_activity_decay(c2->skolem->cegar, lit_to_var(lit));
+    domain_decay_interface_activity(c2->skolem->domain, lit_to_var(lit));
     
     bool assumption_vacuous = satsolver_sat(c2->skolem->skolem) != SATSOLVER_SATISFIABLE;
     if (assumption_vacuous) {
@@ -367,7 +367,7 @@ void c2_case_splits_successful_case_completion(C2* c2) {
     
     c2_backtrack_case_split(c2);
     
-    cegar_new_cube(c2->skolem, solved_cube);
+    domain_new_cube(c2->skolem, solved_cube);
     
     if (c2->result == CADET_RESULT_UNKNOWN && satsolver_sat(c2->skolem->skolem) == SATSOLVER_RESULT_UNSAT) {
         c2->result = CADET_RESULT_SAT;

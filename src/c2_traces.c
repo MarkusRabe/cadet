@@ -8,7 +8,7 @@
 
 #include "log.h"
 #include "c2_traces.h"
-#include "c2_cegar.h"
+#include "domain.h"
 
 #include <sys/time.h>
 
@@ -162,7 +162,7 @@ void c2_print_statistics(C2* c2) {
     
     qcnf_print_statistics(c2->qcnf);
     skolem_print_statistics(c2->skolem);
-    cegar_print_statistics(c2->skolem->cegar);
+    domain_print_statistics(c2->skolem->domain);
     if (c2->examples) {
         examples_print_statistics(c2->examples);
     }

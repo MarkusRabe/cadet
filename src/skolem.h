@@ -82,11 +82,9 @@ struct Skolem {
     Options* options;
     QCNF* qcnf;
     
-    
     // Dependent objects
     SATSolver* skolem;
     Cegar* cegar;
-    
     
     // Core Skolem state and data structures
     unsigned decision_lvl;

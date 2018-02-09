@@ -367,7 +367,7 @@ void c2_case_splits_successful_case_completion(C2* c2) {
     
     c2_backtrack_case_split(c2);
     
-    domain_new_cube(c2->skolem, solved_cube);
+    domain_completed_case(c2->skolem, solved_cube, NULL, NULL);
     
     if (c2->result == CADET_RESULT_UNKNOWN && satsolver_sat(c2->skolem->skolem) == SATSOLVER_RESULT_UNSAT) {
         c2->result = CADET_RESULT_SAT;

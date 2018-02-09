@@ -14,7 +14,7 @@
 Domain* domain_init(QCNF* qcnf) {
     Domain* d = malloc(sizeof(Domain));
     d->qcnf = qcnf;
-    d->solved_cubes = vector_init();
+    d->solved_cases = vector_init();
     
     d->interface_vars = NULL;
     d->interface_activities = float_vector_init();
@@ -210,11 +210,14 @@ void domain_free(Domain* d) {
     if (d->interface_activities) {float_vector_free(d->interface_activities);}
     if (d->original_satlits) {map_free(d->original_satlits);}
     int_vector_free(d->is_used_in_lemma);
-    for (unsigned i = 0; i < vector_count(d->solved_cubes); i++) {
-        int_vector* cube = (int_vector*) vector_get(d->solved_cubes, i);
-        int_vector_free(cube);
+    for (unsigned i = 0; i < vector_count(d->solved_cases); i++) {
+        PartialFunction* c = (PartialFunction*) vector_get(d->solved_cases, i);
+        if (c->cube) {int_vector_free(c->cube);}
+        if (c->assignment) {int_vector_free(c->assignment);}
+        if (c->function) {qcnf_free(c->function);}
+        free(c);
     }
-    vector_free(d->solved_cubes);
+    vector_free(d->solved_cases);
 }
 
 cadet_res domain_solve_2QBF_by_cegar(C2* c2, int rounds_num) {
@@ -258,49 +261,75 @@ int domain_get_cegar_val(void* domain, Lit lit) {
     return val;
 }
 
-void domain_new_cube(Skolem* s, int_vector* cube) {
-    
-    vector_add(s->domain->solved_cubes, cube);
-    
-    V2("Completed cube (with length %u) ", int_vector_count(cube));
-    for (unsigned i = 0; i < int_vector_count(cube); i++) {
-        Lit lit = int_vector_get(cube, i);
-        assert(skolem_is_deterministic(s, lit_to_var(lit)));
-        if (int_vector_count(cube) <= 10) {
-            V2("%d ", - lit);
-        } else {
-            V3("%d ", - lit);
-        }
-        
-        if (! map_contains(s->domain->original_satlits, lit)) {
-            // Stupid bug: after replenishing the sat solvers, the interface might shift and old cubes are not on the interface any more.
-            abortif(s->stack->push_count != 0, "This is a new bug");
-            cegar_remember_original_satlit(s, lit_to_var(lit));
-        }
-        
-        int satlit = (int) (long) map_get(s->domain->original_satlits, lit);
-//        int satlit = skolem_get_satsolver_lit(s, lit); // doesn't work, as the universal variables could be updated to be constant after case split assumptions
-        satsolver_add(s->skolem, satlit);
+PartialFunction* pf_init() {
+    PartialFunction* pf = malloc(sizeof(PartialFunction));
+    pf->cube = NULL;
+    pf->assignment = NULL;
+    pf->function = NULL;
+    return pf;
+}
+
+void domain_completed_case(Skolem* s, int_vector* cube, int_vector* partial_assignment, QCNF* function) {
+    abortif(partial_assignment && function, "Each completed case must specify either a partial assignment or a function.");
+    PartialFunction* pf = pf_init();
+    pf->cube = cube;
+    if (s->options->certify_SAT) {
+        pf->assignment = partial_assignment;
+        pf->function = function;
+    } else {
+        pf->assignment = NULL;
+        pf->function = NULL;
+        if (partial_assignment) {int_vector_free(partial_assignment);}
+        if (function) {qcnf_free(function);}
     }
-    satsolver_clause_finished_for_context(s->skolem, 0);
-    V2("\n");
     
-    // TODO: we should insert a real clause here, to enable propagation among the universals. But universal reduction might collapse these clauses to empty clauses ... not good.
+    vector_add(s->domain->solved_cases, pf);
     
+    if (cube) {
+        // TODO: Instead of adding a clause to the SATsolver only, we should add a clause to the actual QCNF to enable propagation among the universals. But universal reduction might collapse these clauses to empty clauses ... not good.
+        V2("Completed cube (with length %u) ", int_vector_count(cube));
+        for (unsigned i = 0; i < int_vector_count(cube); i++) {
+            Lit lit = int_vector_get(cube, i);
+            assert(skolem_is_deterministic(s, lit_to_var(lit)));
+            assert(skolem_get_decision_lvl(s, lit_to_var(lit)) == 0);
+            if (int_vector_count(cube) <= 10) {
+                V2("%d ", - lit);
+            } else {
+                V3("%d ", - lit);
+            }
+            
+            if (! map_contains(s->domain->original_satlits, lit)) {
+                // Stupid bug: after replenishing the sat solvers, the interface might shift and old cubes are not on the interface any more.
+                abortif(s->stack->push_count != 0, "This is a new bug");
+                cegar_remember_original_satlit(s, lit_to_var(lit));
+            }
+            
+            int satlit = (int) (long) map_get(s->domain->original_satlits, lit);
+            //        int satlit = skolem_get_satsolver_lit(s, lit); // doesn't work, as the universal variables could be updated to be constant after case split assumptions
+            satsolver_add(s->skolem, satlit);
+        }
+        satsolver_clause_finished_for_context(s->skolem, 0);
+        V2("\n");
+    } else {
+        assert(function);
+        // Add the negation of the domain of the (partial) function
+        NOT_IMPLEMENTED();
+    }
 }
 
 cadet_res domain_do_cegar_for_conflicting_assignment(C2* c2) {
     assert(domain_is_initialized(c2->skolem->domain));
     assert(c2->result == CADET_RESULT_UNKNOWN);
-    Domain* cegar = c2->skolem->domain;
+    assert(c2->state == C2_SKOLEM_CONFLICT);
+    Domain* d = c2->skolem->domain;
     
     V3("Assuming: ");
-    for (unsigned i = 0 ; i < int_vector_count(cegar->interface_vars); i++) {
-        unsigned var_id = (unsigned) int_vector_get(cegar->interface_vars, i);
-        int_vector_set(cegar->is_used_in_lemma, var_id, 1); // reset values
+    for (unsigned i = 0 ; i < int_vector_count(d->interface_vars); i++) {
+        unsigned var_id = (unsigned) int_vector_get(d->interface_vars, i);
+        int_vector_set(d->is_used_in_lemma, var_id, 1); // reset values
         
         int val = domain_get_cegar_val(c2->skolem, (int) var_id);
-        satsolver_assume(cegar->exists_solver, val * (Lit) var_id);
+        satsolver_assume(d->exists_solver, val * (Lit) var_id);
         V3(" %d", val * (Lit) var_id);
     }
     V3("\n");
@@ -311,27 +340,28 @@ cadet_res domain_do_cegar_for_conflicting_assignment(C2* c2) {
         if (!v->original) {
             continue;
         }
-        assert(int_vector_get(cegar->is_used_in_lemma, i) == 1);
+        assert(int_vector_get(d->is_used_in_lemma, i) == 1);
     }
 #endif
     
-    if (satsolver_sat(cegar->exists_solver) == SATSOLVER_RESULT_SAT) {
+    if (satsolver_sat(d->exists_solver) == SATSOLVER_RESULT_SAT) {
         
-        int_vector_reset(cegar->additional_assignment);
+        int_vector_reset(d->additional_assignment);
         int_vector* cube = int_vector_init();
         
-        for (unsigned i = 0 ; i < int_vector_count(cegar->interface_vars); i++) {
-            unsigned var_id = (unsigned) int_vector_get(cegar->interface_vars, i);
-            int val = satsolver_deref(cegar->exists_solver, (int) var_id);
+        for (unsigned i = 0 ; i < int_vector_count(d->interface_vars); i++) {
+            unsigned var_id = (unsigned) int_vector_get(d->interface_vars, i);
+            int val = satsolver_deref(d->exists_solver, (int) var_id);
             
-            if (cegar_var_needs_to_be_set(cegar, var_id)) {
+            if (cegar_var_needs_to_be_set(d, var_id)) {
                 Lit lit = - val * (Lit) var_id;
                 int_vector_add(cube, lit);
             } else {
-                int_vector_set(cegar->is_used_in_lemma, var_id, 0);
+                int_vector_set(d->is_used_in_lemma, var_id, 0);
             }
         }
-        domain_new_cube(c2->skolem, cube);
+        
+        domain_completed_case(c2->skolem, cube, NULL, NULL);
         c2->skolem->domain->cegar_stats.recent_average_cube_size = (float) int_vector_count(cube) * (float) 0.1 + c2->skolem->domain->cegar_stats.recent_average_cube_size * (float) 0.9;
     } else {
         c2->state = C2_CEGAR_CONFLICT;
@@ -341,13 +371,14 @@ cadet_res domain_do_cegar_for_conflicting_assignment(C2* c2) {
     return c2->result;
 }
 
-void domain_print_statistics(Domain* cegar) {
-    if (cegar && domain_is_initialized(cegar)) {
-        V0("Cegar statistics:\n");
-        V0("  Interface size: %u\n", int_vector_count(cegar->interface_vars));
-        V0("  Number of cubes: %u\n", vector_count(cegar->solved_cubes));
-        V0("  Successful minimizations: %u\n", cegar->cegar_stats.successful_minimizations);
-        V0("  Additional assignments: %u\n", cegar->cegar_stats.additional_assignments_num);
-        V0("  Additional assignments helped: %u\n", cegar->cegar_stats.successful_minimizations_by_additional_assignments);
+void domain_print_statistics(Domain* d) {
+    if (d && domain_is_initialized(d)) {
+        V0("Domain statistics:\n");
+        V0("  Interface size: %u\n", int_vector_count(d->interface_vars));
+        V0("  Number of explored cases: %u\n", vector_count(d->solved_cases));
+        V0("CEGAR statistics:\n");
+        V0("  Successful minimizations: %u\n", d->cegar_stats.successful_minimizations);
+        V0("  Additional assignments: %u\n", d->cegar_stats.additional_assignments_num);
+        V0("  Additional assignments helped: %u\n", d->cegar_stats.successful_minimizations_by_additional_assignments);
     }
 }

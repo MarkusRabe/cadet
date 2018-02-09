@@ -105,7 +105,7 @@ struct QCNF {
 
 // Constructor and Destructor
 QCNF* qcnf_init();
-void qcnf_free();
+void qcnf_free(QCNF*);
 
 //bool qcnf_is_2QBF(QCNF*);
 

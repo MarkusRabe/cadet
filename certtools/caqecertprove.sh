@@ -1,12 +1,16 @@
 #!/bin/bash
 
+# Usage: ./caqecertprove sh <file.qdimacs>
+# Launch from this folder; apply only to SAT files
+
 ./../cadet -c tmp.aig $1
 
 abc -c "read tmp.aig; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2;  print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; write tmp.aig;"
 
+# some old version
 # abc -c "&r tmp.aig; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &put; write tmp.aig"
 
-./../../tools/caqe/certcheck $1 tmp.aig > tmp.aag
+./../../../tools/caqe/certcheck $1 tmp.aig > tmp.aag
 
 aigtoaig tmp.aag tmp2.aig
 

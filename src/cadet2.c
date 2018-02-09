@@ -547,7 +547,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                         int lit = learnt_clause->occs[i];
                         int_vector_set(cube, i, lit);
                     }
-                    domain_new_cube(c2->skolem, cube);
+                    domain_completed_case(c2->skolem, cube, NULL, NULL);
                     continue;
                 }
 
@@ -683,13 +683,17 @@ void c2_replenish_skolem_satsolver(C2* c2) {
     
     domain_update_interface(c2->skolem);
     
-    assert(vector_count(old_skolem->domain->solved_cubes) == 0 || c2->options->cegar || c2->options->case_splits);
+    assert(vector_count(old_skolem->domain->solved_cases) == 0 || c2->options->cegar || c2->options->case_splits);
     
     // Copy the cubes that we have solved already.
-    for (unsigned i = 0; i < vector_count(old_skolem->domain->solved_cubes); i++) {
-        int_vector* cube = (int_vector*) vector_get(old_skolem->domain->solved_cubes, i);
-        int_vector* cube_copy = int_vector_copy(cube);
-        domain_new_cube(c2->skolem, cube_copy);
+    for (unsigned i = 0; i < vector_count(old_skolem->domain->solved_cases); i++) {
+        PartialFunction* pf = (PartialFunction*) vector_get(old_skolem->domain->solved_cases, i);
+        domain_completed_case(c2->skolem, pf->cube, pf->assignment, pf->function);
+        
+        // make sure these objects will not be deallocated during free of old_skolem below.
+        pf->cube = NULL;
+        pf->assignment = NULL;
+        pf->function = NULL;
     }
     
     // Replace the new interace activities by the old ones

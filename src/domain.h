@@ -27,6 +27,14 @@ struct Cegar_Statistics {
     float recent_average_cube_size;
 };
 
+struct PartialFunction {
+    int_vector* cube; // optional: cube in which this partial function is valid.
+    // In certifying mode, one of the following must be assigned
+    int_vector* assignment; // assignment to dlvl>0 vars
+    QCNF* function; // formula over dlvl>0 vars
+};
+typedef struct PartialFunction PartialFunction;
+
 typedef struct Domain Domain;
 struct Domain {
     QCNF* qcnf;
@@ -36,7 +44,7 @@ struct Domain {
     float_vector* interface_activities; // contains the frequencies of the interface variabes as floats
     map* original_satlits;
     
-    vector* solved_cubes;
+    vector* solved_cases; // over struct Case*
     
     // CEGAR
     SATSolver* exists_solver;
@@ -52,7 +60,7 @@ struct Domain {
 Domain* domain_init(QCNF*);
 void domain_free(Domain* c);
 
-void domain_new_cube(Skolem* s, int_vector* cube);
+void domain_completed_case(Skolem* s, int_vector* cube, int_vector* partial_assignment, QCNF* function); // cube is over dlvl0, partial_assignment is over dlvl>0, function is over dlvl>0
 void domain_print_statistics(Domain*);
 bool domain_is_initialized(Domain*);
 

@@ -110,7 +110,25 @@ cadet_res domain_do_cegar_for_conflicting_assignment(C2* c2) {
             }
         }
         
-        domain_completed_case(c2->skolem, cube, NULL, NULL);
+        int_vector* existentials = NULL;
+        if (c2->options->certify_SAT) {
+            existentials = int_vector_init();
+            for (unsigned var_id = 1; var_id < var_vector_count(c2->qcnf->vars); var_id++) {
+                if (! skolem_is_deterministic(c2->skolem, var_id) || skolem_get_decision_lvl(c2->skolem, var_id) > 0) {
+                    assert(qcnf_var_exists(c2->qcnf, var_id));
+                    int val = satsolver_deref(d->exists_solver, (int) var_id);
+                    if (val == 0 && int_vector_find_sorted(d->additional_assignment, - (int) var_id)) {
+                        val = -1;
+                    } else { // potentially (int) var_id is in additional_assignment
+                        val = +1;  // default is +1
+                    }
+                    assert(val == -1 || val == +1);
+                    int_vector_add(existentials, val * (int) var_id);
+                }
+            }
+        }
+        
+        domain_completed_case(c2->skolem, cube, existentials, NULL);
         c2->skolem->domain->cegar_stats.recent_average_cube_size = (float) int_vector_count(cube) * (float) 0.1 + c2->skolem->domain->cegar_stats.recent_average_cube_size * (float) 0.9;
     } else {
         c2->state = C2_CEGAR_CONFLICT;

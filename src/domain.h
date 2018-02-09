@@ -47,7 +47,7 @@ struct Domain {
     vector* solved_cases; // over struct Case*
     
     // CEGAR
-    SATSolver* exists_solver;
+    SATSolver* exists_solver; // using original names, no redirect as in the skolem solver
     int_vector* is_used_in_lemma;
     int_vector* additional_assignment;
     struct Cegar_Statistics cegar_stats;

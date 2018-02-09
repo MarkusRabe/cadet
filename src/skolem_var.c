@@ -290,9 +290,9 @@ void skolem_undo_dependencies(Skolem* s, void* data) {
 
 bool skolem_is_deterministic(Skolem* s, unsigned var_id) {
     assert(var_id != 0);
-    assert(var_id < 10000000); // just a safety measure, if you actually see variables with IDs > 10000000 you are probably screwed.
-    skolem_var si = skolem_get_info(s, var_id);
-    return si.deterministic;
+    assert(var_id < 100000000); // just a safety measure, if you actually see variables with IDs > 10000000 you are probably screwed.
+    skolem_var* sv = skolem_var_vector_get(s->infos, var_id);
+    return sv->deterministic;
 }
 
 float skolem_get_conflict_potential(Skolem* s, unsigned var_id) {

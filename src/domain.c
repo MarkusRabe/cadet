@@ -82,8 +82,9 @@ void domain_update_interface(Skolem* s) {
     
     Domain* d = s->domain;
     
-    const unsigned max_var_id = var_vector_count(d->qcnf->vars);
     d->exists_solver = satsolver_init();
+    
+    const unsigned max_var_id = var_vector_count(d->qcnf->vars);
     satsolver_set_max_var(d->exists_solver, (int) max_var_id);
     
     // set up satsolver for existentials

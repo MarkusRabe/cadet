@@ -36,6 +36,7 @@ unsigned skolem_get_decision_lvl_for_conflict_analysis(void* domain, unsigned va
 }
 unsigned skolem_get_decision_lvl(Skolem* s, unsigned var_id) {
     skolem_enlarge_skolem_var_vector(s, var_id);
+    assert(skolem_is_deterministic(s, var_id));
     skolem_var* sv = skolem_var_vector_get(s->infos, var_id);
     return sv->decision_lvl;
 }
@@ -291,6 +292,7 @@ void skolem_undo_dependencies(Skolem* s, void* data) {
 bool skolem_is_deterministic(Skolem* s, unsigned var_id) {
     assert(var_id != 0);
     assert(var_id < 100000000); // just a safety measure, if you actually see variables with IDs > 10000000 you are probably screwed.
+    skolem_enlarge_skolem_var_vector(s, var_id);
     skolem_var* sv = skolem_var_vector_get(s->infos, var_id);
     return sv->deterministic;
 }

@@ -1379,7 +1379,6 @@ void skolem_decision(Skolem* s, Lit decision_lit) {
     V3("Decision %d, new dlvl is %u\n", decision_lit, s->decision_lvl + 1);
     unsigned decision_var_id = lit_to_var(decision_lit);
     
-    assert(skolem_get_decision_lvl(s, decision_var_id) == 0);
     assert(!skolem_is_deterministic(s, decision_var_id));
     assert(skolem_get_constant_value(s, decision_lit) == 0);
     

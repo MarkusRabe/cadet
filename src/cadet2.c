@@ -228,7 +228,6 @@ Var* c2_pick_most_active_notdeterministic_variable(C2* c2) {
     float decision_var_activity = -1.0;
     for (unsigned i = 1; i < var_vector_count(c2->qcnf->vars); i++) {
         if (!skolem_is_deterministic(c2->skolem, i)) {
-            assert(skolem_get_decision_lvl(c2->skolem, i) == 0);
             Var* v = var_vector_get(c2->qcnf->vars, i);
             assert(!v->is_universal);
             if (v->var_id != 0) {
@@ -913,28 +912,28 @@ cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
     }
 
     if (c2->result == CADET_RESULT_SAT && c2->options->certify_SAT) {
-        c2_cert_AIG_certificate(c2);
+        cert_AIG_certificate(c2);
     }
     if (c2->result == CADET_RESULT_UNSAT && c2->options->certify_internally_UNSAT) {
         switch (c2->state) {
             case C2_SKOLEM_CONFLICT:
                 V1("  UNSAT via Skolem conflict.\n");
                 c2_print_qdimacs_certificate(c2, c2->skolem, skolem_get_value_for_conflict_analysis);
-                abortif(! c2_cert_check_UNSAT(c2->qcnf, c2->skolem, skolem_get_value_for_conflict_analysis) , "Check failed! UNSAT result could not be certified.");
+                abortif(! cert_check_UNSAT(c2->qcnf, c2->skolem, skolem_get_value_for_conflict_analysis) , "Check failed! UNSAT result could not be certified.");
                 abortif(c2->options->functional_synthesis, "Should not reach UNSAT output in functional synthesis mode.");
                 V1("Result verified.\n");
                 break;
             case C2_CEGAR_CONFLICT:
                 V1("  UNSAT via Cegar conflict.\n");
                 c2_print_qdimacs_certificate(c2, c2->skolem, domain_get_cegar_val);
-                abortif(! c2_cert_check_UNSAT(c2->qcnf, c2->skolem, domain_get_cegar_val), "Check failed! UNSAT result could not be certified.");
+                abortif(! cert_check_UNSAT(c2->qcnf, c2->skolem, domain_get_cegar_val), "Check failed! UNSAT result could not be certified.");
 //                abortif(c2->options->functional_synthesis, "Should not reach UNSAT output in functional synthesis mode.");
                 V1("Result verified.\n");
                 break;
             case C2_EXAMPLES_CONFLICT:
                 V1("  UNSAT via Examples conflict.\n");
                 c2_print_qdimacs_certificate(c2, c2->examples, examples_get_value_for_conflict_analysis);
-                abortif(! c2_cert_check_UNSAT(c2->qcnf, c2->examples, examples_get_value_for_conflict_analysis) , "Check failed! UNSAT result could not be certified.");
+                abortif(! cert_check_UNSAT(c2->qcnf, c2->examples, examples_get_value_for_conflict_analysis) , "Check failed! UNSAT result could not be certified.");
                 abortif(c2->options->functional_synthesis, "Should not reach UNSAT output in functional synthesis mode.");
                 V1("Result verified.\n");
                 break;

@@ -114,8 +114,10 @@ cadet_res domain_do_cegar_for_conflicting_assignment(C2* c2) {
         if (c2->options->certify_SAT) {
             existentials = int_vector_init();
             for (unsigned var_id = 1; var_id < var_vector_count(c2->qcnf->vars); var_id++) {
+                if (!qcnf_var_exists(c2->qcnf, var_id)) {
+                    continue;
+                }
                 if (! skolem_is_deterministic(c2->skolem, var_id) || skolem_get_decision_lvl(c2->skolem, var_id) > 0) {
-                    assert(qcnf_var_exists(c2->qcnf, var_id));
                     int val = satsolver_deref(d->exists_solver, (int) var_id);
                     if (val == 0 && int_vector_find_sorted(d->additional_assignment, - (int) var_id)) {
                         val = -1;

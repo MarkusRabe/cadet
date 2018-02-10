@@ -74,10 +74,10 @@ int main(int argc, const char* argv[]) {
                         LOG_WARNING("Case splits not compatible with certificates right now. Deactivating case splits.");
                         options->case_splits = false;
                     }
-                    if (options->cegar) {
-                        LOG_WARNING("CEGAR is not compatible with certificates right now. Deactivating CEGAR.");
-                        options->cegar = false;
-                    }
+//                    if (options->cegar) {
+//                        LOG_WARNING("CEGAR is not compatible with certificates right now. Deactivating CEGAR.");
+//                        options->cegar = false;
+//                    }
                     
                     i++;
                     break;

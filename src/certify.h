@@ -17,7 +17,8 @@
 #include <stdio.h>
 
 void cert_AIG_certificate(C2* c2);
-void c2_print_qdimacs_certificate(C2* c2, void* domain, int (*get_value)(void* domain, Lit lit));
+void c2_print_qdimacs_output(QCNF* qcnf, void* domain, int (*get_value)(void* domain, Lit lit));
+void cert_propositional_AIG_certificate_SAT(QCNF* qcnf, Options* o, void* domain, int (*get_value)(void* domain, Lit lit));
 bool cert_check_UNSAT(QCNF* qcnf, void* domain, int (*get_value)(void* domain, Lit lit));
 
 bool cert_check_SAT(C2* c2);

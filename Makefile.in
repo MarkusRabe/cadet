@@ -27,7 +27,7 @@ $(TARGET): $(OBJECTS) $(LGL_OBJECTS) $(MINISAT_OBJECTS)
 	$(CC) $(CFLAGS) $(OBJECTS) $(LGL_OBJECTS) $(MINISAT_OBJECTS) $(LIBS) -o $@
 
 test: default
-	python scripts/tester.py --test
+	python scripts/tester.py --test -f
 
 profile: default
 	$(CC) $(CFLAGS) -pg $(OBJECTS) $(MINISAT_OBJECTS) $(LIBS) -o $(TARGET) 

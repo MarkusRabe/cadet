@@ -63,7 +63,6 @@ typedef struct {
     bool failed_literals;
     
     // Output options
-    bool print_qdimacs;
     bool print_name_mapping;
     bool print_statistics;
     bool print_detailed_miniscoping_stats;

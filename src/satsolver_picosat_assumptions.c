@@ -289,6 +289,10 @@ int satsolver_deref(SATSolver* solver, int lit) {
     return res;
 }
 
+int satsolver_deref_generic(void* solver, int lit) {
+    return satsolver_deref((SATSolver*) solver, lit);
+}
+
 int satsolver_deref_partial(SATSolver* solver, int lit) {
     int pico_lit = lit_from_int(solver, lit);
     assert( ! int_vector_contains(solver->context_literals, abs(pico_lit)));

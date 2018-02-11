@@ -646,7 +646,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
     return c2->result; // results in a restart
 }
 
-cadet_res c2_check_propositional(QCNF* qcnf) {
+cadet_res c2_check_propositional(QCNF* qcnf, Options* o) {
     V1("Using SAT solver to solve propositional problem.\n");
     SATSolver* checker = satsolver_init();
     satsolver_set_max_var(checker, (int) var_vector_count(qcnf->vars));
@@ -660,8 +660,17 @@ cadet_res c2_check_propositional(QCNF* qcnf) {
         }
     }
     sat_res res = satsolver_sat(checker);
-    satsolver_free(checker);
     assert(res == SATSOLVER_RESULT_SAT || res == SATSOLVER_RESULT_UNSAT);
+    if (o->certify_SAT && res == SATSOLVER_RESULT_SAT) {
+        cert_propositional_AIG_certificate_SAT(qcnf, o, checker, satsolver_deref_generic);
+    }
+    if (res == SATSOLVER_UNSATISFIABLE) {
+        c2_print_qdimacs_output(qcnf, checker, satsolver_deref_generic);
+        if (o->certify_UNSAT) {
+            NOT_IMPLEMENTED();
+        }
+    }
+    satsolver_free(checker);
     return res == SATSOLVER_RESULT_SAT ? CADET_RESULT_SAT : CADET_RESULT_UNSAT;
 }
 
@@ -765,14 +774,6 @@ cadet_res c2_sat(C2* c2) {
         return CADET_RESULT_UNSAT;
     }
 
-    if (qcnf_is_propositional(c2->qcnf) && ! c2->options->use_qbf_engine_also_for_propositional_problems) {
-        c2->result = c2_check_propositional(c2->qcnf);
-        if (c2->result == CADET_RESULT_UNSAT) {
-            c2->state = C2_CEGAR_CONFLICT; // ensures the validation of the conflict does the right thing
-        }
-        return c2->result;
-    }
-
     ////// THIS RESTRICTS US TO 2QBF
     if (! qcnf_is_2QBF(c2->qcnf) && ! qcnf_is_propositional(c2->qcnf)) {
         V0("Is not 2QBF. Currently not supported.\n");
@@ -867,15 +868,14 @@ cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
     if (f != stdin) {fclose(f);}
     abortif(!qcnf,"Failed to create QCNF.");
 
-    if (options->print_qdimacs) {
-        qcnf_print_qdimacs(qcnf);
-        return 1;
-    }
-
     V1("Maximal variable index: %u\n", var_vector_count(qcnf->vars));
     V1("Number of clauses: %u\n", vector_count(qcnf->clauses));
     V1("Number of scopes: %u\n", vector_count(qcnf->scopes));
 
+    if (qcnf_is_propositional(qcnf) && ! options->use_qbf_engine_also_for_propositional_problems) {
+        return c2_check_propositional(qcnf, options);
+    }
+    
     if (options->plaisted_greenbaum_completion) {
         qcnf_plaisted_greenbaum_completion(qcnf);
     }
@@ -914,33 +914,44 @@ cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
     if (c2->result == CADET_RESULT_SAT && c2->options->certify_SAT) {
         cert_AIG_certificate(c2);
     }
-    if (c2->result == CADET_RESULT_UNSAT && c2->options->certify_internally_UNSAT) {
+    if (c2->result == CADET_RESULT_UNSAT) {
         switch (c2->state) {
             case C2_SKOLEM_CONFLICT:
                 V1("  UNSAT via Skolem conflict.\n");
-                c2_print_qdimacs_certificate(c2, c2->skolem, skolem_get_value_for_conflict_analysis);
-                abortif(! cert_check_UNSAT(c2->qcnf, c2->skolem, skolem_get_value_for_conflict_analysis) , "Check failed! UNSAT result could not be certified.");
+                c2_print_qdimacs_output(c2->qcnf, c2->skolem, skolem_get_value_for_conflict_analysis);
+                abortif(c2->options->certify_internally_UNSAT
+                        && ! cert_check_UNSAT(c2->qcnf, c2->skolem, skolem_get_value_for_conflict_analysis) ,
+                        "Check failed! UNSAT result could not be certified.");
                 abortif(c2->options->functional_synthesis, "Should not reach UNSAT output in functional synthesis mode.");
                 V1("Result verified.\n");
                 break;
             case C2_CEGAR_CONFLICT:
                 V1("  UNSAT via Cegar conflict.\n");
-                c2_print_qdimacs_certificate(c2, c2->skolem, domain_get_cegar_val);
-                abortif(! cert_check_UNSAT(c2->qcnf, c2->skolem, domain_get_cegar_val), "Check failed! UNSAT result could not be certified.");
+                c2_print_qdimacs_output(c2->qcnf, c2->skolem, domain_get_cegar_val);
+                abortif(c2->options->certify_internally_UNSAT
+                        && ! cert_check_UNSAT(c2->qcnf, c2->skolem, domain_get_cegar_val),
+                        "Check failed! UNSAT result could not be certified.");
 //                abortif(c2->options->functional_synthesis, "Should not reach UNSAT output in functional synthesis mode.");
                 V1("Result verified.\n");
                 break;
             case C2_EXAMPLES_CONFLICT:
                 V1("  UNSAT via Examples conflict.\n");
-                c2_print_qdimacs_certificate(c2, c2->examples, examples_get_value_for_conflict_analysis);
-                abortif(! cert_check_UNSAT(c2->qcnf, c2->examples, examples_get_value_for_conflict_analysis) , "Check failed! UNSAT result could not be certified.");
+                c2_print_qdimacs_output(c2->qcnf, c2->examples, examples_get_value_for_conflict_analysis);
+                abortif(c2->options->certify_internally_UNSAT
+                        && ! cert_check_UNSAT(c2->qcnf, c2->examples, examples_get_value_for_conflict_analysis) ,
+                        "Check failed! UNSAT result could not be certified.");
                 abortif(c2->options->functional_synthesis, "Should not reach UNSAT output in functional synthesis mode.");
                 V1("Result verified.\n");
                 break;
             case C2_EMPTY_CLAUSE_CONFLICT:
                 V1("  UNSAT via empty clause.\n");
-                if (log_qdimacs_compliant) {V0("Unable to provide qdimacs certificate. Found an empty clause, but that may have resulted from universal reduction.\n");}
-                abortif(!c2->qcnf->empty_clause || (! c2->qcnf->empty_clause->original && !c2->qcnf->empty_clause->consistent_with_originals), "Inconsistency after empty clause conflict.");
+                if (log_qdimacs_compliant) {
+                    V0("Unable to provide qdimacs certificate. Found an empty clause, but that may have resulted from universal reduction.\n");
+                }
+                abortif(!c2->qcnf->empty_clause
+                        || (! c2->qcnf->empty_clause->original
+                            && !c2->qcnf->empty_clause->consistent_with_originals),
+                        "Inconsistency after empty clause conflict.");
                 break;
             default:
                 LOG_ERROR("Unknown type of conflict. Such confused, very WOW.");

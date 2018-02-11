@@ -894,7 +894,7 @@ bool qcnf_occus_only_in_binary_clauses(QCNF* qcnf, Lit lit) {
     return true;
 }
 
-Lit qcnf_get_other_lit(QCNF* qcnf, Clause* c, Lit lit) {
+Lit qcnf_get_other_lit(Clause* c, Lit lit) {
     assert(c->size == 2); // actually not needed
     assert(qcnf_contains_literal(c, lit));
     for (unsigned i = 0; i < c->size; i++) {
@@ -1029,7 +1029,7 @@ void qcnf_plaisted_greenbaum_completion(QCNF* qcnf) {
                     for (unsigned j = 0; j < vector_count(occs); j++) {
                         Clause* c = vector_get(occs, j);
                         assert(c->size == 2);
-                        Lit other = qcnf_get_other_lit(qcnf, c, this);
+                        Lit other = qcnf_get_other_lit(c, this);
                         qcnf_add_lit(qcnf, - other);
                     }
                     qcnf_add_lit(qcnf, -this);

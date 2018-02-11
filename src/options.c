@@ -46,7 +46,6 @@ Options* default_options() {
     o->miniscoping = false;
     o->find_smallest_reason = true;
     o->minimize_conflicts = true;
-    o->preprocess = false;
     o->delete_clauses_on_restarts = false;
     o->pure_literals = true;
     o->enhanced_pure_literals = false;
@@ -55,7 +54,6 @@ Options* default_options() {
     o->print_detailed_miniscoping_stats = false;
     o->print_name_mapping = true;
     o->print_statistics = true;
-    o->print_qdimacs = false;
     o->variable_names = NULL;
 
     o->trace_learnt_clauses = false;
@@ -97,7 +95,6 @@ char* options_get_help() {
     "  General options:\n"
     "\t-v [0-4]\t\tSet the verbosity [default %d]\n"
     "\t-s [num]\t\tSet the seed for the random number generator\n"
-    "\t--print \t\tPrint the qdimacs file as read.\n"
     "\t--no_colors \t\tSuppress colors in output.\n"
     "\t-c [file]\t\tWrite certificate to specified file. File ending\n\t\t\t\tdefines Aiger formag aag/aig.\n"
     "\t--qbfcert\t\tWrite certificate in qbfcert-readable format.\n\t\t\t\tOnly compatible with aag file ending.\n"

@@ -113,18 +113,10 @@ int main(int argc, const char* argv[]) {
                     if (strcmp(argv[i], "--stats") == 0) {
                         V0("Enabled printing statistics\n");
                         options->print_statistics = true;
-                    } else if (strcmp(argv[i], "--disable-preprocessing") == 0) {
-                        V0("Disable preprocessing\n");
-                        options->preprocess = false;
                     } else if (strcmp(argv[i], "--qbfcert") == 0) {
                         options->certificate_type = QBFCERT;
                     } else if (strcmp(argv[i], "--qdimacs_out") == 0) {
-                        log_qdimacs_compliant = true;
-                        log_colors = false;
-                    } else if (strcmp(argv[i], "--print") == 0) {
-                        options->preprocess = false;
-                        options->print_qdimacs = true;
-                        log_qdimacs_compliant = true;
+                        log_qdimacs_compliant = !log_qdimacs_compliant;
                         log_colors = false;
                     } else if (strcmp(argv[i], "--no_colors") == 0) {
                         log_colors = false;

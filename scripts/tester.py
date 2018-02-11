@@ -416,7 +416,7 @@ def run_testcase(testcase):
 
         cert_file2 = testcase+'.cert2.aig';
 
-        cert_cmd = './../tools/caqe/certcheck ' + testcase + ' ' + cert_file + ' | aigtoaig - ' + cert_file2
+        cert_cmd = './../../tools/caqe/certcheck ' + testcase + ' ' + cert_file + ' | aigtoaig - ' + cert_file2
         cert_return_value, cert_output, cert_error = call(cert_cmd, ARGS.timeout)
         
         # print(cert_cmd)
@@ -428,7 +428,7 @@ def run_testcase(testcase):
         cert_return_value, cert_output, cert_error = call('cat '+cert_file2+' | aigtocnf | lingeling', 5 *  ARGS.timeout)
         
         if 's UNSATISFIABLE' not in cert_output:
-            print('CERTIFICATE FAILED!')
+            print('CERTIFICATE FAILED for {}'.format(str(testcase)))
             code = TEST_FAILED
             if ARGS.verbose:
                 print('Cert Output:\n' + cert_output)

@@ -52,6 +52,7 @@ void satsolver_clear_assumptions(SATSolver*);
 bool satsolver_inconsistent(SATSolver*);
 sat_res satsolver_sat(SATSolver*);
 int satsolver_deref(SATSolver*, int lit);
+int satsolver_deref_generic(void*, int lit);
 int satsolver_deref_partial(SATSolver*, int lit);
 int satsolver_deref_toplevel(SATSolver*, int lit);
 int satsolver_is_decision_var(SATSolver*, int lit);

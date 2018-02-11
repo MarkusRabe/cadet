@@ -16,6 +16,7 @@
 
 void float_vector_increase(float_vector* v) {
     v->size *= INCREASE_FACTOR;
+    assert(v->size > 0);
     v->data = realloc(v->data, sizeof(float) * v->size);
     //    float* newdata = malloc(sizeof(float) * v->size);
     //    for (unsigned i = 0; i < v->count; i++) {

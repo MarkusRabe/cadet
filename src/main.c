@@ -44,7 +44,7 @@ int main(int argc, const char* argv[]) {
                     }
                     
                     options->certify_SAT = true;
-                    options->certify_UNSAT = true;
+//                    options->certify_UNSAT = true;
                     options->certify_internally_UNSAT = false;
                     
                     options->certificate_file_name = argv[i+1];

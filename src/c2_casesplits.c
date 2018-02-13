@@ -177,7 +177,7 @@ bool c2_case_splits_make_assumption(C2* c2, Lit lit) {
                 c2->result = CADET_RESULT_SAT;
             } else {
                 abortif(! c2->options->cegar, "This case can only occur when something else added assumptions.");
-//                c2_case_splits_successful_case_completion(c2); // watch out: this might be a recursive call
+//                c2_close_case(c2); // watch out: this might be a recursive call
             }
             lit = 0; // suppresses that case split happens
             return true;
@@ -338,7 +338,7 @@ int_vector* c2_determine_notorious_determinsitic_variables(C2* c2) {
     return notorious_lits;
 }
 
-void c2_case_splits_successful_case_completion(C2* c2) {
+void c2_close_case(C2* c2) {
     assert(c2->result == CADET_RESULT_SAT);
     
     V1("Case split of depth %u successfully completed. ", c2->case_split_depth);

@@ -498,11 +498,16 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                             default:
                                 abortif(true, "Unexpected value seen for cadet_res");
                         }
-                        
-                        if (c2->skolem->domain->cegar_stats.recent_average_cube_size >= c2->skolem->domain->cegar_magic.cegar_effectiveness_threshold
-                            || satsolver_sat(c2->skolem->skolem) == SATSOLVER_UNSATISFIABLE) {
-                            // simply continue; cannot conclude SAT, because check relied on assumptions in global conflict check
-                             break;
+                        bool lets_do_another_round = c2->skolem->domain->cegar_stats.recent_average_cube_size
+                                                        <= c2->skolem->domain->cegar_magic.cegar_effectiveness_threshold;
+                        if (lets_do_another_round) {
+                            sat_res res = satsolver_sat(c2->skolem->skolem);
+                            if (res == SATSOLVER_UNSATISFIABLE) {
+                                lets_do_another_round = false; // simply continue; cannot conclude SAT, because check relied on assumptions in global conflict check
+                            }
+                        }
+                        if (!lets_do_another_round) {
+                            break;
                         }
                     }
                     assert(skolem_is_conflicted(c2->skolem));
@@ -819,7 +824,7 @@ cadet_res c2_sat(C2* c2) {
         c2_run(c2, c2->next_restart);
 
         while (c2->result == CADET_RESULT_SAT && int_vector_count(c2->case_split_stack) != 0) {
-            c2_case_splits_successful_case_completion(c2);
+            c2_close_case(c2);
         }
         
         if (c2->result == CADET_RESULT_UNKNOWN) {
@@ -915,6 +920,9 @@ cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
         cert_AIG_certificate(c2);
     }
     if (c2->result == CADET_RESULT_UNSAT) {
+        if (c2->options->certify_UNSAT) {
+            NOT_IMPLEMENTED();
+        }
         switch (c2->state) {
             case C2_SKOLEM_CONFLICT:
                 V1("  UNSAT via Skolem conflict.\n");

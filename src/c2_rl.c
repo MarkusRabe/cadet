@@ -155,7 +155,6 @@ int c2_rl_get_decision() {
         float seconds_since_last_decision_float = (float) seconds_since_last_decision;
         assert(!isnan(seconds_since_last_decision_float));
         float_vector_set(rl->runtimes, float_vector_count(rl->runtimes) - 1, seconds_since_last_decision_float);
-//        float_vector_add(rl->runtimes, (float) seconds_since_last_decision);
     }
     
     char *s = c2_rl_readline();
@@ -175,6 +174,7 @@ int c2_rl_get_decision() {
         float_vector_add(rl->rewards, 0.0);
         float_vector_add(rl->runtimes, 0.0);
     }
+    assert(float_vector_count(rl->rewards) == float_vector_count(rl->runtimes));
     
     return (int) ret;
 }
@@ -211,7 +211,6 @@ cadet_res c2_rl_run_c2(Options* o) {
             rl_add_reward(float_vector_count(rl->rewards)  - 1, 1);
         }
         
-        assert(float_vector_count(rl->rewards) == float_vector_count(rl->runtimes));
         for (unsigned i = 0; i < float_vector_count(rl->rewards); i++) {
             float seconds_since_last_decision = float_vector_get(rl->runtimes, i);
             assert(!isnan(seconds_since_last_decision)); // Time array contains NaN

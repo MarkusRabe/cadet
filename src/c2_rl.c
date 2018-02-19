@@ -208,7 +208,7 @@ cadet_res c2_rl_run_c2(Options* o) {
         cadet_res res = c2_solve_qdimacs(file,o);
         
         if (res == CADET_RESULT_SAT || res == CADET_RESULT_UNSAT) {
-            rl_add_reward(float_vector_count(rl->rewards)  - 1, 1);
+            rl_add_reward(float_vector_count(rl->rewards) - 1, 1.0);
         }
         
         for (unsigned i = 0; i < float_vector_count(rl->rewards); i++) {

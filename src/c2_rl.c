@@ -12,6 +12,7 @@
 #include "float_vector.h"
 
 #include <stdio.h>
+#include <math.h>
 
 typedef struct {
     Stats* stats;
@@ -30,6 +31,7 @@ void rl_init() {
 }
 
 void rl_add_reward(unsigned dec_idx, float value) { // for current decision
+    abortif(dec_idx >= float_vector_count(rl->rewards), "Array out of bounds.");
     float_vector_set(rl->rewards, dec_idx, float_vector_get(rl->rewards, dec_idx) + value);
 }
 
@@ -150,7 +152,10 @@ int c2_rl_get_decision() {
     double seconds_since_last_decision = 0.0;
     if (statistics_timer_is_running(rl->stats)) {
         seconds_since_last_decision = statistics_stop_and_record_timer(rl->stats);
-        float_vector_add(rl->runtimes, (float) seconds_since_last_decision);
+        float seconds_since_last_decision_float = (float) seconds_since_last_decision;
+        assert(!isnan(seconds_since_last_decision_float));
+        float_vector_set(rl->runtimes, float_vector_count(rl->runtimes) - 1, seconds_since_last_decision_float);
+//        float_vector_add(rl->runtimes, (float) seconds_since_last_decision);
     }
     
     char *s = c2_rl_readline();
@@ -168,6 +173,7 @@ int c2_rl_get_decision() {
     if (ret != 0) {
         statistics_start_timer(rl->stats);
         float_vector_add(rl->rewards, 0.0);
+        float_vector_add(rl->runtimes, 0.0);
     }
     
     return (int) ret;
@@ -208,7 +214,10 @@ cadet_res c2_rl_run_c2(Options* o) {
         assert(float_vector_count(rl->rewards) == float_vector_count(rl->runtimes));
         for (unsigned i = 0; i < float_vector_count(rl->rewards); i++) {
             float seconds_since_last_decision = float_vector_get(rl->runtimes, i);
-            rl_add_reward(i, - seconds_since_last_decision * (float) 0.1);
+            assert(!isnan(seconds_since_last_decision)); // Time array contains NaN
+            if (!isnan(seconds_since_last_decision)) {
+                rl_add_reward(i, - seconds_since_last_decision * (float) 0.1);
+            }
         }
         
         c2_rl_print_rewards();

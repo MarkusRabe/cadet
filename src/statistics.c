@@ -39,6 +39,7 @@ double statistics_stop_and_record_timer(Stats* s) {
         return 0.0;
     }
     double diff = get_seconds() - s->time_stamp;
+    assert(diff >= 0.0); // time passed must be positive
     statistic_add_value(s, diff);
     s->clock_is_running = false;
     return diff;

@@ -1,12 +1,12 @@
 //
-//  c2_casesplits.c
+//  casesplits.c
 //  cadet
 //
 //  Created by Markus Rabe on 25/01/2017.
 //  Copyright © 2017 UC Berkeley. All rights reserved.
 //
 
-#include "c2_casesplits.h"
+#include "casesplits.h"
 #include "log.h"
 #include "c2_traces.h"
 #include "domain.h"
@@ -29,7 +29,7 @@ void c2_successful_case_split_heuristics(C2* c2, int_vector* solved_cube) {
 }
 
 // Returns if last assumption was vacuous
-void c2_backtrack_case_split(C2* c2) {
+void casesplits_backtrack_case_split(C2* c2) {
     V2("Backtracking from case split.\n");
     
     assert(c2->skolem->decision_lvl == c2->restart_base_decision_lvl);
@@ -154,7 +154,7 @@ Lit c2_case_split_pick_literal(C2* c2) {
     return lit;
 }
 
-bool c2_case_splits_make_assumption(C2* c2, Lit lit) {
+bool casesplits_make_assumption(C2* c2, Lit lit) {
     
     satsolver_assume(c2->skolem->skolem, skolem_get_satsolver_lit(c2->skolem, lit));
     
@@ -177,7 +177,7 @@ bool c2_case_splits_make_assumption(C2* c2, Lit lit) {
                 c2->result = CADET_RESULT_SAT;
             } else {
                 abortif(! c2->options->cegar, "This case can only occur when something else added assumptions.");
-//                c2_close_case(c2); // watch out: this might be a recursive call
+//                casesplits_close_case(c2); // watch out: this might be a recursive call
             }
             lit = 0; // suppresses that case split happens
             return true;
@@ -231,7 +231,7 @@ void c2_case_splits_reset_countdown(C2* c2) {
     c2->conflicts_between_case_splits_countdown = val + 1;
 }
 
-bool c2_case_split(C2* c2) {
+bool casesplits_assume_single_lit(C2* c2) {
     if (! c2->options->case_splits
         || c2->restarts < c2->magic.num_restarts_before_case_splits
         || c2->conflicts_between_case_splits_countdown > 0
@@ -246,7 +246,7 @@ bool c2_case_split(C2* c2) {
     //    Lit most_notorious_literal = c2_pick_most_notorious_literal(c2);
     Lit most_notorious_literal = c2_case_split_pick_literal(c2);
     if (most_notorious_literal != 0) {
-        c2_case_splits_make_assumption(c2, most_notorious_literal);
+        casesplits_make_assumption(c2, most_notorious_literal);
         return true;
     } else {
         V1("Case split not successful; no literal available for case split.\n");
@@ -338,7 +338,7 @@ int_vector* c2_determine_notorious_determinsitic_variables(C2* c2) {
     return notorious_lits;
 }
 
-void c2_close_case(C2* c2) {
+void casesplits_close_case(C2* c2) {
     assert(c2->result == CADET_RESULT_SAT);
     
     V1("Case split of depth %u successfully completed. ", c2->case_split_depth);
@@ -365,7 +365,7 @@ void c2_close_case(C2* c2) {
     
     c2_successful_case_split_heuristics(c2, solved_cube);
     
-    c2_backtrack_case_split(c2);
+    casesplits_backtrack_case_split(c2);
     
     domain_completed_case(c2->skolem, solved_cube, NULL, NULL);
     
@@ -382,7 +382,7 @@ void c2_close_case(C2* c2) {
         }
         
         Lit l = int_vector_get(solved_cube, i);
-        vacuous = c2_case_splits_make_assumption(c2, - l);
+        vacuous = casesplits_make_assumption(c2, - l);
         if (i == int_vector_count(solved_cube) - 1) {
             abortif(!vacuous, "Problem with assumptions after reset");
         }
@@ -390,7 +390,7 @@ void c2_close_case(C2* c2) {
     }
 }
 
-void c2_case_splits_undo_assumption(C2* c2, void* obj) {
+void casesplits_undo_assumption(C2* c2, void* obj) {
     bool assumption_vacuous = (bool) (long) obj;
     
     c2->skolem->decision_lvl -=1;

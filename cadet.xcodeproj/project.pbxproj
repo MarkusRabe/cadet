@@ -42,7 +42,7 @@
 		287BB7C31E0609B000AAE180 /* partitions.c in Sources */ = {isa = PBXBuildFile; fileRef = 287BB7C11E0609B000AAE180 /* partitions.c */; };
 		287C3B0D1E37EF7B00F7096A /* examples.c in Sources */ = {isa = PBXBuildFile; fileRef = 287C3B0B1E37EF7B00F7096A /* examples.c */; };
 		287C3B101E396B7600F7096A /* c2_traces.c in Sources */ = {isa = PBXBuildFile; fileRef = 287C3B0E1E396B7600F7096A /* c2_traces.c */; };
-		287C3B131E399C7A00F7096A /* c2_casesplits.c in Sources */ = {isa = PBXBuildFile; fileRef = 287C3B111E399C7A00F7096A /* c2_casesplits.c */; };
+		287C3B131E399C7A00F7096A /* casesplits.c in Sources */ = {isa = PBXBuildFile; fileRef = 287C3B111E399C7A00F7096A /* casesplits.c */; };
 		287C3B161E3C01FE00F7096A /* skolem_var.c in Sources */ = {isa = PBXBuildFile; fileRef = 287C3B141E3C01FE00F7096A /* skolem_var.c */; };
 		287C3B1B1E3C2D5500F7096A /* val_vector.c in Sources */ = {isa = PBXBuildFile; fileRef = 287C3B191E3C2D5500F7096A /* val_vector.c */; };
 		28C1C17F20197A000094DB4E /* c2_rl.c in Sources */ = {isa = PBXBuildFile; fileRef = 28C1C17E20197A000094DB4E /* c2_rl.c */; };
@@ -139,8 +139,8 @@
 		287C3B0C1E37EF7B00F7096A /* examples.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = examples.h; path = src/examples.h; sourceTree = "<group>"; };
 		287C3B0E1E396B7600F7096A /* c2_traces.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = c2_traces.c; path = src/c2_traces.c; sourceTree = "<group>"; };
 		287C3B0F1E396B7600F7096A /* c2_traces.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = c2_traces.h; path = src/c2_traces.h; sourceTree = "<group>"; };
-		287C3B111E399C7A00F7096A /* c2_casesplits.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = c2_casesplits.c; path = src/c2_casesplits.c; sourceTree = "<group>"; };
-		287C3B121E399C7A00F7096A /* c2_casesplits.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = c2_casesplits.h; path = src/c2_casesplits.h; sourceTree = "<group>"; };
+		287C3B111E399C7A00F7096A /* casesplits.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = casesplits.c; path = src/casesplits.c; sourceTree = "<group>"; };
+		287C3B121E399C7A00F7096A /* casesplits.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = casesplits.h; path = src/casesplits.h; sourceTree = "<group>"; };
 		287C3B141E3C01FE00F7096A /* skolem_var.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = skolem_var.c; path = src/skolem_var.c; sourceTree = "<group>"; };
 		287C3B151E3C01FE00F7096A /* skolem_var.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = skolem_var.h; path = src/skolem_var.h; sourceTree = "<group>"; };
 		287C3B191E3C2D5500F7096A /* val_vector.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = val_vector.c; path = src/val_vector.c; sourceTree = "<group>"; };
@@ -296,8 +296,8 @@
 		287C3B181E3C03A400F7096A /* cadet2_ext */ = {
 			isa = PBXGroup;
 			children = (
-				287C3B121E399C7A00F7096A /* c2_casesplits.h */,
-				287C3B111E399C7A00F7096A /* c2_casesplits.c */,
+				287C3B121E399C7A00F7096A /* casesplits.h */,
+				287C3B111E399C7A00F7096A /* casesplits.c */,
 				287C3B0F1E396B7600F7096A /* c2_traces.h */,
 				287C3B0E1E396B7600F7096A /* c2_traces.c */,
 				28C1C17D20197A000094DB4E /* c2_rl.h */,
@@ -434,7 +434,7 @@
 				28675A4D1DDAA9D000951212 /* debug.c in Sources */,
 				284EED5A1ED39BAF00581801 /* satsolver_lingeling_assumptions.c in Sources */,
 				28675A601DDAA9D000951212 /* statistics.c in Sources */,
-				287C3B131E399C7A00F7096A /* c2_casesplits.c in Sources */,
+				287C3B131E399C7A00F7096A /* casesplits.c in Sources */,
 				28EBA5511DE19539003D21EB /* int_vector.c in Sources */,
 				28675A541DDAA9D000951212 /* options.c in Sources */,
 				28675A5F1DDAA9D000951212 /* skolem.c in Sources */,

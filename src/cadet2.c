@@ -15,7 +15,7 @@
 #include "certify.h"
 #include "c2_validate.h"
 #include "c2_traces.h"
-#include "c2_casesplits.h"
+#include "casesplits.h"
 #include "skolem_dependencies.h"
 #include "domain.h"
 #include "satsolver.h"
@@ -568,7 +568,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
             }
 
             // try case splits
-            bool progress_through_case_split = c2_case_split(c2);
+            bool progress_through_case_split = casesplits_assume_single_lit(c2);
             if (c2->result != CADET_RESULT_UNKNOWN) { // either the above if statement or c2_case_split may result in SAT/UNSAT
                 return c2->result;
             }
@@ -759,7 +759,7 @@ void c2_restart_heuristics(C2* c2) {
     
     if (c2->restarts % c2->magic.replenish_frequency == c2->magic.replenish_frequency - 1) {
         V1("Stepping out of case split.\n"); // Needed to simplify replenishing
-        c2_backtrack_case_split(c2);
+        casesplits_backtrack_case_split(c2);
 //#if (USE_SOLVER == SOLVER_PICOSAT_ASSUMPTIONS)
         c2_replenish_skolem_satsolver(c2);
 //#endif
@@ -824,7 +824,7 @@ cadet_res c2_sat(C2* c2) {
         c2_run(c2, c2->next_restart);
 
         while (c2->result == CADET_RESULT_SAT && int_vector_count(c2->case_split_stack) != 0) {
-            c2_close_case(c2);
+            casesplits_close_case(c2);
         }
         
         if (c2->result == CADET_RESULT_UNKNOWN) {
@@ -1000,7 +1000,7 @@ void c2_undo(void* parent, char type, void* obj) {
 
         case C2_OP_UNIVERSAL_ASSUMPTION:
             assert(true);
-            c2_case_splits_undo_assumption(c2, obj);
+            casesplits_undo_assumption(c2, obj);
             break;
             
         default:

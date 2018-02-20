@@ -29,7 +29,7 @@ void c2_validate_unique_consequences(C2* c2) {
         Clause* c = vector_get(c2->qcnf->clauses, i);
         if (c && ! skolem_has_unique_consequence(c2->skolem, c) && ! skolem_clause_satisfied(c2->skolem, c)) {
             skolem_check_for_unique_consequence(c2->skolem, c);
-            abortif(skolem_has_unique_consequence(c2->skolem, c), "Unique consequence messed up for clause %d.", c->clause_id);
+            abortif(skolem_has_unique_consequence(c2->skolem, c), "Unique consequence messed up for clause %d.", c->clause_idx);
         }
     }
 }

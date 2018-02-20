@@ -136,7 +136,7 @@ void partial_assignment_go_into_conflict_state(PartialAssignment* pa, Clause* co
     pa->conflicted_clause = conflicted_clause;
     pa->conflicted_var = conflicted_var;
     stack_push_op(pa->stack, PA_OP_CONFLICT, (void*) pa->conflicted_clause);
-    V3("Conflict in partial assignment domain for clause %u.\n", pa->conflicted_clause->clause_id);
+    V3("Conflict in partial assignment domain for clause %u.\n", pa->conflicted_clause->clause_idx);
 }
 
 void partial_assignment_assign_value(PartialAssignment* pa, Lit lit) {

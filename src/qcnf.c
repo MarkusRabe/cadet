@@ -395,7 +395,7 @@ Clause* qcnf_new_clause(QCNF* qcnf, int_vector* literals) {
     size_t bytes_to_allocate_for_literals = sizeof(Lit) * (size_t) ((int) int_vector_count(literals) - 1);
     
     Clause* c = malloc( sizeof(Clause) + bytes_to_allocate_for_literals );
-    c->clause_id = qcnf_get_smallest_free_clause_id(qcnf); // UINT_MAX;
+    c->clause_idx = qcnf_get_smallest_free_clause_id(qcnf); // UINT_MAX;
     c->original = true;
     c->consistent_with_originals = true;
     c->blocked = false;
@@ -477,16 +477,16 @@ void qcnf_register_clause(QCNF* qcnf, Clause* c) {
     for (int i = 0; i < c->size; i++) {
         vector_add(qcnf_get_occs_of_lit(qcnf, c->occs[i]), c);
     }
-    assert(vector_get(qcnf->clauses, c->clause_id) == NULL);
-    vector_set(qcnf->clauses, c->clause_id, c);
+    assert(vector_get(qcnf->clauses, c->clause_idx) == NULL);
+    vector_set(qcnf->clauses, c->clause_idx, c);
     if (c->universal_clause) {
-        int_vector_add(qcnf->universal_clauses, (int) c->clause_id);
+        int_vector_add(qcnf->universal_clauses, (int) c->clause_idx);
     }
 }
 
 void qcnf_unregister_clause(QCNF* qcnf, Clause* c) {
     if (c->universal_clause) {
-        int_vector_remove(qcnf->universal_clauses, (int) c->clause_id);
+        int_vector_remove(qcnf->universal_clauses, (int) c->clause_idx);
     }
     
     // Update the occurrence lists
@@ -495,7 +495,7 @@ void qcnf_unregister_clause(QCNF* qcnf, Clause* c) {
         vector_remove_unsorted(occs, c);
     }
     
-    vector_set(qcnf->clauses, c->clause_id, NULL);
+    vector_set(qcnf->clauses, c->clause_idx, NULL);
 }
 
 void qcnf_delete_clause(QCNF* qcnf, Clause* c) {
@@ -503,8 +503,8 @@ void qcnf_delete_clause(QCNF* qcnf, Clause* c) {
     qcnf->deleted_clauses += 1;
     qcnf_unregister_clause(qcnf, c);
     
-    if (c->clause_id < qcnf->next_free_clause_id) {
-        qcnf->next_free_clause_id = c->clause_id;
+    if (c->clause_idx < qcnf->next_free_clause_id) {
+        qcnf->next_free_clause_id = c->clause_idx;
     }
     
     qcnf_free_clause(c);

@@ -782,7 +782,7 @@ cadet_res c2_sat(C2* c2) {
         unsigned universal_clause_idx = (unsigned) int_vector_get(c2->qcnf->universal_clauses, 0); // must be at least one clause in there
         Clause* universal_clause = vector_get(c2->qcnf->clauses, universal_clause_idx);
         assert(universal_clause->universal_clause);
-        V1("CNF contains a universal clause (clause id %u).\n", universal_clause->clause_id);
+        V1("CNF contains a universal clause (clause id %u).\n", universal_clause->clause_idx);
         c2->result = CADET_RESULT_UNSAT;
         c2->state = C2_EMPTY_CLAUSE_CONFLICT;
         return CADET_RESULT_UNSAT;
@@ -1055,7 +1055,7 @@ void c2_new_variable(C2* c2, unsigned var_id) {
 }
 
 void c2_new_clause(C2* c2, Clause* c) {
-    assert(c->clause_id <= vector_count(c2->qcnf->clauses));
+    assert(c->clause_idx <= vector_count(c2->qcnf->clauses));
     assert(c != NULL);
     c2->result = CADET_RESULT_UNKNOWN;
     examples_new_clause(c2->examples, c);

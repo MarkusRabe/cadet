@@ -38,7 +38,7 @@ bool skolem_is_relevant_clause(void* domain, Clause* c, Lit lit) {
     Skolem* s = (Skolem*) domain;
     unsigned var_id = lit_to_var(lit);
     if (skolem_get_constant_value(domain, lit) == 1) { // if the constant has the opposite value, the reason_for_constant cannot be it.
-        return skolem_get_reason_for_constant(domain, var_id) == c->clause_id;
+        return skolem_get_reason_for_constant(domain, var_id) == c->clause_idx;
     } else {
         return lit_to_var(skolem_get_unique_consequence(s, c)) == var_id;
     }

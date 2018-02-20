@@ -225,23 +225,23 @@ typedef union {
 } UNIQUE_CONSEQUENCE_UNDO_INFO_UNION;
 
 void skolem_set_unique_consequence(Skolem* s, Clause* c, Lit l) {
-    V3("  Assigning clause %d unique consequence %d\n", c->clause_id, l);
-    while (int_vector_count(s->unique_consequence) <= c->clause_id) {
+    V3("  Assigning clause %d unique consequence %d\n", c->clause_idx, l);
+    while (int_vector_count(s->unique_consequence) <= c->clause_idx) {
         int_vector_add(s->unique_consequence, 0);
     }
     UNIQUE_CONSEQUENCE_UNDO_INFO_UNION ucui;
-    ucui.components.clause_id = c->clause_id;
-    ucui.components.lit = int_vector_get(s->unique_consequence, c->clause_id);
+    ucui.components.clause_id = c->clause_idx;
+    ucui.components.lit = int_vector_get(s->unique_consequence, c->clause_idx);
     
     assert(ucui.components.lit != l);
     
     stack_push_op(s->stack, SKOLEM_OP_UNIQUE_CONSEQUENCE, (void*) (uint64_t) ucui.data); // (uint64_t) c->clause_id
-    int_vector_set(s->unique_consequence, c->clause_id, l);
+    int_vector_set(s->unique_consequence, c->clause_idx, l);
 }
 
 Lit skolem_get_unique_consequence(Skolem* s, Clause* c) {
-    if (int_vector_count(s->unique_consequence) > c->clause_id) {
-        return int_vector_get(s->unique_consequence, c->clause_id);
+    if (int_vector_count(s->unique_consequence) > c->clause_idx) {
+        return int_vector_get(s->unique_consequence, c->clause_idx);
     } else {
         return 0;
     }
@@ -1240,7 +1240,7 @@ void skolem_assign_constant_value(Skolem* s, Lit lit, union Dependencies propaga
     
     V3("Skolem: Assign value %d.\n",lit);
     skolem_update_clause_worklist(s, lit);
-    skolem_update_reason_for_constant(s, var_id, reason ? reason->clause_id : INT_MAX, s->decision_lvl);
+    skolem_update_reason_for_constant(s, var_id, reason ? reason->clause_idx : INT_MAX, s->decision_lvl);
     
     if (propagation_deps.dependence_lvl == 1) {
         V3("Constant propagation with non-zero dependencies.\n");
@@ -1354,7 +1354,7 @@ void skolem_propagate_constants_over_clause(Skolem* s, Clause* c) {
         s->state = SKOLEM_STATE_CONSTANTS_CONLICT;
         stack_push_op(s->stack, SKOLEM_OP_PROPAGATION_CONFLICT, NULL);
         
-        V3("Conflict in explicit propagation in skolem domain for clause %u and var %u\n", s->conflicted_clause->clause_id, s->conflict_var_id);
+        V3("Conflict in explicit propagation in skolem domain for clause %u and var %u\n", s->conflicted_clause->clause_idx, s->conflict_var_id);
         
     } else { // assign value
         if ((qcnf_is_universal(s->qcnf, lit_to_var(unassigned_lit)) ||

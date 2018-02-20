@@ -41,7 +41,7 @@ typedef enum {
 } PROBLEM_TYPE;
 
 struct Clause {
-    unsigned int clause_id; // its position in the clause vector; can change, unlike var_ids
+    unsigned int clause_idx; // its position in the clause vector; can change, unlike var_ids
 
     unsigned int original                  : 1;
     unsigned int consistent_with_originals : 1;   // learnt clauses

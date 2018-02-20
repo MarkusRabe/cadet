@@ -70,7 +70,7 @@ unsigned c2_minimize_clause(C2* c2, Clause* c) {
                 partial_assignment_assign_value(c2->minimization_pa, - l);
                 partial_assignment_propagate(c2->minimization_pa);
             } else if (val == 1) {
-                V3("Removing implied literal %d from clause %u.\n", l, c->clause_id);
+                V3("Removing implied literal %d from clause %u.\n", l, c->clause_idx);
                 int_vector_add(to_remove, l);
             }
             

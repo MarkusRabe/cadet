@@ -191,7 +191,7 @@ void conflict_analysis_follow_implication_graph(conflict_analysis* ca) {
             } else {
                 assert(reason->original || reason->consistent_with_originals);
                 if (debug_verbosity >= VERBOSITY_HIGH) {
-                    V3("  Reason for %d is clause %u: ", lit, reason->clause_id);
+                    V3("  Reason for %d is clause %u: ", lit, reason->clause_idx);
                     qcnf_print_clause(reason, stdout);
                 }
                 conflict_analysis_schedule_causing_vars_in_work_queue(ca, reason, lit);
@@ -239,7 +239,7 @@ int_vector* analyze_assignment_conflict(C2* c2,
                                         unsigned (*domain_get_decision_lvl)(void* domain, unsigned var_id)) {
     V3("Computing conflict clause. Conflicted var: %u. Conflicted clause:", conflicted_var);
     if (conflicted_clause) {
-        V3("%u\n", conflicted_clause->clause_id);
+        V3("%u\n", conflicted_clause->clause_idx);
     } else {
         V3("NULL\n");
     }

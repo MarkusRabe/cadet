@@ -430,7 +430,6 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
         assert(c2->state == C2_READY);
         assert(c2->skolem->decision_lvl >= c2->restart_base_decision_lvl);
         assert(c2->skolem->decision_lvl <= c2->stack->push_count);
-        assert(c2->qcnf->stack->push_count >= c2->skolem->stack->push_count);
         assert(c2->skolem->stack->push_count >= c2->skolem->decision_lvl - c2->restart_base_decision_lvl);
 
         c2_propagate(c2);
@@ -982,13 +981,11 @@ cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
 void c2_push(C2* c2) {
     stack_push(c2->stack);
     skolem_push(c2->skolem);
-    qcnf_push(c2->qcnf);
     examples_push(c2->examples);
 }
 void c2_pop(C2* c2) {
     stack_pop(c2->stack, c2);
     skolem_pop(c2->skolem);
-    qcnf_pop(c2->qcnf);
     examples_pop(c2->examples);
 }
 void c2_undo(void* parent, char type, void* obj) {

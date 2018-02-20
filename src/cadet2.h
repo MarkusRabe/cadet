@@ -122,9 +122,10 @@ C2* c2_init(Options* options);
 C2* c2_init_qcnf(QCNF*, Options* options);
 void c2_free(C2* c2);
 
-// Push and pop are for external use. 
+// Push and pop are currently only meant for internal use.
 void c2_push(C2*);
 void c2_pop(C2*);
+
 Clause* c2_add_lit(C2* c2, Lit lit);
 void c2_new_variable(C2* c2, unsigned var_id);
 void c2_new_clause(C2* c2, Clause* c);

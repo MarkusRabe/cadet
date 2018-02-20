@@ -11,6 +11,7 @@
 
 #include "cadet2.h"
 #include "float_vector.h"
+#include "set.h"
 
 #include <stdio.h>
 
@@ -27,13 +28,22 @@ struct Cegar_Statistics {
     float recent_average_cube_size;
 };
 
-struct PartialFunction {
-    int_vector* cube; // optional: cube in which this partial function is valid.
-    // In certifying mode, one of the following must be assigned
-    int_vector* assignment; // assignment to dlvl>0 vars
-    QCNF* function; // formula over dlvl>0 vars
+struct Case {
+    union {
+        struct { // for completed cegar rounds
+            int_vector* cube; // optional: cube in which this partial function is valid.
+            int_vector* assignment; // assignment to dlvl>0 vars
+        } ass;
+        struct { // for completed case split
+            int_vector* decisions;
+            set* learnt_clauses;
+        } fun;
+    } representation;
+    
+    char type; // 0 indicates cegar round, 1 indicates case split
+    // type listed last, as this reduces memory footprint of this struct by 7 bytes.
 };
-typedef struct PartialFunction PartialFunction;
+typedef struct Case Case;
 
 typedef struct Domain Domain;
 struct Domain {
@@ -60,7 +70,9 @@ struct Domain {
 Domain* domain_init(QCNF*);
 void domain_free(Domain* c);
 
-void domain_completed_case(Skolem* s, int_vector* cube, int_vector* partial_assignment, QCNF* function); // cube is over dlvl0, partial_assignment is over dlvl>0, function is over dlvl>0
+void domain_completed_case_split(Skolem* s, int_vector* decisions, set* learnt_clauses);
+void domain_completed_cegar_cube(Skolem* s, int_vector* cube, int_vector* partial_assignment);
+void domain_encode_case_into_satsolver(Skolem* s, Case* c, SATSolver* sat);
 void domain_print_statistics(Domain*);
 bool domain_is_initialized(Domain*);
 

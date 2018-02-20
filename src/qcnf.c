@@ -16,8 +16,8 @@
 #include <assert.h>
 #include <stdint.h>
 
-bool qcnf_contains_empty_clause(QCNF* qcnf) {
-    return qcnf->empty_clause != NULL;
+bool qcnf_contains_clause_with_only_universals(QCNF* qcnf) {
+    return int_vector_count(qcnf->universal_clauses) > 0;
 }
 bool qcnf_is_trivially_true(QCNF* qcnf) {
     return vector_count(qcnf->clauses) == 0;
@@ -60,7 +60,14 @@ int qcnf_contains_variable(Clause* clause, Var* var) { // 0 if not contained, ot
 
 bool qcnf_is_duplicate(QCNF* qcnf, Clause* c) {
     if (c->size == 0) {
-        return qcnf->empty_clause != NULL;
+        for (unsigned i = 0; i < int_vector_count(qcnf->universal_clauses); i++) {
+            Clause* other = vector_get(qcnf->clauses,
+                                       (unsigned) int_vector_get(qcnf->universal_clauses, i));
+            if (other != c && other->size == 0) {
+                return true;
+            }
+        }
+        return false;
     }
     Lit first = c->occs[0];
     Var* v = var_vector_get(qcnf->vars, lit_to_var(first));
@@ -76,7 +83,6 @@ bool qcnf_is_duplicate(QCNF* qcnf, Clause* c) {
                 return true;
             }
         }
-        
     }
     return false;
 }
@@ -202,7 +208,6 @@ QCNF* qcnf_init() {
     QCNF* qcnf = malloc(sizeof(QCNF));
     
     qcnf->clauses = vector_init();
-    qcnf->cubes = vector_init();
     qcnf->next_free_clause_id = 0;
     
     qcnf->vars = var_vector_init();
@@ -215,7 +220,7 @@ QCNF* qcnf_init() {
     qcnf->problem_type = QCNF_PROPOSITIONAL;
     
     qcnf->new_clause = int_vector_init();
-    qcnf->empty_clause = NULL;
+    qcnf->universal_clauses = int_vector_init();
     
     qcnf->universals_constraints = int_vector_init();
     
@@ -360,7 +365,7 @@ unsigned qcnf_get_smallest_free_clause_id(QCNF* qcnf) {
     assert(vector_count(qcnf->clauses) == qcnf->next_free_clause_id || vector_get(qcnf->clauses, qcnf->next_free_clause_id) == NULL);
     
     unsigned res = qcnf->next_free_clause_id;
-    qcnf->next_free_clause_id += 1; 
+    qcnf->next_free_clause_id += 1;
     while (qcnf->next_free_clause_id < vector_count(qcnf->clauses) && vector_get(qcnf->clauses, qcnf->next_free_clause_id) != NULL) {
         qcnf->next_free_clause_id += 1;
     }
@@ -385,49 +390,52 @@ Clause* qcnf_new_clause(QCNF* qcnf, int_vector* literals) {
         }
     }
     
+    assert(sizeof(Clause) == 3 * sizeof(Lit));
     assert( sizeof(Clause) + (size_t) ( (int) sizeof(Lit) * ((int) int_vector_count(literals) - 1) ) == sizeof(int) * (int_vector_count(literals) + 2) );
     size_t bytes_to_allocate_for_literals = sizeof(Lit) * (size_t) ((int) int_vector_count(literals) - 1);
     
     Clause* c = malloc( sizeof(Clause) + bytes_to_allocate_for_literals );
-    c->clause_id = qcnf_get_smallest_free_clause_id(qcnf);
+    c->clause_id = qcnf_get_smallest_free_clause_id(qcnf); // UINT_MAX;
     c->original = true;
     c->consistent_with_originals = true;
     c->blocked = false;
+    c->universal_clause = true;
     c->size = int_vector_count(literals);
+    
     for (unsigned i = 0; i < c->size; i++) {
         int lit = int_vector_get(literals, i);
         assert(lit != 0);
-        
         c->occs[i] = lit;
         unsigned var_id = lit_to_var(lit);
+        
         if (! qcnf_var_exists(qcnf,var_id)) {
             V1("Warning: Variable %d is not bound.\n", var_id);
             qcnf_new_var(qcnf, false, qcnf_get_empty_scope(qcnf), var_id);
         }
+        V3("clause %u, lit is %d\n", qcnf->clauses->count, lit);
+        c->universal_clause = c->universal_clause && qcnf_is_universal(qcnf, var_id);
     }
     
     abortif(static_qcnf_variable_for_sorting != NULL, "Memory curruption or concurrent usage of static variable static_qcnf_variable_for_sorting.");
     
     static_qcnf_variable_for_sorting = qcnf; // sorry for this hack; need to reference qcnf from within the sorting procedure
-    qsort(c->occs, c->size, sizeof(int), qcnf_compare_occurrence_by_qtype_then_scope_size_then_var_id__static_qcnf);
+    qsort(c->occs,
+          c->size,
+          sizeof(int),
+          qcnf_compare_occurrence_by_qtype_then_scope_size_then_var_id__static_qcnf);
     static_qcnf_variable_for_sorting = NULL;
     
-    qcnf_universal_reduction(qcnf, c);
-
+    qcnf_register_clause(qcnf, c);
+    
+    ///// Clause is done /////
+    
     if (qcnf_is_duplicate(qcnf,c)) {
         V3("Warning: detected duplicate clause. ");
         if (debug_verbosity >= 3) {
             qcnf_print_clause(c, stdout);
         }
-        free(c);
+        qcnf_delete_clause(qcnf, c);
         return NULL;
-    }
-    
-    qcnf_register_clause(qcnf, c);
-    
-    if (c->size == 0) {
-        stack_push_op(qcnf->stack, QCNF_UPDATE_EMPTY_CLAUSE, qcnf->empty_clause);
-        qcnf->empty_clause = c;
     }
     
     if (c != NULL) { // to avoid too many operations in the undo-chain
@@ -435,7 +443,7 @@ Clause* qcnf_new_clause(QCNF* qcnf, int_vector* literals) {
     }
     
     if (debug_verbosity >= VERBOSITY_ALL) {
-        V4("New clause %d: ", c->clause_id);
+        V4("New clause: ");
         qcnf_print_clause(c, stdout);
     }
     
@@ -456,14 +464,50 @@ void qcnf_add_lit(QCNF* qcnf, int lit) {
 Clause* qcnf_close_clause(QCNF* qcnf) {
     Clause* c = qcnf_new_clause(qcnf, qcnf->new_clause);
     int_vector_reset(qcnf->new_clause);
-    if (c && qcnf->empty_clause == NULL && c->size == 0) {
-        qcnf->empty_clause = c;
-    }
     return c;
 }
 
 void qcnf_free_clause(Clause* c) {
     free(c);
+}
+
+
+void qcnf_register_clause(QCNF* qcnf, Clause* c) {
+    // Update the occurrence lists
+    for (int i = 0; i < c->size; i++) {
+        vector_add(qcnf_get_occs_of_lit(qcnf, c->occs[i]), c);
+    }
+    assert(vector_get(qcnf->clauses, c->clause_id) == NULL);
+    vector_set(qcnf->clauses, c->clause_id, c);
+    if (c->universal_clause) {
+        int_vector_add(qcnf->universal_clauses, (int) c->clause_id);
+    }
+}
+
+void qcnf_unregister_clause(QCNF* qcnf, Clause* c) {
+    if (c->universal_clause) {
+        int_vector_remove(qcnf->universal_clauses, (int) c->clause_id);
+    }
+    
+    // Update the occurrence lists
+    for (int i = 0; i < c->size; i++) {
+        vector* occs = qcnf_get_occs_of_lit(qcnf, c->occs[i]);
+        vector_remove_unsorted(occs, c);
+    }
+    
+    vector_set(qcnf->clauses, c->clause_id, NULL);
+}
+
+void qcnf_delete_clause(QCNF* qcnf, Clause* c) {
+    assert(c);
+    qcnf->deleted_clauses += 1;
+    qcnf_unregister_clause(qcnf, c);
+    
+    if (c->clause_id < qcnf->next_free_clause_id) {
+        qcnf->next_free_clause_id = c->clause_id;
+    }
+    
+    qcnf_free_clause(c);
 }
 
 void qcnf_free_var(Var* v) {
@@ -495,24 +539,6 @@ void qcnf_push(QCNF* qcnf) {
     stack_push(qcnf->stack);
 }
 
-void qcnf_remove_clause(QCNF* qcnf, Clause* c) {
-    assert(! c->original);
-    
-    vector_set(qcnf->clauses, c->clause_id, NULL);
-    if (c->clause_id < qcnf->next_free_clause_id) {
-        qcnf->next_free_clause_id = c->clause_id;
-    }
-    for (unsigned i = 0; i < c->size; i++) {
-        Var* v = var_vector_get(qcnf->vars, lit_to_var(c->occs[i]));
-        assert(v->var_id != 0);
-        vector* var_occs = c->occs[i] < 0 ? &v->neg_occs : &v->pos_occs;
-        bool res = vector_remove_unsorted(var_occs, c);
-        assert(res);
-    }
-    qcnf_free_clause(c);
-}
-
-
 void qcnf_undo_op(void* parent, char type, void* obj) {
 //void qcnf_undo_operation(QCNF* m, Operation* op) {
     QCNF* qcnf = (QCNF*) parent;
@@ -521,7 +547,7 @@ void qcnf_undo_op(void* parent, char type, void* obj) {
             assert(obj != NULL);
             Clause* c = (Clause*) obj;
             if (!c->consistent_with_originals) { // protects learned clauses
-                qcnf_remove_clause(qcnf, (Clause*) obj);
+                qcnf_delete_clause(qcnf, c);
             }
             break;
         case QCNF_OP_NEW_VAR:
@@ -547,11 +573,8 @@ void qcnf_undo_op(void* parent, char type, void* obj) {
                     break;
                 }
             }
-            
             break;
-        case QCNF_UPDATE_EMPTY_CLAUSE:
-            qcnf->empty_clause = (Clause*) obj;
-            break;
+        
         default:
             V0("Unknown undo operation in qcnf.c.\n");
             NOT_IMPLEMENTED();
@@ -825,34 +848,6 @@ validate_and_return: // check that the result is correct ... this function is to
     return res;
 }
 
-void qcnf_register_clause(QCNF* qcnf, Clause* c) {
-    // Update the occurrence lists
-    for (int i = 0; i < c->size; i++) {
-        vector_add(qcnf_get_occs_of_lit(qcnf, c->occs[i]), c);
-    }
-    
-    vector_set(qcnf->clauses, c->clause_id, c);
-    
-    if (c->size == 0) {
-        if (qcnf->empty_clause) {
-            LOG_WARNING("Found second empty clause. Likely inconsistency.");
-        }
-        qcnf->empty_clause = c;
-    }
-}
-
-void qcnf_unregister_clause(QCNF* qcnf, Clause* c) {
-    assert(c->size > 0); // otherwise we may also need to keep qcnf->empty_clause consistent
-    
-    // Update the occurrence lists
-    for (int i = 0; i < c->size; i++) {
-        vector* occs = qcnf_get_occs_of_lit(qcnf, c->occs[i]);
-        vector_remove_unsorted(occs, c);
-    }
-    
-    vector_set(qcnf->clauses, c->clause_id, NULL);
-}
-
 bool qcnf_remove_literal(QCNF* qcnf, Clause* c, Lit l) {
     vector* occs = qcnf_get_occs_of_lit(qcnf, l);
     vector_remove_unsorted(occs, c);
@@ -873,14 +868,6 @@ bool qcnf_remove_literal(QCNF* qcnf, Clause* c, Lit l) {
     }
     return found;
 }
-
-void qcnf_delete_clause(QCNF* qcnf, Clause* c) {
-    assert(c && ! c->original);
-    qcnf->deleted_clauses += 1;
-    qcnf_unregister_clause(qcnf, c);
-    qcnf_free_clause(c);
-}
-
 
 
 bool qcnf_occus_only_in_binary_clauses(QCNF* qcnf, Lit lit) {

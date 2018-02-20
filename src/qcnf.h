@@ -28,7 +28,6 @@ struct Scope;
 typedef struct Scope Scope;
 
 struct C2_VAR_DATA {
-//    unsigned phase : 1;
     float activity;
 };
 typedef struct C2_VAR_DATA C2_VAR_DATA;
@@ -42,14 +41,13 @@ typedef enum {
 } PROBLEM_TYPE;
 
 struct Clause {
-    unsigned clause_id; // is not needed, but convenient. Is not reconstructible like the var_ids
+    unsigned int clause_id; // its position in the clause vector; can change, unlike var_ids
 
     unsigned int original                  : 1;
     unsigned int consistent_with_originals : 1;   // learnt clauses
-    unsigned int blocked                   : 1;   // See blocked clause elimination
-    unsigned int size                      : 29;
-    
-    // skolem_clause_info ... // contains unique_consequence
+    unsigned int blocked                   : 1;   // for blocked clause elimination
+    unsigned int universal_clause          : 1;   // contains only universals
+    unsigned int size                      : 28;
     
     Lit occs[1]; // to avoid flexible array member and make code compatible with newer C standards
 };
@@ -82,8 +80,7 @@ struct Scope {
 
 struct QCNF {
     var_vector* vars; // indexed by var_id
-    vector* clauses; // indexed by clause_id --- but it is deprecated to rely on this indexing
-    vector* cubes; // cubes represented as clauses -- not indexed by anything. Only used for conversion from 3QBF 
+    vector* clauses; // indexed by clause_id
     unsigned next_free_clause_id;
     
     vector* scopes; // vector of scope, indexed by scope_id.
@@ -91,7 +88,7 @@ struct QCNF {
     PROBLEM_TYPE problem_type;
     
     int_vector* new_clause;
-    Clause* empty_clause; // is NULL if no empty clause exists
+    int_vector* universal_clauses; // idxs of clauses containing only universals
     
     int_vector* universals_constraints;
     
@@ -112,7 +109,7 @@ void qcnf_free(QCNF*);
 void qcnf_push(QCNF*);
 void qcnf_pop(QCNF*);
 
-bool qcnf_contains_empty_clause(QCNF*);
+bool qcnf_contains_clause_with_only_universals(QCNF*);
 bool qcnf_is_trivially_true(QCNF*);
 bool qcnf_is_propositional(QCNF*);
 bool qcnf_is_2QBF(QCNF*);
@@ -178,8 +175,7 @@ void qcnf_check_invariants(QCNF* qcnf);
 
 typedef enum {
     QCNF_OP_NEW_CLAUSE,
-    QCNF_OP_NEW_VAR,
-    QCNF_UPDATE_EMPTY_CLAUSE
+    QCNF_OP_NEW_VAR
 } qcnf_op;
 
 void qcnf_undo_op(void* qcnf,char,void*);

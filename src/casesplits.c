@@ -338,14 +338,25 @@ int_vector* c2_determine_notorious_determinsitic_variables(C2* c2) {
     return notorious_lits;
 }
 
+void casesplits_record_case(C2* c2) {
+    set* learnt_clauses = set_init();
+    for (unsigned i = 0; i < vector_count(c2->skolem->qcnf->clauses); i++) {
+        Clause* c = vector_get(c2->skolem->qcnf->clauses, i++);
+        if (! c->original && c->consistent_with_originals) {
+            set_add(learnt_clauses, c);
+        }
+    }
+    domain_completed_case_split(c2->skolem, int_vector_copy(c2->skolem->decisions), learnt_clauses);
+}
+
 void casesplits_close_case(C2* c2) {
     assert(c2->result == CADET_RESULT_SAT);
     
     V1("Case split of depth %u successfully completed. ", c2->case_split_depth);
     
-    c2->statistics.cases_explored += 1;
+    c2->statistics.cases_closed += 1;
     
-//    c2_case_split_record_certificate(c2);
+    casesplits_record_case(c2);
     
     c2_backtrack_to_decision_lvl(c2, c2->restart_base_decision_lvl);
     assert(c2->skolem->decision_lvl == c2->restart_base_decision_lvl);
@@ -355,7 +366,7 @@ void casesplits_close_case(C2* c2) {
     int_vector* solved_cube = int_vector_init();
     for (unsigned i = 0; i < int_vector_count(c2->case_split_stack); i++) {
         Lit l = int_vector_get(c2->case_split_stack, i);
-        int_vector_add(solved_cube, -l);
+        int_vector_add(solved_cube, l);
         V1(" %d", l);
     }
     V1("\n");
@@ -367,27 +378,27 @@ void casesplits_close_case(C2* c2) {
     
     casesplits_backtrack_case_split(c2);
     
-    domain_completed_case(c2->skolem, solved_cube, NULL, NULL);
-    
     if (c2->result == CADET_RESULT_UNKNOWN && satsolver_sat(c2->skolem->skolem) == SATSOLVER_RESULT_UNSAT) {
         c2->result = CADET_RESULT_SAT;
     }
-    // Redo all but last case assumptions; stop when one turns out to be vacuous (can be in combination with earlier cases.
-    bool vacuous = false;
-    unsigned i = 0;
-    while (! vacuous && c2->result == CADET_RESULT_UNKNOWN) {
-        
-        if (genrand_int31() % 20 == 0) {
-            break;
+    
+    if (c2->options->partial_backtracking_from_closed_cases) {
+        // Redo all but last case assumptions; stop when one turns out to be vacuous (can be in combination with earlier cases.
+        bool vacuous = false;
+        unsigned i = 0;
+        while (! vacuous && c2->result == CADET_RESULT_UNKNOWN && i + 1 < int_vector_count(solved_cube)) {
+            
+            if (genrand_int31() % 20 == 0) {
+                break;
+            }
+            
+            Lit l = int_vector_get(solved_cube, i);
+            vacuous = casesplits_make_assumption(c2, l);
+            i++;
         }
-        
-        Lit l = int_vector_get(solved_cube, i);
-        vacuous = casesplits_make_assumption(c2, - l);
-        if (i == int_vector_count(solved_cube) - 1) {
-            abortif(!vacuous, "Problem with assumptions after reset");
-        }
-        i++;
     }
+    
+    int_vector_free(solved_cube);
 }
 
 void casesplits_undo_assumption(C2* c2, void* obj) {

@@ -49,6 +49,7 @@ typedef struct {
     
     // Case splits
     bool case_splits;
+    bool partial_backtracking_from_closed_cases;
     
     // Optimizations
     bool plaisted_greenbaum_completion;

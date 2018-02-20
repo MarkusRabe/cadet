@@ -68,6 +68,7 @@ Skolem* skolem_init(QCNF* qcnf, Options* o,
     if (s->options->functional_synthesis) {
         s->decision_indicator_sat_lits = int_vector_init();
     }
+    s->decisions = int_vector_init();
     
     // Statistics
     s->statistics.propagations = 0;
@@ -1101,13 +1102,17 @@ void skolem_undo(void* parent, char type, void* obj) {
             }
             break;
             
-        case SKOLEM_OP_DECISION:
+        case SKOLEM_OP_DECISION_LVL:
             s->decision_lvl -= 1;
-            if (s->options->functional_synthesis) {
-                int_vector_pop(s->decision_indicator_sat_lits);
-            }
             break;
             
+        case SKOLEM_OP_DECISION:
+            int_vector_pop(s->decisions);
+            if (s->options->functional_synthesis) {
+                int_vector_pop(s->decision_indicator_sat_lits);
+                assert(int_vector_count(s->decisions) == int_vector_count(s->decision_indicator_sat_lits));
+            }
+            break;
         default:
             V0("Unknown undo operation in skolem.c: %d\n", (int) type);
             NOT_IMPLEMENTED();
@@ -1116,7 +1121,7 @@ void skolem_undo(void* parent, char type, void* obj) {
 
 void skolem_increase_decision_lvl(Skolem* s) {
     s->decision_lvl += 1;
-    stack_push_op(s->stack, SKOLEM_OP_DECISION, NULL);
+    stack_push_op(s->stack, SKOLEM_OP_DECISION_LVL, NULL);
 }
 
 // PRINTING
@@ -1376,14 +1381,15 @@ cleanup:
 void skolem_decision(Skolem* s, Lit decision_lit) {
     assert(!skolem_can_propagate(s));
     
-    V3("Decision %d, new dlvl is %u\n", decision_lit, s->decision_lvl + 1);
+    V3("Decision %d, dlvl is %u\n", decision_lit, s->decision_lvl);
     unsigned decision_var_id = lit_to_var(decision_lit);
     
     assert(!skolem_is_deterministic(s, decision_var_id));
     assert(skolem_get_constant_value(s, decision_lit) == 0);
     
-    // Increase decision level, set
-    skolem_increase_decision_lvl(s);
+    int_vector_add(s->decisions, decision_lit);
+    stack_push_op(s->stack, SKOLEM_OP_DECISION, NULL);
+    
     skolem_update_decision_lvl(s, decision_var_id, s->decision_lvl);
     
     /* Tricky bug: In case the decision var is conflicted and both lits are true, the definitions below

@@ -5,10 +5,10 @@
 #include <stdio.h>
 
 #define SEED 0
-#define VERSION "v2.3"
+#define VERSION "v2.4"
 
 typedef enum {
-    CADET_RESULT_SAT      = 10,
+    CADET_RESULT_SAT      = 10, // currently also internally used to represent completed cases; should be refactored
     CADET_RESULT_UNSAT    = 20,
     CADET_RESULT_UNKNOWN  = 30,
     CADET_RESULT_ABORT_RL = 40

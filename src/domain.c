@@ -158,70 +158,77 @@ void domain_free(Domain* d) {
     if (d->original_satlits) {map_free(d->original_satlits);}
     int_vector_free(d->is_used_in_lemma);
     for (unsigned i = 0; i < vector_count(d->solved_cases); i++) {
-        PartialFunction* c = (PartialFunction*) vector_get(d->solved_cases, i);
-        if (c->cube) {int_vector_free(c->cube);}
-        if (c->assignment) {int_vector_free(c->assignment);}
-        if (c->function) {qcnf_free(c->function);}
+        Case* c = (Case*) vector_get(d->solved_cases, i);
+        if (c->type == 0) {
+            if (c->representation.ass.cube) {int_vector_free(c->representation.ass.cube);}
+            if (c->representation.ass.assignment) {int_vector_free(c->representation.ass.assignment);}
+        } else {
+            assert(c->type == 1);
+            if (c->representation.fun.decisions) {int_vector_free(c->representation.fun.decisions);}
+            if (c->representation.fun.learnt_clauses) {set_free(c->representation.fun.learnt_clauses);}
+        }
         free(c);
     }
     vector_free(d->solved_cases);
 }
 
 
-PartialFunction* pf_init() {
-    PartialFunction* pf = malloc(sizeof(PartialFunction));
-    pf->cube = NULL;
-    pf->assignment = NULL;
-    pf->function = NULL;
+Case* pf_init() {
+    Case* pf = malloc(sizeof(Case));
+    pf->type = 0;
+    pf->representation.ass.cube = NULL;
+    pf->representation.ass.assignment = NULL;
+    pf->representation.fun.decisions = NULL;
+    pf->representation.fun.learnt_clauses = NULL;
     return pf;
 }
 
-void domain_completed_case(Skolem* s, int_vector* cube, int_vector* partial_assignment, QCNF* function) {
-    abortif(partial_assignment && function, "Each completed case must specify either a partial assignment or a function.");
-    PartialFunction* pf = pf_init();
-    pf->cube = cube;
-    if (s->options->certify_SAT) {
-        pf->assignment = partial_assignment;
-        pf->function = function;
-    } else {
-        pf->assignment = NULL;
-        pf->function = NULL;
-        if (partial_assignment) {int_vector_free(partial_assignment);}
-        if (function) {qcnf_free(function);}
-    }
+void domain_completed_case_split(Skolem* s, int_vector* decisions, set* learnt_clauses) {
+    Case* pf = pf_init();
+    pf->type = 1;
+    pf->representation.fun.decisions = decisions;
+    pf->representation.fun.learnt_clauses = learnt_clauses;
+    vector_add(s->domain->solved_cases, pf);
+}
+
+void domain_encode_case_into_satsolver(Skolem* s, Case* c, SATSolver* sat) {
+    V2("Encoding completed case");
+    NOT_IMPLEMENTED();
+}
+
+void domain_completed_cegar_cube(Skolem* s, int_vector* cube, int_vector* partial_assignment) {
+    Case* pf = pf_init();
+    assert(cube);
+    assert(!s->options->certify_SAT || partial_assignment);
+    pf->type = 0;
+    pf->representation.ass.cube = cube; // needed even in non-certifying mode for reinitialization of SAT solvers
+    pf->representation.ass.assignment = partial_assignment;
     
     vector_add(s->domain->solved_cases, pf);
-    
-    if (cube) {
-        // TODO: Instead of adding a clause to the SATsolver only, we should add a clause to the actual QCNF to enable propagation among the universals. But universal reduction might collapse these clauses to empty clauses ... not good.
-        V2("Completed cube (with length %u) ", int_vector_count(cube));
-        for (unsigned i = 0; i < int_vector_count(cube); i++) {
-            Lit lit = int_vector_get(cube, i);
-            assert(skolem_is_deterministic(s, lit_to_var(lit)));
-            assert(skolem_get_decision_lvl(s, lit_to_var(lit)) == 0);
-            if (int_vector_count(cube) <= 10) {
-                V2("%d ", - lit);
-            } else {
-                V3("%d ", - lit);
-            }
-            
-            if (! map_contains(s->domain->original_satlits, lit)) {
-                // Stupid bug: after replenishing the sat solvers, the interface might shift and old cubes are not on the interface any more.
-                abortif(s->stack->push_count != 0, "This is a new bug");
-                cegar_remember_original_satlit(s, lit_to_var(lit));
-            }
-            
-            int satlit = (int) (long) map_get(s->domain->original_satlits, lit);
-            //        int satlit = skolem_get_satsolver_lit(s, lit); // doesn't work, as the universal variables could be updated to be constant after case split assumptions
-            satsolver_add(s->skolem, satlit);
+    // TODO: Instead of adding a clause to the SATsolver only, we should add a clause to the actual QCNF to enable propagation among the universals. But universal reduction might collapse these clauses to empty clauses ... not good.
+    V2("Completed cube (with length %u) ", int_vector_count(cube));
+    for (unsigned i = 0; i < int_vector_count(cube); i++) {
+        Lit lit = int_vector_get(cube, i);
+        assert(skolem_is_deterministic(s, lit_to_var(lit)));
+        assert(skolem_get_decision_lvl(s, lit_to_var(lit)) == 0);
+        if (int_vector_count(cube) <= 10) {
+            V2("%d ", - lit);
+        } else {
+            V3("%d ", - lit);
         }
-        satsolver_clause_finished_for_context(s->skolem, 0);
-        V2("\n");
-    } else {
-        assert(function);
-        // Add the negation of the domain of the (partial) function
-        NOT_IMPLEMENTED();
+        
+        if (! map_contains(s->domain->original_satlits, lit)) {
+            // Stupid bug: after replenishing the sat solvers, the interface might shift and old cubes are not on the interface any more.
+            abortif(s->stack->push_count != 0, "This is a new bug");
+            cegar_remember_original_satlit(s, lit_to_var(lit));
+        }
+        
+        int satlit = (int) (long) map_get(s->domain->original_satlits, lit);
+        //        int satlit = skolem_get_satsolver_lit(s, lit); // doesn't work, as the universal variables could be updated to be constant after case split assumptions
+        satsolver_add(s->skolem, satlit);
     }
+    satsolver_clause_finished_for_context(s->skolem, 0);
+    V2("\n");
 }
 
 void domain_print_statistics(Domain* d) {

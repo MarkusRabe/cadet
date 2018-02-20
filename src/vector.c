@@ -58,6 +58,12 @@ void* vector_get(vector* v, unsigned i) {
     return v->data[i];
 }
 
+void* vector_pop(vector* v) {
+    assert(v->count > 0);
+    v->count -= 1;
+    return v->data[v->count];
+}
+
 void vector_set(vector* v, unsigned i, void* value) {
     assert (v->count > i);
     v->data[i] = value;

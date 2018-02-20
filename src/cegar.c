@@ -130,7 +130,7 @@ cadet_res domain_do_cegar_for_conflicting_assignment(C2* c2) {
             }
         }
         
-        domain_completed_case(c2->skolem, cube, existentials, NULL);
+        domain_completed_cegar_cube(c2->skolem, cube, existentials);
         c2->skolem->domain->cegar_stats.recent_average_cube_size = (float) int_vector_count(cube) * (float) 0.1 + c2->skolem->domain->cegar_stats.recent_average_cube_size * (float) 0.9;
     } else {
         c2->state = C2_CEGAR_CONFLICT;

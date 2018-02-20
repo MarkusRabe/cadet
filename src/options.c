@@ -39,7 +39,8 @@ Options* default_options() {
 
     // Case splits
     o->case_splits = false;
-
+    o->partial_backtracking_from_closed_cases = false;
+    
     // Optimizations
     o->plaisted_greenbaum_completion = false; // pure literal detection is better
     o->qbce = false;

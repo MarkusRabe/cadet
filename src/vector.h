@@ -27,6 +27,7 @@ void vector_add_sorted(vector* v, void* value);
 void vector_set(vector* v, unsigned i, void* value);
 void vector_insert_at(vector* v, unsigned i, void* value);
 void* vector_get(vector* v, unsigned i);
+void* vector_pop(vector* v);
 unsigned vector_find(vector* v, void* value);
 unsigned vector_find_sorted(vector* v, void* value);
 bool vector_contains(vector* v, void* value);

@@ -80,7 +80,7 @@ C2* c2_init_qcnf(QCNF* qcnf, Options* options) {
     c2->statistics.decisions = 0;
     c2->statistics.successful_conflict_clause_minimizations = 0;
     c2->statistics.learnt_clauses_total_length = 0;
-    c2->statistics.cases_explored = 0;
+    c2->statistics.cases_closed = 0;
     c2->statistics.lvls_backtracked = 0;
     c2->statistics.start_time = get_seconds();
     c2->statistics.minimization_stats = statistics_init(10000);
@@ -145,7 +145,6 @@ void c2_free(C2* c2) {
 C2_VAR_DATA c2_initial_var_data() {
     C2_VAR_DATA vd;
     vd.activity = 0.0f;
-//    vd.phase = 0;
     return vd;
 }
 
@@ -551,7 +550,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                         int lit = learnt_clause->occs[i];
                         int_vector_set(cube, i, lit);
                     }
-                    domain_completed_case(c2->skolem, cube, NULL, NULL);
+                    domain_completed_cegar_cube(c2->skolem, cube, NULL);
                     continue;
                 }
 
@@ -638,11 +637,14 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                     V2("Examples domain is conflicted.\n");
                 } else {
                     // Regular decision
+                    
+                    // Increase decision level, set
+                    skolem_increase_decision_lvl(c2->skolem);
+                    
                     skolem_decision(c2->skolem, phase * (Lit) decision_var->var_id);
                     c2_set_decision_val(c2, decision_var->var_id, phase);
                 }
             }
-
         }
     }
     
@@ -700,13 +702,17 @@ void c2_replenish_skolem_satsolver(C2* c2) {
     
     // Copy the cubes that we have solved already.
     for (unsigned i = 0; i < vector_count(old_skolem->domain->solved_cases); i++) {
-        PartialFunction* pf = (PartialFunction*) vector_get(old_skolem->domain->solved_cases, i);
-        domain_completed_case(c2->skolem, pf->cube, pf->assignment, pf->function);
+        Case* pf = (Case*) vector_get(old_skolem->domain->solved_cases, i);
+        if (pf->type == 0) {
+            domain_completed_cegar_cube(c2->skolem, pf->representation.ass.cube, pf->representation.ass.assignment);
+            pf->representation.ass.cube = NULL; // make sure these objects will not be deallocated during free of old_skolem below.
+            pf->representation.ass.assignment = NULL;
+        } else {
+            domain_completed_case_split(c2->skolem, pf->representation.fun.decisions, pf->representation.fun.learnt_clauses);
+            pf->representation.fun.decisions = NULL;
+            pf->representation.fun.learnt_clauses = NULL;
+        }
         
-        // make sure these objects will not be deallocated during free of old_skolem below.
-        pf->cube = NULL;
-        pf->assignment = NULL;
-        pf->function = NULL;
     }
     
     // Replace the new interace activities by the old ones
@@ -772,8 +778,11 @@ cadet_res c2_sat(C2* c2) {
         return c2->result;
     }
 
-    if (c2->qcnf->empty_clause != NULL) {
-        V1("CNF contains an empty clause (clause id %u).\n", c2->qcnf->empty_clause->clause_id);
+    if (int_vector_count(c2->qcnf->universal_clauses) > 0) {
+        unsigned universal_clause_idx = (unsigned) int_vector_get(c2->qcnf->universal_clauses, 0); // must be at least one clause in there
+        Clause* universal_clause = vector_get(c2->qcnf->clauses, universal_clause_idx);
+        assert(universal_clause->universal_clause);
+        V1("CNF contains a universal clause (clause id %u).\n", universal_clause->clause_id);
         c2->result = CADET_RESULT_UNSAT;
         c2->state = C2_EMPTY_CLAUSE_CONFLICT;
         return CADET_RESULT_UNSAT;
@@ -823,8 +832,10 @@ cadet_res c2_sat(C2* c2) {
     while (c2->result == CADET_RESULT_UNKNOWN) { // This loop controls the restarts
         c2_run(c2, c2->next_restart);
 
-        while (c2->result == CADET_RESULT_SAT && int_vector_count(c2->case_split_stack) != 0) {
+        if ((c2->result == CADET_RESULT_SAT && c2->options->case_splits) || c2->options->certify_SAT) {
+            bool must_be_done =  int_vector_count(c2->case_split_stack) == 0; // just for safety
             casesplits_close_case(c2);
+            assert(! must_be_done || c2->result == CADET_RESULT_SAT);
         }
         
         if (c2->result == CADET_RESULT_UNKNOWN) {
@@ -847,7 +858,7 @@ cadet_res c2_sat(C2* c2) {
                         skolem_check_for_unique_consequence(c2->skolem, c);
                     }
                 }
-                if (c2->qcnf->empty_clause) {
+                if (int_vector_count(c2->qcnf->universal_clauses) > 0) {
                     c2->result = CADET_RESULT_UNSAT;
                     c2->state = C2_EMPTY_CLAUSE_CONFLICT;
                     break;
@@ -952,14 +963,9 @@ cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
                 V1("Result verified.\n");
                 break;
             case C2_EMPTY_CLAUSE_CONFLICT:
-                V1("  UNSAT via empty clause.\n");
-                if (log_qdimacs_compliant) {
-                    V0("Unable to provide qdimacs certificate. Found an empty clause, but that may have resulted from universal reduction.\n");
-                }
-                abortif(!c2->qcnf->empty_clause
-                        || (! c2->qcnf->empty_clause->original
-                            && !c2->qcnf->empty_clause->consistent_with_originals),
-                        "Inconsistency after empty clause conflict.");
+                V1("  UNSAT because at least one clause contains only universals.\n");
+                assert(int_vector_count(c2->qcnf->universal_clauses) > 0);
+                c2_print_qdimacs_output_from_universal_clause(c2->qcnf);
                 break;
             default:
                 LOG_ERROR("Unknown type of conflict. Such confused, very WOW.");

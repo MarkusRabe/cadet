@@ -122,7 +122,7 @@ void c2_rl_print_state(C2* c2, unsigned conflicts_until_next_restart) {
                (float) c2->statistics.learnt_clauses_total_length / (float) (c2->statistics.conflicts + 1),
                c2->statistics.successful_conflict_clause_minimizations,
                (float) c2->statistics.successful_conflict_clause_minimizations / (float) (c2->statistics.learnt_clauses_total_length + 1),
-               c2->statistics.cases_explored
+               c2->statistics.cases_closed
                );
 }
 

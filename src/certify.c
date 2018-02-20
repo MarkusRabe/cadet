@@ -29,6 +29,16 @@ void cert_write_aiger(aiger* a, Options* o) {
     }
 }
 
+void c2_print_qdimacs_output_from_universal_clause(QCNF* qcnf) {
+    assert(int_vector_count(qcnf->universal_clauses) > 0);
+    Clause* universal_clause = vector_get(qcnf->clauses, 0); // must contain at least one element
+    printf("V"); // using printf, since everything else will otherwise be prefixed with a "c " when log_qdimacs_compliant is activated
+    for (unsigned i = 0; i < universal_clause->size; i++) {
+        printf(" %d", - universal_clause->occs[i]);
+    }
+    printf("\n");
+}
+
 void c2_print_qdimacs_output(QCNF* qcnf, void* domain, int (*get_value)(void* domain, Lit lit)) {
     printf("V"); // using printf, since everything else will otherwise be prefixed with a "c " when log_qdimacs_compliant is activated
     for (unsigned i = 1; i < var_vector_count(qcnf->vars); i++) {
@@ -256,13 +266,13 @@ void cert_AIG_certificate(C2* c2) {
     }
     
     for (unsigned i = 0; i < vector_count(c2->skolem->domain->solved_cases); i++) {
-        PartialFunction* pf = vector_get(c2->skolem->domain->solved_cases, i);
-        if (pf->cube) {
-            assert(pf->assignment);
-            unsigned cube_lit = cert_encode_cube(c2, a, &max_sym, aigerlits, pf->cube);
+        Case* pf = vector_get(c2->skolem->domain->solved_cases, i);
+        if (pf->representation.ass.cube) {
+            assert(pf->representation.ass.assignment);
+            unsigned cube_lit = cert_encode_cube(c2, a, &max_sym, aigerlits, pf->representation.ass.cube);
             
-            for (unsigned j = 0; j < int_vector_count(pf->assignment); j++) {
-                Lit l = int_vector_get(pf->assignment, j);
+            for (unsigned j = 0; j < int_vector_count(pf->representation.ass.assignment); j++) {
+                Lit l = int_vector_get(pf->representation.ass.assignment, j);
                 unsigned var_id = lit_to_var(l);
                 if (skolem_is_deterministic(c2->skolem, var_id)
                     && skolem_get_decision_lvl(c2->skolem, var_id) == 0) {

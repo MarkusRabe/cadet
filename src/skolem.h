@@ -102,6 +102,7 @@ struct Skolem {
     
     // Extra data structure required for functional synthesis
     int_vector* decision_indicator_sat_lits; // contains var_id of temporary vars
+    int_vector* decisions;
     
     /* Propagation worklists:
      * Constants are propagated through the clauses_to_check worklist.
@@ -198,6 +199,7 @@ typedef enum {
     SKOLEM_OP_PROPAGATION_CONFLICT,
     SKOLEM_OP_SKOLEM_CONFLICT,
     SKOLEM_OP_POTENTIALLY_CONFLICTED_VAR,
+    SKOLEM_OP_DECISION_LVL,
     SKOLEM_OP_DECISION
 } SKOLEM_OP;
 

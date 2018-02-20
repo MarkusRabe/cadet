@@ -29,7 +29,7 @@ void c2_delete_learnt_clauses_greater_than(C2* c2, unsigned max_size) {
             }
             
             qcnf_delete_clause(c2->qcnf, c);
-            vector_set(c2->qcnf->clauses, (unsigned) i, NULL);
+            assert(vector_get(c2->qcnf->clauses, (unsigned) i) == NULL);
             deleted += 1;
         } else {
             kept += 1;

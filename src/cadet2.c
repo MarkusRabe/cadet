@@ -746,7 +746,7 @@ void c2_restart_heuristics(C2* c2) {
         c2->restarts_since_last_major = 0;
         c2->next_restart = c2->magic.initial_restart; // resets restart frequency
         
-        c2_delete_learnt_clauses_greater_than(c2, c2->magic.keeping_clauses_threshold);
+//        c2_delete_learnt_clauses_greater_than(c2, c2->magic.keeping_clauses_threshold);
         c2->magic.keeping_clauses_threshold += 1;
         
         V1("Major restart no %zu. Resetting all activity values to 0 and some random ones to 1.\n", c2->major_restarts);
@@ -844,10 +844,9 @@ cadet_res c2_sat(C2* c2) {
             c2_simplify(c2);
         }
         
-//        if (c2->statistics.conflicts > 1000) {
+//        if (c2->options->reinforcement_learning && c2->statistics.conflicts > 1000 && ! c2->options->cegar) {
 //            LOG_WARNING("Switching cegar on after >1000 conflicts to save time during generation of problems for RL. Remove for normal operation.\n");
 //            c2->options->cegar = true;
-//            break;
 //        }
     }
 

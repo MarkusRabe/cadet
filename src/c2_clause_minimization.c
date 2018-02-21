@@ -100,7 +100,6 @@ unsigned c2_minimize_clause(C2* c2, Clause* c) {
         }
     }
     V2("Conflict clause minimization removed %u of %u literals.\n", removed_total, initial_size);
-    qcnf_print_clause(c, stdout);
     
     qcnf_register_clause(c2->qcnf, c);
     

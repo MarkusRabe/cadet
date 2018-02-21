@@ -19,7 +19,6 @@
 #include "skolem_dependencies.h"
 #include "domain.h"
 #include "satsolver.h"
-#include "mersenne_twister.h"
 #include "c2_traces.h"
 #include "c2_rl.h"
 
@@ -842,27 +841,7 @@ cadet_res c2_sat(C2* c2) {
             assert(c2->skolem->decision_lvl == c2->restart_base_decision_lvl);
             c2->restarts += 1;
             c2_restart_heuristics(c2);
-            
-            if (c2->options->minimize_conflicts) {
-                for (int i = (int) vector_count(c2->qcnf->clauses) - 1; i >= 0; i--) {
-                    Clause* c = vector_get(c2->qcnf->clauses, (unsigned) i);
-                    if (! c) {
-                        continue;
-                    }
-                    if (c->original || genrand_int31() % 100 == 0) {
-                        break;
-                    }
-                    if (skolem_get_unique_consequence(c2->skolem, c) == 0) {
-                        c2_minimize_clause(c2, c);
-                        skolem_check_for_unique_consequence(c2->skolem, c);
-                    }
-                }
-                if (int_vector_count(c2->qcnf->universal_clauses) > 0) {
-                    c2->result = CADET_RESULT_UNSAT;
-                    c2->state = C2_EMPTY_CLAUSE_CONFLICT;
-                    break;
-                }
-            }
+            c2_simplify(c2);
         }
         
 //        if (c2->statistics.conflicts > 1000) {

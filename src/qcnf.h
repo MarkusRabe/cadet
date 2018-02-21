@@ -120,6 +120,7 @@ bool qcnf_var_has_unique_maximal_dependency(QCNF*, unsigned var_id);
 //bool contains_literal(Clause* clause, Lit lit);
 bool qcnf_contains_literal(Clause*,Lit); // 0 if not contained, return lit if it occurs, and return -lit if the opposite lit occurs.
 int qcnf_contains_variable(Clause*,Var*); // 0 if not contained, otherwise return lit.
+bool qcnf_check_if_clause_is_universal(QCNF*, Clause*);
 //int qcnf_maximal_qlvl(QCNF*,Clause*);
 //int qcnf_minimal_qlvl(QCNF*,Clause*);
 bool qcnf_is_duplicate(QCNF*,Clause*);

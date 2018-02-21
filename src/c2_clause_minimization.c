@@ -28,8 +28,11 @@ void c2_remove_literals_from_clause(QCNF* qcnf, Clause* c, int_vector* literals)
 /* Implements two ideas: 
  * (1) remove literals whose negation is implied by the negation of the remaining literals
  * (2) find subset of negations of literals that cause a conflict
+ *
+ * TODO: Can probably rewrite this; remove requirement that clause must be unregistered and reregistered; use SAT solver and extract unsat core.
  */
 unsigned c2_minimize_clause(C2* c2, Clause* c) {
+    assert(c == vector_get(c2->qcnf->clauses, c->clause_idx)); // must be registered
     statistics_start_timer(c2->statistics.minimization_stats);
     
     if (c->size == 0) {
@@ -96,14 +99,15 @@ unsigned c2_minimize_clause(C2* c2, Clause* c) {
             break;
         }
     }
-
+    V2("Conflict clause minimization removed %u of %u literals.\n", removed_total, initial_size);
+    qcnf_print_clause(c, stdout);
+    
     qcnf_register_clause(c2->qcnf, c);
     
     int_vector_free(permutation);
     int_vector_free(to_remove);
     statistics_stop_and_record_timer(c2->statistics.minimization_stats);
     
-    V2("Conflict clause minimization removed %u of %u literals.\n", removed_total, initial_size);
     assert(removed_total < initial_size);
     c2->statistics.successful_conflict_clause_minimizations += removed_total;
     

@@ -129,10 +129,12 @@ void c2_pop(C2*);
 Clause* c2_add_lit(C2* c2, Lit lit);
 void c2_new_variable(C2* c2, unsigned var_id);
 void c2_new_clause(C2* c2, Clause* c);
+void c2_simplify(C2* c2);
 
 cadet_res c2_sat(C2*);
 cadet_res c2_solve_qdimacs(FILE*,Options*);
 cadet_res c2_solve(C2* c2);
+
 
 // PRINTING
 void c2_print_statistics(C2*);

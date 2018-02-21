@@ -58,6 +58,14 @@ int qcnf_contains_variable(Clause* clause, Var* var) { // 0 if not contained, ot
     return 0;
 }
 
+bool qcnf_check_if_clause_is_universal(QCNF* qcnf, Clause* c) {
+    c->universal_clause = true;
+    for (unsigned i = 0; i < c->size; i++) {
+        c->universal_clause = c->universal_clause && qcnf_is_universal(qcnf, lit_to_var(c->occs[i]));
+    }
+    return c->universal_clause;
+}
+
 bool qcnf_is_duplicate(QCNF* qcnf, Clause* c) {
     if (c->size == 0) {
         for (unsigned i = 0; i < int_vector_count(qcnf->universal_clauses); i++) {
@@ -413,7 +421,6 @@ Clause* qcnf_new_clause(QCNF* qcnf, int_vector* literals) {
             qcnf_new_var(qcnf, false, qcnf_get_empty_scope(qcnf), var_id);
         }
         V3("clause %u, lit is %d\n", qcnf->clauses->count, lit);
-        c->universal_clause = c->universal_clause && qcnf_is_universal(qcnf, var_id);
     }
     
     abortif(static_qcnf_variable_for_sorting != NULL, "Memory curruption or concurrent usage of static variable static_qcnf_variable_for_sorting.");
@@ -479,6 +486,8 @@ void qcnf_register_clause(QCNF* qcnf, Clause* c) {
     }
     assert(vector_get(qcnf->clauses, c->clause_idx) == NULL);
     vector_set(qcnf->clauses, c->clause_idx, c);
+    
+    qcnf_check_if_clause_is_universal(qcnf, c);
     if (c->universal_clause) {
         int_vector_add(qcnf->universal_clauses, (int) c->clause_idx);
     }

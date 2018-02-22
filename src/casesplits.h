@@ -6,12 +6,15 @@
 //  Copyright © 2017 UC Berkeley. All rights reserved.
 //
 
-#ifndef c2_casesplits_h
-#define c2_casesplits_h
+#ifndef casesplits_h
+#define casesplits_h
 
-#include "cadet2.h"
 #include "float_vector.h"
 #include "set.h"
+#include "int_vector.h"
+#include "qcnf.h"
+#include "skolem.h"
+
 
 #include <stdio.h>
 
@@ -72,13 +75,7 @@ Casesplits* casesplits_init(QCNF*);
 bool casesplits_is_initialized(Casesplits*);
 void casesplits_free(Casesplits*);
 
-
-void casesplits_backtrack_case_split(C2*);
-bool casesplits_assume_single_lit(C2*); // returns if any kind of progress happened
-void casesplits_close_case(C2*);
-void casesplits_undo_assumption(C2*, void* obj);
-
-
+void casesplits_record_case(Skolem* s);
 void casesplits_completed_case_split(Skolem* s, int_vector* decisions, set* learnt_clauses);
 void casesplits_completed_cegar_cube(Skolem* s, int_vector* cube, int_vector* partial_assignment);
 void casesplits_encode_case_into_satsolver(Skolem* s, Case* c, SATSolver* sat);
@@ -89,18 +86,5 @@ void casesplits_update_interface(Skolem*);
 float casesplits_get_interface_activity(Casesplits*, unsigned var_id);
 void casesplits_add_interface_activity(Casesplits*, unsigned var_id, float value);
 void casesplits_decay_interface_activity(Casesplits*, unsigned var_id);
-
-// CEGAR
-/*
- * Assumes the current assignment of the satsolver c2->skolem->skolem
- * and checks for the existence of an assignment for the nondeterministic
- * (at the time of creation of the cegar object) existentials satisfying
- * all constraints.
- *
- * May change the state of C2 when termination criterion is found.
- */
-cadet_res casesplits_do_cegar_for_conflicting_assignment(C2*);
-int casesplits_get_cegar_val(void* domain, Lit lit);
-cadet_res casespilts_solve_2QBF_by_cegar(C2* c2, int rounds_num);
 
 #endif /* c2_casesplits_h */

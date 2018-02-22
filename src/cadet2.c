@@ -479,7 +479,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                 if (c2->options->cegar && c2->skolem->state == SKOLEM_STATE_SKOLEM_CONFLICT) {
                     
                     for (unsigned i = 0; i < c2->skolem->domain->cegar_magic.max_cegar_iterations_per_learnt_clause; i++) {
-                        switch (casesplits_do_cegar_for_conflicting_assignment(c2)) {
+                        switch (cegar_one_round_for_conflicting_assignment(c2)) {
                             case CADET_RESULT_SAT:
                                 abortif(true, "CEGAR abstraction cannot conclude CADET_RESULT_SAT here because it is still inside the global conflict check assumptions.");
                                 c2->state = C2_READY;
@@ -564,7 +564,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
             }
 
             // try case splits
-            bool progress_through_case_split = casesplits_assume_single_lit(c2);
+            bool progress_through_case_split = c2_casesplits_assume_single_lit(c2);
             if (c2->result != CADET_RESULT_UNKNOWN) { // either the above if statement or c2_case_split may result in SAT/UNSAT
                 return c2->result;
             }
@@ -823,7 +823,7 @@ cadet_res c2_sat(C2* c2) {
     
     casesplits_update_interface(c2->skolem);
     if (c2->options->cegar_only) {
-        return casespilts_solve_2QBF_by_cegar(c2, -1);
+        return cegar_solve_2QBF_by_cegar(c2, -1);
     }
 
     while (c2->result == CADET_RESULT_UNKNOWN) { // This loop controls the restarts
@@ -831,7 +831,7 @@ cadet_res c2_sat(C2* c2) {
 
         if ((c2->result == CADET_RESULT_SAT && c2->options->case_splits) || c2->options->certify_SAT) {
             bool must_be_done =  int_vector_count(c2->case_split_stack) == 0; // just for safety
-            casesplits_close_case(c2);
+            c2_close_case(c2);
             assert(! must_be_done || c2->result == CADET_RESULT_SAT);
         }
         
@@ -922,9 +922,9 @@ cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
                 break;
             case C2_CEGAR_CONFLICT:
                 V1("  UNSAT via Cegar conflict.\n");
-                c2_print_qdimacs_output(c2->qcnf, c2->skolem, casesplits_get_cegar_val);
+                c2_print_qdimacs_output(c2->qcnf, c2->skolem, cegar_get_val);
                 abortif(c2->options->certify_internally_UNSAT
-                        && ! cert_check_UNSAT(c2->qcnf, c2->skolem, casesplits_get_cegar_val),
+                        && ! cert_check_UNSAT(c2->qcnf, c2->skolem, cegar_get_val),
                         "Check failed! UNSAT result could not be certified.");
 //                abortif(c2->options->functional_synthesis, "Should not reach UNSAT output in functional synthesis mode.");
                 V1("Result verified.\n");
@@ -980,7 +980,7 @@ void c2_undo(void* parent, char type, void* obj) {
 
         case C2_OP_UNIVERSAL_ASSUMPTION:
             assert(true);
-            casesplits_undo_assumption(c2, obj);
+            c2_undo_casesplits(c2, obj);
             break;
             
         default:

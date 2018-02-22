@@ -6,11 +6,11 @@
 //  Copyright © 2018 UC Berkeley. All rights reserved.
 //
 
+#include "cadet2.h"
 #include "casesplits.h"
 #include "log.h"
 
 #include <assert.h>
-
 
 bool cegar_var_needs_to_be_set(Casesplits* d, unsigned var_id) {
     abortif(int_vector_get(d->is_used_in_lemma, var_id) == 0, "Variable not used in CEGAR lemma?");
@@ -66,7 +66,7 @@ bool cegar_var_needs_to_be_set(Casesplits* d, unsigned var_id) {
     return false;
 }
 
-cadet_res casesplits_do_cegar_for_conflicting_assignment(C2* c2) {
+cadet_res cegar_one_round_for_conflicting_assignment(C2* c2) {
     assert(casesplits_is_initialized(c2->skolem->domain));
     assert(c2->result == CADET_RESULT_UNKNOWN);
     assert(c2->state == C2_SKOLEM_CONFLICT);
@@ -77,7 +77,7 @@ cadet_res casesplits_do_cegar_for_conflicting_assignment(C2* c2) {
         unsigned var_id = (unsigned) int_vector_get(d->interface_vars, i);
         int_vector_set(d->is_used_in_lemma, var_id, 1); // reset values
         
-        int val = casesplits_get_cegar_val(c2->skolem, (int) var_id);
+        int val = cegar_get_val(c2->skolem, (int) var_id);
         satsolver_assume(d->exists_solver, val * (Lit) var_id);
         V3(" %d", val * (Lit) var_id);
     }
@@ -140,14 +140,14 @@ cadet_res casesplits_do_cegar_for_conflicting_assignment(C2* c2) {
     return c2->result;
 }
 
-cadet_res casespilts_solve_2QBF_by_cegar(C2* c2, int rounds_num) {
+cadet_res cegar_solve_2QBF_by_cegar(C2* c2, int rounds_num) {
     
     assert(casesplits_is_initialized(c2->skolem->domain));
     
     // solver loop
     while (c2->result == CADET_RESULT_UNKNOWN && rounds_num--) {
         if (satsolver_sat(c2->skolem->skolem) == SATSOLVER_RESULT_SAT) {
-            casesplits_do_cegar_for_conflicting_assignment(c2);
+            cegar_one_round_for_conflicting_assignment(c2);
         } else {
             c2->result = CADET_RESULT_SAT;
         }
@@ -155,7 +155,7 @@ cadet_res casespilts_solve_2QBF_by_cegar(C2* c2, int rounds_num) {
     return c2->result;
 }
 
-int casesplits_get_cegar_val(void* domain, Lit lit) {
+int cegar_get_val(void* domain, Lit lit) {
     Skolem* s = (Skolem*) domain;
     int val = skolem_get_value_for_conflict_analysis(s, lit);
     if (val == 0) {

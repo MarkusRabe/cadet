@@ -135,6 +135,24 @@ cadet_res c2_sat(C2*);
 cadet_res c2_solve_qdimacs(FILE*,Options*);
 cadet_res c2_solve(C2* c2);
 
+// Case splits
+void casesplits_backtrack_case_split(C2*);
+bool c2_casesplits_assume_single_lit(C2*); // returns if any kind of progress happened
+void c2_close_case(C2*);
+void c2_undo_casesplits(C2*, void* obj);
+
+// CEGAR
+/*
+ * Assumes the current assignment of the satsolver c2->skolem->skolem
+ * and checks for the existence of an assignment for the nondeterministic
+ * (at the time of creation of the cegar object) existentials satisfying
+ * all constraints.
+ *
+ * May change the state of C2 when termination criterion is found.
+ */
+cadet_res cegar_one_round_for_conflicting_assignment(C2*);
+int cegar_get_val(void* domain, Lit lit);
+cadet_res cegar_solve_2QBF_by_cegar(C2* c2, int rounds_num);
 
 // PRINTING
 void c2_print_statistics(C2*);

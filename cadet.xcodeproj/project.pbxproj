@@ -42,7 +42,7 @@
 		287BB7C31E0609B000AAE180 /* partitions.c in Sources */ = {isa = PBXBuildFile; fileRef = 287BB7C11E0609B000AAE180 /* partitions.c */; };
 		287C3B0D1E37EF7B00F7096A /* examples.c in Sources */ = {isa = PBXBuildFile; fileRef = 287C3B0B1E37EF7B00F7096A /* examples.c */; };
 		287C3B101E396B7600F7096A /* c2_traces.c in Sources */ = {isa = PBXBuildFile; fileRef = 287C3B0E1E396B7600F7096A /* c2_traces.c */; };
-		287C3B131E399C7A00F7096A /* casesplits.c in Sources */ = {isa = PBXBuildFile; fileRef = 287C3B111E399C7A00F7096A /* casesplits.c */; };
+		287C3B131E399C7A00F7096A /* c2_casesplits_control.c in Sources */ = {isa = PBXBuildFile; fileRef = 287C3B111E399C7A00F7096A /* c2_casesplits_control.c */; };
 		287C3B161E3C01FE00F7096A /* skolem_var.c in Sources */ = {isa = PBXBuildFile; fileRef = 287C3B141E3C01FE00F7096A /* skolem_var.c */; };
 		287C3B1B1E3C2D5500F7096A /* val_vector.c in Sources */ = {isa = PBXBuildFile; fileRef = 287C3B191E3C2D5500F7096A /* val_vector.c */; };
 		28C1C17F20197A000094DB4E /* c2_rl.c in Sources */ = {isa = PBXBuildFile; fileRef = 28C1C17E20197A000094DB4E /* c2_rl.c */; };
@@ -56,7 +56,7 @@
 		28F2769C1E6FE45400B471CB /* qipasir_parser.c in Sources */ = {isa = PBXBuildFile; fileRef = 28F2769A1E6FE45400B471CB /* qipasir_parser.c */; };
 		28F4A9531E29C0D30090BB67 /* satsolver_picosat_assumptions.c in Sources */ = {isa = PBXBuildFile; fileRef = 28F4A9511E29C0D30090BB67 /* satsolver_picosat_assumptions.c */; };
 		28FA8D301E10ACBC00A43B7B /* c2_validate.c in Sources */ = {isa = PBXBuildFile; fileRef = 28FA8D2E1E10ACBC00A43B7B /* c2_validate.c */; };
-		28FA8D361E14F4E900A43B7B /* domain.c in Sources */ = {isa = PBXBuildFile; fileRef = 28FA8D341E14F4E900A43B7B /* domain.c */; };
+		28FA8D361E14F4E900A43B7B /* casesplits.c in Sources */ = {isa = PBXBuildFile; fileRef = 28FA8D341E14F4E900A43B7B /* casesplits.c */; };
 		28FEE64B1EDA304000A9D8CA /* skolem_conflict_analysis.c in Sources */ = {isa = PBXBuildFile; fileRef = 28FEE64A1EDA304000A9D8CA /* skolem_conflict_analysis.c */; };
 /* End PBXBuildFile section */
 
@@ -139,7 +139,7 @@
 		287C3B0C1E37EF7B00F7096A /* examples.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = examples.h; path = src/examples.h; sourceTree = "<group>"; };
 		287C3B0E1E396B7600F7096A /* c2_traces.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = c2_traces.c; path = src/c2_traces.c; sourceTree = "<group>"; };
 		287C3B0F1E396B7600F7096A /* c2_traces.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = c2_traces.h; path = src/c2_traces.h; sourceTree = "<group>"; };
-		287C3B111E399C7A00F7096A /* casesplits.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = casesplits.c; path = src/casesplits.c; sourceTree = "<group>"; };
+		287C3B111E399C7A00F7096A /* c2_casesplits_control.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = c2_casesplits_control.c; path = src/c2_casesplits_control.c; sourceTree = "<group>"; };
 		287C3B121E399C7A00F7096A /* casesplits.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = casesplits.h; path = src/casesplits.h; sourceTree = "<group>"; };
 		287C3B141E3C01FE00F7096A /* skolem_var.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = skolem_var.c; path = src/skolem_var.c; sourceTree = "<group>"; };
 		287C3B151E3C01FE00F7096A /* skolem_var.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = skolem_var.h; path = src/skolem_var.h; sourceTree = "<group>"; };
@@ -165,7 +165,7 @@
 		28F4A9511E29C0D30090BB67 /* satsolver_picosat_assumptions.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = satsolver_picosat_assumptions.c; path = src/satsolver_picosat_assumptions.c; sourceTree = "<group>"; };
 		28FA8D2E1E10ACBC00A43B7B /* c2_validate.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = c2_validate.c; path = src/c2_validate.c; sourceTree = "<group>"; };
 		28FA8D2F1E10ACBC00A43B7B /* c2_validate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = c2_validate.h; path = src/c2_validate.h; sourceTree = "<group>"; };
-		28FA8D341E14F4E900A43B7B /* domain.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = domain.c; path = src/domain.c; sourceTree = "<group>"; };
+		28FA8D341E14F4E900A43B7B /* casesplits.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = casesplits.c; path = src/casesplits.c; sourceTree = "<group>"; };
 		28FEE64A1EDA304000A9D8CA /* skolem_conflict_analysis.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = skolem_conflict_analysis.c; path = src/skolem_conflict_analysis.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -254,8 +254,8 @@
 				28675A391DDAA9D000951212 /* skolem.c */,
 				287C3B171E3C035500F7096A /* skolem_ext */,
 				287C3B121E399C7A00F7096A /* casesplits.h */,
-				287C3B111E399C7A00F7096A /* casesplits.c */,
-				28FA8D341E14F4E900A43B7B /* domain.c */,
+				28FA8D341E14F4E900A43B7B /* casesplits.c */,
+				287C3B111E399C7A00F7096A /* c2_casesplits_control.c */,
 				28C1C181202D3EB40094DB4E /* cegar.c */,
 				287BB7C11E0609B000AAE180 /* partitions.c */,
 				28675A121DDAA9D000951212 /* certify.h */,
@@ -424,7 +424,7 @@
 				28675A501DDAA9D000951212 /* map.c in Sources */,
 				28675A471DDAA9D000951212 /* bit_vector.c in Sources */,
 				284EED781ED3B65600581801 /* lglib.c in Sources */,
-				28FA8D361E14F4E900A43B7B /* domain.c in Sources */,
+				28FA8D361E14F4E900A43B7B /* casesplits.c in Sources */,
 				28C6FD981F831DC3008D109C /* c2_simplify.c in Sources */,
 				28675A4C1DDAA9D000951212 /* conflict_analysis.c in Sources */,
 				287C3B161E3C01FE00F7096A /* skolem_var.c in Sources */,
@@ -432,7 +432,7 @@
 				28675A4D1DDAA9D000951212 /* debug.c in Sources */,
 				284EED5A1ED39BAF00581801 /* satsolver_lingeling_assumptions.c in Sources */,
 				28675A601DDAA9D000951212 /* statistics.c in Sources */,
-				287C3B131E399C7A00F7096A /* casesplits.c in Sources */,
+				287C3B131E399C7A00F7096A /* c2_casesplits_control.c in Sources */,
 				28EBA5511DE19539003D21EB /* int_vector.c in Sources */,
 				28675A541DDAA9D000951212 /* options.c in Sources */,
 				28675A5F1DDAA9D000951212 /* skolem.c in Sources */,

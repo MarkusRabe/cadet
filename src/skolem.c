@@ -12,7 +12,7 @@
 #include "log.h"
 #include "util.h"
 #include "c2_traces.h"
-#include "domain.h"
+#include "casesplits.h"
 #include "c2_rl.h"
 
 #include <math.h>
@@ -28,7 +28,7 @@ Skolem* skolem_init(QCNF* qcnf, Options* o,
     Skolem* s = malloc(sizeof(Skolem));
     s->options = o;
     s->qcnf = qcnf;
-    s->domain = domain_init(qcnf);
+    s->domain = casesplits_init(qcnf);
     s->u_initially_deterministic = u_initially_deterministic;
     s->e_initially_deterministic = e_initially_deterministic;
     
@@ -98,7 +98,7 @@ Skolem* skolem_init(QCNF* qcnf, Options* o,
 }
 
 void skolem_free(Skolem* s) {
-    if (s->domain) {domain_free(s->domain); s->domain = NULL;}
+    if (s->domain) {casesplits_free(s->domain); s->domain = NULL;}
     satsolver_free(s->skolem);
     skolem_var_vector_free(s->infos);
     pqueue_free(s->determinicity_queue);

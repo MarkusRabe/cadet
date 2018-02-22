@@ -11,7 +11,7 @@
 #include "aiger.h"
 #include "aiger_utils.h"
 #include "log.h"
-#include "domain.h"
+#include "casesplits.h"
 
 #include <string.h>
 

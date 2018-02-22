@@ -6,13 +6,13 @@
 //  Copyright © 2018 UC Berkeley. All rights reserved.
 //
 
-#include "domain.h"
+#include "casesplits.h"
 #include "log.h"
 
 #include <assert.h>
 
 
-bool cegar_var_needs_to_be_set(Domain* d, unsigned var_id) {
+bool cegar_var_needs_to_be_set(Casesplits* d, unsigned var_id) {
     abortif(int_vector_get(d->is_used_in_lemma, var_id) == 0, "Variable not used in CEGAR lemma?");
     int satval = satsolver_deref(d->exists_solver, (int) var_id);
     abortif(satval == 0, "CEGAR lemma variable not set in SAT solver");
@@ -66,18 +66,18 @@ bool cegar_var_needs_to_be_set(Domain* d, unsigned var_id) {
     return false;
 }
 
-cadet_res domain_do_cegar_for_conflicting_assignment(C2* c2) {
-    assert(domain_is_initialized(c2->skolem->domain));
+cadet_res casesplits_do_cegar_for_conflicting_assignment(C2* c2) {
+    assert(casesplits_is_initialized(c2->skolem->domain));
     assert(c2->result == CADET_RESULT_UNKNOWN);
     assert(c2->state == C2_SKOLEM_CONFLICT);
-    Domain* d = c2->skolem->domain;
+    Casesplits* d = c2->skolem->domain;
     
     V3("Assuming: ");
     for (unsigned i = 0 ; i < int_vector_count(d->interface_vars); i++) {
         unsigned var_id = (unsigned) int_vector_get(d->interface_vars, i);
         int_vector_set(d->is_used_in_lemma, var_id, 1); // reset values
         
-        int val = domain_get_cegar_val(c2->skolem, (int) var_id);
+        int val = casesplits_get_cegar_val(c2->skolem, (int) var_id);
         satsolver_assume(d->exists_solver, val * (Lit) var_id);
         V3(" %d", val * (Lit) var_id);
     }
@@ -130,7 +130,7 @@ cadet_res domain_do_cegar_for_conflicting_assignment(C2* c2) {
             }
         }
         
-        domain_completed_cegar_cube(c2->skolem, cube, existentials);
+        casesplits_completed_cegar_cube(c2->skolem, cube, existentials);
         c2->skolem->domain->cegar_stats.recent_average_cube_size = (float) int_vector_count(cube) * (float) 0.1 + c2->skolem->domain->cegar_stats.recent_average_cube_size * (float) 0.9;
     } else {
         c2->state = C2_CEGAR_CONFLICT;
@@ -140,14 +140,14 @@ cadet_res domain_do_cegar_for_conflicting_assignment(C2* c2) {
     return c2->result;
 }
 
-cadet_res domain_solve_2QBF_by_cegar(C2* c2, int rounds_num) {
+cadet_res casespilts_solve_2QBF_by_cegar(C2* c2, int rounds_num) {
     
-    assert(domain_is_initialized(c2->skolem->domain));
+    assert(casesplits_is_initialized(c2->skolem->domain));
     
     // solver loop
     while (c2->result == CADET_RESULT_UNKNOWN && rounds_num--) {
         if (satsolver_sat(c2->skolem->skolem) == SATSOLVER_RESULT_SAT) {
-            domain_do_cegar_for_conflicting_assignment(c2);
+            casesplits_do_cegar_for_conflicting_assignment(c2);
         } else {
             c2->result = CADET_RESULT_SAT;
         }
@@ -155,23 +155,7 @@ cadet_res domain_solve_2QBF_by_cegar(C2* c2, int rounds_num) {
     return c2->result;
 }
 
-void do_cegar_if_effective(C2* c2) {
-    assert(domain_is_initialized(c2->skolem->domain));
-    unsigned i = 0;
-    while (c2->result == CADET_RESULT_UNKNOWN &&
-           c2->skolem->domain->cegar_stats.recent_average_cube_size < c2->skolem->domain->cegar_magic.cegar_effectiveness_threshold) {
-        i++;
-        domain_solve_2QBF_by_cegar(c2,1);
-    }
-    V1("Executed %u rounds of CEGAR.\n", i);
-    if (c2->result == CADET_RESULT_UNKNOWN) {
-        V1("CEGAR inconclusive, returning to normal mode.\n");
-    } else {
-        V1("CEGAR solved the problem: %d\n", c2->result);
-    }
-}
-
-int domain_get_cegar_val(void* domain, Lit lit) {
+int casesplits_get_cegar_val(void* domain, Lit lit) {
     Skolem* s = (Skolem*) domain;
     int val = skolem_get_value_for_conflict_analysis(s, lit);
     if (val == 0) {

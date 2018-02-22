@@ -17,7 +17,6 @@
 #include "c2_traces.h"
 #include "casesplits.h"
 #include "skolem_dependencies.h"
-#include "domain.h"
 #include "satsolver.h"
 #include "c2_traces.h"
 #include "c2_rl.h"
@@ -480,7 +479,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                 if (c2->options->cegar && c2->skolem->state == SKOLEM_STATE_SKOLEM_CONFLICT) {
                     
                     for (unsigned i = 0; i < c2->skolem->domain->cegar_magic.max_cegar_iterations_per_learnt_clause; i++) {
-                        switch (domain_do_cegar_for_conflicting_assignment(c2)) {
+                        switch (casesplits_do_cegar_for_conflicting_assignment(c2)) {
                             case CADET_RESULT_SAT:
                                 abortif(true, "CEGAR abstraction cannot conclude CADET_RESULT_SAT here because it is still inside the global conflict check assumptions.");
                                 c2->state = C2_READY;
@@ -548,7 +547,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                         int lit = learnt_clause->occs[i];
                         int_vector_set(cube, i, lit);
                     }
-                    domain_completed_cegar_cube(c2->skolem, cube, NULL);
+                    casesplits_completed_cegar_cube(c2->skolem, cube, NULL);
                     continue;
                 }
 
@@ -694,7 +693,7 @@ void c2_replenish_skolem_satsolver(C2* c2) {
     c2_initial_propagation(c2); // (re-)establishes dlvl 0
     abortif(c2->state != C2_READY, "Conflicted after replenishing.");
     
-    domain_update_interface(c2->skolem);
+    casesplits_update_interface(c2->skolem);
     
     assert(vector_count(old_skolem->domain->solved_cases) == 0 || c2->options->cegar || c2->options->case_splits);
     
@@ -702,11 +701,11 @@ void c2_replenish_skolem_satsolver(C2* c2) {
     for (unsigned i = 0; i < vector_count(old_skolem->domain->solved_cases); i++) {
         Case* pf = (Case*) vector_get(old_skolem->domain->solved_cases, i);
         if (pf->type == 0) {
-            domain_completed_cegar_cube(c2->skolem, pf->representation.ass.cube, pf->representation.ass.assignment);
+            casesplits_completed_cegar_cube(c2->skolem, pf->representation.ass.cube, pf->representation.ass.assignment);
             pf->representation.ass.cube = NULL; // make sure these objects will not be deallocated during free of old_skolem below.
             pf->representation.ass.assignment = NULL;
         } else {
-            domain_completed_case_split(c2->skolem, pf->representation.fun.decisions, pf->representation.fun.learnt_clauses);
+            casesplits_completed_case_split(c2->skolem, pf->representation.fun.decisions, pf->representation.fun.learnt_clauses);
             pf->representation.fun.decisions = NULL;
             pf->representation.fun.learnt_clauses = NULL;
         }
@@ -822,9 +821,9 @@ cadet_res c2_sat(C2* c2) {
         c2_analysis_determine_number_of_partitions(c2);
     }
     
-    domain_update_interface(c2->skolem);
+    casesplits_update_interface(c2->skolem);
     if (c2->options->cegar_only) {
-        return domain_solve_2QBF_by_cegar(c2, -1);
+        return casespilts_solve_2QBF_by_cegar(c2, -1);
     }
 
     while (c2->result == CADET_RESULT_UNKNOWN) { // This loop controls the restarts
@@ -923,9 +922,9 @@ cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
                 break;
             case C2_CEGAR_CONFLICT:
                 V1("  UNSAT via Cegar conflict.\n");
-                c2_print_qdimacs_output(c2->qcnf, c2->skolem, domain_get_cegar_val);
+                c2_print_qdimacs_output(c2->qcnf, c2->skolem, casesplits_get_cegar_val);
                 abortif(c2->options->certify_internally_UNSAT
-                        && ! cert_check_UNSAT(c2->qcnf, c2->skolem, domain_get_cegar_val),
+                        && ! cert_check_UNSAT(c2->qcnf, c2->skolem, casesplits_get_cegar_val),
                         "Check failed! UNSAT result could not be certified.");
 //                abortif(c2->options->functional_synthesis, "Should not reach UNSAT output in functional synthesis mode.");
                 V1("Result verified.\n");

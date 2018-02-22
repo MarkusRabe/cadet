@@ -6,13 +6,13 @@
 //  Copyright © 2016 UC Berkeley. All rights reserved.
 //
 
-#include "domain.h"
+#include "casesplits.h"
 #include "log.h"
 
 #include <math.h>
 
-Domain* domain_init(QCNF* qcnf) {
-    Domain* d = malloc(sizeof(Domain));
+Casesplits* casesplits_init(QCNF* qcnf) {
+    Casesplits* d = malloc(sizeof(Casesplits));
     d->qcnf = qcnf;
     d->solved_cases = vector_init();
     
@@ -41,25 +41,25 @@ Domain* domain_init(QCNF* qcnf) {
     return d;
 }
 
-bool domain_is_initialized(Domain* cegar) {
-    return cegar->interface_vars != NULL;
+bool casesplits_is_initialized(Casesplits* cs) {
+    return cs->interface_vars != NULL;
 }
 
-float domain_get_interface_activity(Domain* cegar, unsigned var_id) {
-    if (float_vector_count(cegar->interface_activities) > var_id) {
-        return float_vector_get(cegar->interface_activities, var_id);
+float casesplits_get_interface_activity(Casesplits* cs, unsigned var_id) {
+    if (float_vector_count(cs->interface_activities) > var_id) {
+        return float_vector_get(cs->interface_activities, var_id);
     } else {
         return (float) 0.0;
     }
 }
-void domain_add_interface_activity(Domain* cegar, unsigned var_id, float value) {
-    while (float_vector_count(cegar->interface_activities) <= var_id) {
-        float_vector_add(cegar->interface_activities, (float) 0.0);
+void casesplits_add_interface_activity(Casesplits* cs, unsigned var_id, float value) {
+    while (float_vector_count(cs->interface_activities) <= var_id) {
+        float_vector_add(cs->interface_activities, (float) 0.0);
     }
-    float old = float_vector_get(cegar->interface_activities, var_id);
-    float_vector_set(cegar->interface_activities, var_id, old + value);
+    float old = float_vector_get(cs->interface_activities, var_id);
+    float_vector_set(cs->interface_activities, var_id, old + value);
 }
-void domain_decay_interface_activity(Domain* d, unsigned var_id) {
+void casesplits_decay_interface_activity(Casesplits* d, unsigned var_id) {
 //    for (unsigned i = 0; i < float_vector_count(cegar->interface_activities); i++) {
     if (var_id >= float_vector_count(d->interface_activities)) {
         return;
@@ -78,9 +78,9 @@ void cegar_remember_original_satlit(Skolem* s, unsigned var_id) {
     map_add(s->domain->original_satlits, - (Lit) var_id, (void*) (long) satlit_neg);
 }
 
-void domain_update_interface(Skolem* s) {
+void casesplits_update_interface(Skolem* s) {
     
-    Domain* d = s->domain;
+    Casesplits* d = s->domain;
     
     d->exists_solver = satsolver_init();
     
@@ -151,7 +151,7 @@ void domain_update_interface(Skolem* s) {
     }
 }
 
-void domain_free(Domain* d) {
+void casesplits_free(Casesplits* d) {
     if (d->exists_solver) {satsolver_free(d->exists_solver);}
     if (d->interface_vars) {int_vector_free(d->interface_vars);}
     if (d->interface_activities) {float_vector_free(d->interface_activities);}
@@ -183,7 +183,7 @@ Case* pf_init() {
     return pf;
 }
 
-void domain_completed_case_split(Skolem* s, int_vector* decisions, set* learnt_clauses) {
+void casesplits_completed_case_split(Skolem* s, int_vector* decisions, set* learnt_clauses) {
     Case* pf = pf_init();
     pf->type = 1;
     pf->representation.fun.decisions = decisions;
@@ -191,12 +191,12 @@ void domain_completed_case_split(Skolem* s, int_vector* decisions, set* learnt_c
     vector_add(s->domain->solved_cases, pf);
 }
 
-void domain_encode_case_into_satsolver(Skolem* s, Case* c, SATSolver* sat) {
+void casesplits_encode_case_into_satsolver(Skolem* s, Case* c, SATSolver* sat) {
     V2("Encoding completed case");
     NOT_IMPLEMENTED();
 }
 
-void domain_completed_cegar_cube(Skolem* s, int_vector* cube, int_vector* partial_assignment) {
+void casesplits_completed_cegar_cube(Skolem* s, int_vector* cube, int_vector* partial_assignment) {
     Case* pf = pf_init();
     assert(cube);
     assert(!s->options->certify_SAT || partial_assignment);
@@ -231,8 +231,8 @@ void domain_completed_cegar_cube(Skolem* s, int_vector* cube, int_vector* partia
     V2("\n");
 }
 
-void domain_print_statistics(Domain* d) {
-    if (d && domain_is_initialized(d)) {
+void casesplits_print_statistics(Casesplits* d) {
+    if (d && casesplits_is_initialized(d)) {
         V0("Domain statistics:\n");
         V0("  Interface size: %u\n", int_vector_count(d->interface_vars));
         V0("  Number of explored cases: %u\n", vector_count(d->solved_cases));

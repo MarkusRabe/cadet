@@ -166,7 +166,6 @@
 		28FA8D2E1E10ACBC00A43B7B /* c2_validate.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = c2_validate.c; path = src/c2_validate.c; sourceTree = "<group>"; };
 		28FA8D2F1E10ACBC00A43B7B /* c2_validate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = c2_validate.h; path = src/c2_validate.h; sourceTree = "<group>"; };
 		28FA8D341E14F4E900A43B7B /* domain.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = domain.c; path = src/domain.c; sourceTree = "<group>"; };
-		28FA8D351E14F4E900A43B7B /* domain.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = domain.h; path = src/domain.h; sourceTree = "<group>"; };
 		28FEE64A1EDA304000A9D8CA /* skolem_conflict_analysis.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = skolem_conflict_analysis.c; path = src/skolem_conflict_analysis.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -254,11 +253,10 @@
 				28675A3A1DDAA9D000951212 /* skolem.h */,
 				28675A391DDAA9D000951212 /* skolem.c */,
 				287C3B171E3C035500F7096A /* skolem_ext */,
-				28FA8D351E14F4E900A43B7B /* domain.h */,
-				28FA8D341E14F4E900A43B7B /* domain.c */,
-				28C1C181202D3EB40094DB4E /* cegar.c */,
 				287C3B121E399C7A00F7096A /* casesplits.h */,
 				287C3B111E399C7A00F7096A /* casesplits.c */,
+				28FA8D341E14F4E900A43B7B /* domain.c */,
+				28C1C181202D3EB40094DB4E /* cegar.c */,
 				287BB7C11E0609B000AAE180 /* partitions.c */,
 				28675A121DDAA9D000951212 /* certify.h */,
 				28675A111DDAA9D000951212 /* certify.c */,

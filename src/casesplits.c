@@ -9,7 +9,6 @@
 #include "casesplits.h"
 #include "log.h"
 #include "c2_traces.h"
-#include "domain.h"
 #include "mersenne_twister.h"
 
 #include <math.h>
@@ -21,7 +20,7 @@ void c2_successful_case_split_heuristics(C2* c2, int_vector* solved_cube) {
         V1("Activity bump: %f\n", activity_bump);
         for (unsigned i = 0; i < int_vector_count(solved_cube); i++) {
             unsigned var_id = lit_to_var(int_vector_get(solved_cube, i));
-            domain_add_interface_activity(c2->skolem->domain, var_id, activity_bump);
+            casesplits_add_interface_activity(c2->skolem->domain, var_id, activity_bump);
         }
 //        unsigned last_var_id = lit_to_var(int_vector_get(solved_cube, int_vector_count(solved_cube) - 1));
 //        domain_add_interface_activity(c2->skolem->cegar, last_var_id, activity_bump);
@@ -125,7 +124,7 @@ Lit c2_case_split_pick_literal(C2* c2) {
             
             assert(propagations_pos < 1000000 && propagations_neg < 1000000); // avoid overflows
             
-            float cost_factor = (float) 1 + (float) 20.0 * /*sqrtf*/(domain_get_interface_activity(c2->skolem->domain, v->var_id));
+            float cost_factor = (float) 1 + (float) 20.0 * /*sqrtf*/(casesplits_get_interface_activity(c2->skolem->domain, v->var_id));
             
             float combined_factor =
                 ((float) 1.0
@@ -158,7 +157,7 @@ bool casesplits_make_assumption(C2* c2, Lit lit) {
     
     satsolver_assume(c2->skolem->skolem, skolem_get_satsolver_lit(c2->skolem, lit));
     
-    domain_decay_interface_activity(c2->skolem->domain, lit_to_var(lit));
+    casesplits_decay_interface_activity(c2->skolem->domain, lit_to_var(lit));
     
     bool assumption_vacuous = satsolver_sat(c2->skolem->skolem) != SATSOLVER_SATISFIABLE;
     if (assumption_vacuous) {
@@ -346,7 +345,7 @@ void casesplits_record_case(C2* c2) {
             set_add(learnt_clauses, c);
         }
     }
-    domain_completed_case_split(c2->skolem, int_vector_copy(c2->skolem->decisions), learnt_clauses);
+    casesplits_completed_case_split(c2->skolem, int_vector_copy(c2->skolem->decisions), learnt_clauses);
 }
 
 void casesplits_close_case(C2* c2) {

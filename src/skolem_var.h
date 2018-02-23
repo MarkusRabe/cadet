@@ -31,11 +31,12 @@ union skolem_undo_union {
 struct skolem_var {
     // undoable portion of skolem_vars
     int pos_lit; // refers to lit in skolem satsolver; 0 value denotes that the lit is constant FALSE; s->satlit_true denotes that the lit is constant TRUE
-    int neg_lit : 28; // refers to lit in skolem satsolver; 0 value denotes that the lit is constant FALSE; s->satlit_true denotes that the lit is constant TRUE
+    int neg_lit : 26; // refers to lit in skolem satsolver; 0 value denotes that the lit is constant FALSE; s->satlit_true denotes that the lit is constant TRUE
     unsigned pure_pos : 1;
     unsigned pure_neg : 1;
     unsigned deterministic : 1;
-    unsigned universal : 1;
+    unsigned decision_pos : 1;
+    unsigned decision_neg : 1;
     union Dependencies dep; // depends on whether we consider a QBF or a DQBF
     
     // permanent portion of skolem_var
@@ -54,12 +55,14 @@ void skolem_update_satlit(Skolem* s, Lit lit, int new_satlit);
 void skolem_update_pure_pos(Skolem*, unsigned var_id, unsigned pos_lit);
 void skolem_update_pure_neg(Skolem*, unsigned var_id, unsigned pos_lit);
 void skolem_update_deterministic(Skolem*, unsigned var_id, unsigned deterministic);
-void skolem_update_universal(Skolem*, unsigned var_id, unsigned deterministic);
+void skolem_update_decision(Skolem* s, Lit lit);
 void skolem_update_dependencies(Skolem*, unsigned var_id, union Dependencies deps);
 void skolem_undo_dependencies(Skolem*, void* data);
 
 unsigned skolem_get_decision_lvl_for_conflict_analysis(void*, unsigned var_id);
 unsigned skolem_get_decision_lvl(Skolem*, unsigned var_id);
+unsigned skolem_is_decision_var(Skolem*, unsigned var_id);
+int skolem_get_decision_val(Skolem*, unsigned var_id);
 void skolem_update_decision_lvl(Skolem*, unsigned var_id, unsigned dlvl);
 void skolem_undo_decision_lvl(Skolem*, void* data);
 

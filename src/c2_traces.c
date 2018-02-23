@@ -48,7 +48,7 @@ void c2_print_variable_states(C2* c2) {
                 continue;
             }
         }
-        V0(",%d",c2_get_decision_val(c2, i));
+        V0(",%d",skolem_get_decision_val(c2->skolem, i));
     }
     V0("\nConstants");
     for (unsigned i = 1; i < var_vector_count(c2->qcnf->vars); i++) {
@@ -74,7 +74,7 @@ char* c2_literal_color(C2* c2, Clause* c, Lit lit) {
         }
     } else if (c && skolem_get_unique_consequence(c2->skolem, c) == lit) {
         return KMAG;
-    } else if (c2_is_decision_var(c2, var_id)) {
+    } else if (skolem_is_decision_var(c2->skolem, var_id)) {
         if (skolem_get_constant_value(c2->skolem, lit) != 0) {
             return KGRN_BOLD;
         } else {
@@ -162,7 +162,7 @@ void c2_print_statistics(C2* c2) {
     
     qcnf_print_statistics(c2->qcnf);
     skolem_print_statistics(c2->skolem);
-    casesplits_print_statistics(c2->skolem->domain);
+    casesplits_print_statistics(c2->cs);
     if (c2->options->examples_max_num > 0) {
         examples_print_statistics(c2->examples);
     }

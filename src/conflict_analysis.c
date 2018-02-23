@@ -182,11 +182,11 @@ void conflict_analysis_follow_implication_graph(conflict_analysis* ca) {
             bool depends_on_illegals = false;
             Clause* reason = conflict_analysis_find_reason_for_value(ca, lit, &depends_on_illegals);
             if (reason == NULL) {
-                abortif(ca->c2->state == C2_SKOLEM_CONFLICT && ! c2_is_decision_var(ca->c2, v->var_id) && ! int_vector_contains(ca->c2->case_split_stack, lit), "No reason for lit %d found in conflict analysis.\n", lit);
+                abortif(ca->c2->state == C2_SKOLEM_CONFLICT && ! skolem_is_decision_var(ca->c2->skolem, v->var_id) && ! int_vector_contains(ca->c2->skolem->universals_assumptions, lit), "No reason for lit %d found in conflict analysis.\n", lit);
 //                assert(ca->c2->state == C2_EXAMPLES_CONFLICT && c2_is_decision_var(ca->c2, v->var_id)); // this means it was a decision variable for the example domain
                 int_vector_add(ca->conflicting_assignment, lit); // must be decision variable (and conflict caused by this decision)
             } else if (!reason->consistent_with_originals) { // decision clause!
-                assert(c2_is_decision_var(ca->c2, lit_to_var(lit)) || lit_to_var(lit) == ca->conflicted_var_id);
+                assert(skolem_is_decision_var(ca->c2->skolem, lit_to_var(lit)) || lit_to_var(lit) == ca->conflicted_var_id);
                 int_vector_add(ca->conflicting_assignment, lit);
             } else {
                 assert(reason->original || reason->consistent_with_originals);

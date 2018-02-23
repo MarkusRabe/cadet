@@ -16,7 +16,7 @@ void c2_validate_var(C2* c2, unsigned var_id) {
     abortif(sv.deterministic && sv.pos_lit == 0 && sv.neg_lit == 0, "");
     abortif(sv.deterministic && sv.pos_lit == 0 && sv.neg_lit == 0, "");
     
-    int decision_val = c2_get_decision_val(c2, var_id);
+    int decision_val = skolem_get_decision_val(c2->skolem, var_id);
     abortif(decision_val != 0 && (sv.pure_pos || sv.pure_neg), "");
     abortif(decision_val != 0 && !sv.deterministic, "");
     

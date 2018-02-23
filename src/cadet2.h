@@ -13,6 +13,7 @@ struct C2;
 typedef struct C2 C2;
 
 #include "skolem.h"
+#include "casesplits.h"
 #include "qcnf.h"
 #include "options.h"
 #include "examples.h"
@@ -82,7 +83,6 @@ struct C2 {
     Options* options;
 
     // Essential C2 data structures
-    val_vector* decision_vals; // indexed by var_id
     c2_state state;
     cadet_res result;
     size_t restarts;
@@ -91,7 +91,6 @@ struct C2 {
     unsigned next_restart;
     size_t next_major_restart;
     unsigned restart_base_decision_lvl; // decision_lvl used for restarts
-    Stack* stack; // for backtracking
     int_vector* current_conflict;
     
     // Reasoning domains
@@ -106,8 +105,8 @@ struct C2 {
     float activity_factor;
     
     // Case splits
-    int_vector* case_split_stack;
-    unsigned case_split_depth;
+    Casesplits* cs;
+    
     size_t decisions_since_last_conflict;
     float skolem_success_recent_average;
     C2_CSDP case_split_depth_penalty;
@@ -122,10 +121,6 @@ C2* c2_init(Options* options);
 C2* c2_init_qcnf(QCNF*, Options* options);
 void c2_free(C2* c2);
 
-// Push and pop are currently only meant for internal use.
-void c2_push(C2*);
-void c2_pop(C2*);
-
 Clause* c2_add_lit(C2* c2, Lit lit);
 void c2_new_variable(C2* c2, unsigned var_id);
 void c2_new_clause(C2* c2, Clause* c);
@@ -136,10 +131,9 @@ cadet_res c2_solve_qdimacs(FILE*,Options*);
 cadet_res c2_solve(C2* c2);
 
 // Case splits
-void casesplits_backtrack_case_split(C2*);
+void c2_backtrack_casesplit(C2*);
 bool c2_casesplits_assume_single_lit(C2*); // returns if any kind of progress happened
 void c2_close_case(C2*);
-void c2_undo_casesplits(C2*, void* obj);
 
 // CEGAR
 /*
@@ -159,21 +153,12 @@ void c2_print_statistics(C2*);
 void c2_print_debug_info(C2*);
 
 // PRIVATE FUNCTIONS
-typedef enum {
-    C2_OP_ASSIGN_DECISION_VAL,
-    C2_OP_UNIVERSAL_ASSUMPTION
-} C2_OPERATION;
-void c2_undo(void* parent, char type, void* obj);
-
 float c2_get_activity(C2* c2, unsigned var_id);
 void c2_set_activity(C2* c2, unsigned var_id, float val);
 void c2_increase_activity(C2* c2, unsigned var_id, float summand);
 void c2_scale_activity(C2* c2, unsigned var_id, float factor);
 unsigned c2_get_decision_lvl(C2* c2, unsigned var_id);
 void c2_backtrack_to_decision_lvl(C2 *c2, unsigned backtracking_lvl);
-
-bool c2_is_decision_var(C2*, unsigned var_id);
-int c2_get_decision_val(C2*, unsigned var_id);
 
 unsigned c2_minimize_clause(C2*,Clause*);
 

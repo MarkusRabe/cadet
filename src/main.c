@@ -70,9 +70,9 @@ int main(int argc, const char* argv[]) {
                         log_silent = true;
                     }
                     
-                    if (options->case_splits) {
+                    if (options->casesplits) {
                         LOG_WARNING("Case splits not compatible with certificates right now. Deactivating case splits.");
-                        options->case_splits = false;
+                        options->casesplits = false;
                     }
 //                    if (options->cegar) {
 //                        LOG_WARNING("CEGAR is not compatible with certificates right now. Deactivating CEGAR.");
@@ -133,7 +133,7 @@ int main(int argc, const char* argv[]) {
                         options->aiger_controllable_inputs = argv[i+1];
                         i++;
                     } else if (strcmp(argv[i], "--case_splits") == 0) {
-                        options->case_splits = ! options->case_splits;
+                        options->casesplits = ! options->casesplits;
                     } else if (strcmp(argv[i], "--functional-synthesis") == 0) {
                         options->functional_synthesis = true;
                         if (options->cegar) {
@@ -155,6 +155,8 @@ int main(int argc, const char* argv[]) {
                     } else if (strcmp(argv[i], "--rl") == 0) {
                         options->reinforcement_learning = true;
                         log_colors = false;
+                    } else if (strcmp(argv[i], "--cegar_soft_conflict_limit") == 0) {
+                        options->cegar_soft_conflict_limit = true;
                     } else if (strcmp(argv[i], "--trace_for_profiling") == 0) {
                         options->trace_for_profiling = true;
                     } else if (strcmp(argv[i], "--print_variable_names") == 0) {

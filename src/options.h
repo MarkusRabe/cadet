@@ -22,6 +22,7 @@ typedef enum {
 typedef struct {
     
     bool reinforcement_learning; // take decisions through stdin; trace state
+    bool cegar_soft_conflict_limit; // switches cegar on after 1000 conflicts to also solve hard problems. 
     
     // Use a configuration of CADET 2 that is easier to debug than the performance-oriented configuration
     bool easy_debugging_mode_c2;
@@ -48,8 +49,8 @@ typedef struct {
     aiger_mode certificate_aiger_mode;
     
     // Case splits
-    bool case_splits;
-    bool partial_backtracking_from_closed_cases;
+    bool casesplits;
+    bool casesplits_cubes; // old case split code
     
     // Optimizations
     bool plaisted_greenbaum_completion;

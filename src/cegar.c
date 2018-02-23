@@ -67,10 +67,10 @@ bool cegar_var_needs_to_be_set(Casesplits* d, unsigned var_id) {
 }
 
 cadet_res cegar_one_round_for_conflicting_assignment(C2* c2) {
-    assert(casesplits_is_initialized(c2->skolem->domain));
+    assert(casesplits_is_initialized(c2->cs));
     assert(c2->result == CADET_RESULT_UNKNOWN);
     assert(c2->state == C2_SKOLEM_CONFLICT);
-    Casesplits* d = c2->skolem->domain;
+    Casesplits* d = c2->cs;
     
     V3("Assuming: ");
     for (unsigned i = 0 ; i < int_vector_count(d->interface_vars); i++) {
@@ -130,8 +130,8 @@ cadet_res cegar_one_round_for_conflicting_assignment(C2* c2) {
             }
         }
         
-        casesplits_completed_cegar_cube(c2->skolem, cube, existentials);
-        c2->skolem->domain->cegar_stats.recent_average_cube_size = (float) int_vector_count(cube) * (float) 0.1 + c2->skolem->domain->cegar_stats.recent_average_cube_size * (float) 0.9;
+        casesplits_completed_cegar_cube(c2->cs, cube, existentials);
+        c2->cs->cegar_stats.recent_average_cube_size = (float) int_vector_count(cube) * (float) 0.1 + c2->cs->cegar_stats.recent_average_cube_size * (float) 0.9;
     } else {
         c2->state = C2_CEGAR_CONFLICT;
         c2->result = CADET_RESULT_UNSAT;
@@ -142,7 +142,7 @@ cadet_res cegar_one_round_for_conflicting_assignment(C2* c2) {
 
 cadet_res cegar_solve_2QBF_by_cegar(C2* c2, int rounds_num) {
     
-    assert(casesplits_is_initialized(c2->skolem->domain));
+    assert(casesplits_is_initialized(c2->cs));
     
     // solver loop
     while (c2->result == CADET_RESULT_UNKNOWN && rounds_num--) {

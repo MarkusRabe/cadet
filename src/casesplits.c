@@ -11,9 +11,11 @@
 
 #include <math.h>
 
-Casesplits* casesplits_init(QCNF* qcnf) {
+Casesplits* casesplits_init(QCNF* qcnf, Options* options) {
     Casesplits* d = malloc(sizeof(Casesplits));
     d->qcnf = qcnf;
+    d->skolem = NULL;
+    d->options = options;
     d->solved_cases = vector_init();
     
     d->interface_vars = NULL;
@@ -69,74 +71,75 @@ void casesplits_decay_interface_activity(Casesplits* d, unsigned var_id) {
 //    }
 }
 
-void cegar_remember_original_satlit(Skolem* s, unsigned var_id) {
-    assert(skolem_is_deterministic(s, var_id));
-    assert(s->stack->push_count == 0);
-    int satlit_pos = skolem_get_satsolver_lit(s,   (Lit) var_id);
-    int satlit_neg = skolem_get_satsolver_lit(s, - (Lit) var_id);
-    map_add(s->domain->original_satlits,   (Lit) var_id, (void*) (long) satlit_pos);
-    map_add(s->domain->original_satlits, - (Lit) var_id, (void*) (long) satlit_neg);
+void cegar_remember_original_satlit(Casesplits* cs, unsigned var_id) {
+    assert(skolem_is_deterministic(cs->skolem, var_id));
+    assert(cs->skolem->stack->push_count == 0);
+    int satlit_pos = skolem_get_satsolver_lit(cs->skolem,   (Lit) var_id);
+    int satlit_neg = skolem_get_satsolver_lit(cs->skolem, - (Lit) var_id);
+    map_add(cs->original_satlits,   (Lit) var_id, (void*) (long) satlit_pos);
+    map_add(cs->original_satlits, - (Lit) var_id, (void*) (long) satlit_neg);
 }
 
-void casesplits_update_interface(Skolem* s) {
+void casesplits_update_interface(Casesplits* cs, Skolem* skolem) {
+    assert(cs->skolem == NULL || cs->skolem == skolem);
+    cs->skolem = skolem;
     
-    Casesplits* d = s->domain;
+    if (cs->exists_solver) {satsolver_free(cs->exists_solver);}
+    cs->exists_solver = satsolver_init();
     
-    d->exists_solver = satsolver_init();
-    
-    const unsigned max_var_id = var_vector_count(d->qcnf->vars);
-    satsolver_set_max_var(d->exists_solver, (int) max_var_id);
+    const unsigned max_var_id = var_vector_count(cs->qcnf->vars);
+    satsolver_set_max_var(cs->exists_solver, (int) max_var_id);
     
     // set up satsolver for existentials
-    for (unsigned i = 0; i < vector_count(s->qcnf->clauses); i++) {
-        Clause* c = vector_get(s->qcnf->clauses, i);
+    for (unsigned i = 0; i < vector_count(cs->qcnf->clauses); i++) {
+        Clause* c = vector_get(cs->qcnf->clauses, i);
         if (!c || ! c->original) {
             continue;
         }
-        unsigned uc_var = lit_to_var(skolem_get_unique_consequence(s, c));
-        if (uc_var != 0 && skolem_is_deterministic(s, uc_var)) {
+        unsigned uc_var = lit_to_var(skolem_get_unique_consequence(cs->skolem, c));
+        if (uc_var != 0 && skolem_is_deterministic(cs->skolem, uc_var)) {
             continue;
         }
         for (unsigned j = 0; j < c->size; j++) {
             assert(lit_to_var(c->occs[j]) < max_var_id);
-            satsolver_add(d->exists_solver, c->occs[j]);
+            satsolver_add(cs->exists_solver, c->occs[j]);
         }
-        satsolver_clause_finished(d->exists_solver);
+        satsolver_clause_finished(cs->exists_solver);
     }
     
     // determine interface variables; variables that are deterministic and occur in clauses together with nondeterministic variables.
-    int_vector* old_interface = d->interface_vars;
-    d->interface_vars = int_vector_init();
-    for (unsigned i = 0; i < vector_count(s->qcnf->clauses); i++) {
-        Clause* c = vector_get(s->qcnf->clauses, i);
+    int_vector* old_interface = cs->interface_vars;
+    cs->interface_vars = int_vector_init();
+    for (unsigned i = 0; i < vector_count(cs->qcnf->clauses); i++) {
+        Clause* c = vector_get(cs->qcnf->clauses, i);
         if (!c || ! c->original || c->blocked) {
             continue;
         }
-        unsigned uc_var = lit_to_var(skolem_get_unique_consequence(s, c));
-        if (uc_var != 0 && skolem_is_deterministic(s, uc_var)) {
+        unsigned uc_var = lit_to_var(skolem_get_unique_consequence(cs->skolem, c));
+        if (uc_var != 0 && skolem_is_deterministic(cs->skolem, uc_var)) {
             continue;
         }
         for (unsigned j = 0; j < c->size; j++) {
-            if (skolem_is_deterministic(s, lit_to_var(c->occs[j]))) {
-                int_vector_add(d->interface_vars, (int) lit_to_var(c->occs[j]));
+            if (skolem_is_deterministic(cs->skolem, lit_to_var(c->occs[j]))) {
+                int_vector_add(cs->interface_vars, (int) lit_to_var(c->occs[j]));
             }
         }
     }
     
-    int_vector_sort(d->interface_vars, compare_integers_natural_order);
-    int_vector_remove_duplicates(d->interface_vars);
+    int_vector_sort(cs->interface_vars, compare_integers_natural_order);
+    int_vector_remove_duplicates(cs->interface_vars);
     
-    for (unsigned i = 0; i < int_vector_count(d->interface_vars); i++) {
-        Lit interface_lit = int_vector_get(d->interface_vars, i);
+    for (unsigned i = 0; i < int_vector_count(cs->interface_vars); i++) {
+        Lit interface_lit = int_vector_get(cs->interface_vars, i);
         assert(interface_lit > 0); // not required for correctness, just a sanity check
         unsigned interface_var = lit_to_var(interface_lit);
-        cegar_remember_original_satlit(s, interface_var);
+        cegar_remember_original_satlit(cs, interface_var);
     }
     
-    V1("Deterministic vars: %zu\n", s->deterministic_variables);
-    V1("Interface vars: (%u in total) ... ", int_vector_count(d->interface_vars));
-    if (debug_verbosity >= VERBOSITY_HIGH || (debug_verbosity >= VERBOSITY_LOW && int_vector_count(d->interface_vars) < 20)) {
-        int_vector_print(d->interface_vars);
+    V1("Deterministic vars: %zu\n", cs->skolem->deterministic_variables);
+    V1("Interface vars: (%u in total) ... ", int_vector_count(cs->interface_vars));
+    if (debug_verbosity >= VERBOSITY_HIGH || (debug_verbosity >= VERBOSITY_LOW && int_vector_count(cs->interface_vars) < 20)) {
+        int_vector_print(cs->interface_vars);
     }
     V1("\n");
     
@@ -144,7 +147,7 @@ void casesplits_update_interface(Skolem* s) {
     if (old_interface != NULL) {
         if (debug_verbosity >= VERBOSITY_HIGH) {
             for (unsigned i = 0; i < int_vector_count(old_interface); i++) {
-                assert(int_vector_contains(d->interface_vars, int_vector_get(old_interface, i)));
+                assert(int_vector_contains(cs->interface_vars, int_vector_get(old_interface, i)));
             }
         }
         free(old_interface);
@@ -183,24 +186,56 @@ Case* case_init() {
     return e;
 }
 
-void casesplits_record_case(Skolem* s) {
+void casesplits_close_heuristics(Casesplits* cs, int_vector* solved_cube) {
+    if (int_vector_count(solved_cube) < 20) { // prevent tinitiny increments, NaN-hell, etc
+        float activity_bump = (float) ((double) 1.0 / pow(2.0, (double) int_vector_count(solved_cube)));
+        //        float activity_bump = (float) ((double) 1.0 / (double) (c2->case_split_depth * c2->case_split_depth + 1.0));
+        V1("Activity bump: %f\n", activity_bump);
+        for (unsigned i = 0; i < int_vector_count(solved_cube); i++) {
+            unsigned var_id = lit_to_var(int_vector_get(solved_cube, i));
+            casesplits_add_interface_activity(cs, var_id, activity_bump);
+        }
+        //        unsigned last_var_id = lit_to_var(int_vector_get(solved_cube, int_vector_count(solved_cube) - 1));
+        //        domain_add_interface_activity(c2->skolem->cegar, last_var_id, activity_bump);
+    }
+}
+
+void casesplits_record_case(Casesplits* cs, int_vector* decisions) {
+    
+    //////////////////////////////////////////////////////
+    if (cs->options->casesplits_cubes) {
+        // Only needed for old casesplit close case:
+        int_vector* solved_cube = int_vector_init();
+        for (unsigned i = 0; i < int_vector_count(cs->skolem->universals_assumptions); i++) {
+            Lit l = int_vector_get(cs->skolem->universals_assumptions, i);
+            int_vector_add(solved_cube, l);
+            V1(" %d", l);
+        }
+        V1("\n");
+        // Adjust universal activity values
+        casesplits_close_heuristics(cs, solved_cube);
+        
+        return;
+    }
+    //////////////////////////////////////////////////////
+    
     // assert(found skolem functions for all variables);
     set* learnt_clauses = set_init();
-    for (unsigned i = 0; i < vector_count(s->qcnf->clauses); i++) {
-        Clause* c = vector_get(s->qcnf->clauses, i++);
+    for (unsigned i = 0; i < vector_count(cs->qcnf->clauses); i++) {
+        Clause* c = vector_get(cs->qcnf->clauses, i++);
         if (! c->original && c->consistent_with_originals) {
             set_add(learnt_clauses, c);
         }
     }
-    casesplits_completed_case_split(s, int_vector_copy(s->decisions), learnt_clauses);
+    casesplits_completed_case_split(cs, int_vector_copy(decisions), learnt_clauses);
 }
 
-void casesplits_completed_case_split(Skolem* s, int_vector* decisions, set* learnt_clauses) {
+void casesplits_completed_case_split(Casesplits* cs, int_vector* decisions, set* learnt_clauses) {
     Case* pf = case_init();
     pf->type = 1;
     pf->representation.fun.decisions = decisions;
     pf->representation.fun.learnt_clauses = learnt_clauses;
-    vector_add(s->domain->solved_cases, pf);
+    vector_add(cs->solved_cases, pf);
 }
 
 void casesplits_encode_case_into_satsolver(Skolem* s, Case* c, SATSolver* sat) {
@@ -208,38 +243,38 @@ void casesplits_encode_case_into_satsolver(Skolem* s, Case* c, SATSolver* sat) {
     NOT_IMPLEMENTED();
 }
 
-void casesplits_completed_cegar_cube(Skolem* s, int_vector* cube, int_vector* partial_assignment) {
+void casesplits_completed_cegar_cube(Casesplits* cs, int_vector* cube, int_vector* partial_assignment) {
     Case* pf = case_init();
     assert(cube);
-    assert(!s->options->certify_SAT || partial_assignment);
+    assert(!cs->options->certify_SAT || partial_assignment);
     pf->type = 0;
     pf->representation.ass.cube = cube; // needed even in non-certifying mode for reinitialization of SAT solvers
     pf->representation.ass.assignment = partial_assignment;
     
-    vector_add(s->domain->solved_cases, pf);
+    vector_add(cs->solved_cases, pf);
     // TODO: Instead of adding a clause to the SATsolver only, we should add a clause to the actual QCNF to enable propagation among the universals. But universal reduction might collapse these clauses to empty clauses ... not good.
     V2("Completed cube (with length %u) ", int_vector_count(cube));
     for (unsigned i = 0; i < int_vector_count(cube); i++) {
         Lit lit = int_vector_get(cube, i);
-        assert(skolem_is_deterministic(s, lit_to_var(lit)));
-        assert(skolem_get_decision_lvl(s, lit_to_var(lit)) == 0);
+        assert(skolem_is_deterministic(cs->skolem, lit_to_var(lit)));
+        assert(skolem_get_decision_lvl(cs->skolem, lit_to_var(lit)) == 0);
         if (int_vector_count(cube) <= 10) {
             V2("%d ", - lit);
         } else {
             V3("%d ", - lit);
         }
         
-        if (! map_contains(s->domain->original_satlits, lit)) {
+        if (! map_contains(cs->original_satlits, lit)) {
             // Stupid bug: after replenishing the sat solvers, the interface might shift and old cubes are not on the interface any more.
-            abortif(s->stack->push_count != 0, "This is a new bug");
-            cegar_remember_original_satlit(s, lit_to_var(lit));
+            abortif(cs->skolem->stack->push_count != 0, "This is a new bug");
+            cegar_remember_original_satlit(cs, lit_to_var(lit));
         }
         
-        int satlit = (int) (long) map_get(s->domain->original_satlits, lit);
+        int satlit = (int) (long) map_get(cs->original_satlits, lit);
         //        int satlit = skolem_get_satsolver_lit(s, lit); // doesn't work, as the universal variables could be updated to be constant after case split assumptions
-        satsolver_add(s->skolem, satlit);
+        satsolver_add(cs->skolem->skolem, satlit);
     }
-    satsolver_clause_finished_for_context(s->skolem, 0);
+    satsolver_clause_finished_for_context(cs->skolem->skolem, 0);
     V2("\n");
 }
 

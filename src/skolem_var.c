@@ -35,10 +35,24 @@ unsigned skolem_get_decision_lvl_for_conflict_analysis(void* domain, unsigned va
     }
 }
 unsigned skolem_get_decision_lvl(Skolem* s, unsigned var_id) {
+    assert(var_id < var_vector_count(s->qcnf->vars));
     skolem_enlarge_skolem_var_vector(s, var_id);
     assert(skolem_is_deterministic(s, var_id));
     skolem_var* sv = skolem_var_vector_get(s->infos, var_id);
     return sv->decision_lvl;
+}
+unsigned skolem_is_decision_var(Skolem* s, unsigned var_id) {
+    assert(var_id < var_vector_count(s->qcnf->vars));
+    skolem_enlarge_skolem_var_vector(s, var_id);
+    skolem_var* sv = skolem_var_vector_get(s->infos, var_id);
+    return sv->decision_pos || sv->decision_neg;
+}
+int skolem_get_decision_val(Skolem* s, unsigned var_id) {
+    assert(var_id < var_vector_count(s->qcnf->vars));
+    assert(skolem_is_deterministic(s, var_id));
+    skolem_enlarge_skolem_var_vector(s, var_id);
+    skolem_var* sv = skolem_var_vector_get(s->infos, var_id);
+    return 2 * sv->decision_pos - 2 * sv->decision_neg;
 }
 
 unsigned skolem_get_dlvl_for_constant(Skolem* s, unsigned var_id) {
@@ -89,6 +103,8 @@ void skolem_enlarge_skolem_var_vector(Skolem* s, unsigned var_id) {
     sv.pure_pos = 0;
     sv.pure_neg = 0;
     sv.deterministic = 0;
+    sv.decision_pos = 0;
+    sv.decision_neg = 0;
     sv.dep = s->empty_dependencies;
     
     // permanent portion
@@ -96,7 +112,6 @@ void skolem_enlarge_skolem_var_vector(Skolem* s, unsigned var_id) {
     sv.conflict_potential = s->magic.initial_conflict_potential;
     sv.reason_for_constant = INT_MAX;
     sv.dlvl_for_constant = 0;
-    sv.universal = qcnf_is_universal(s->qcnf, var_id);
     
     // add this sv to the var_vector
     while (skolem_var_vector_count(s->infos) <= var_id) {
@@ -231,17 +246,20 @@ void skolem_update_deterministic(Skolem* s, unsigned var_id, unsigned determinis
         sv->deterministic = deterministic;
     }
 }
-void skolem_update_universal(Skolem* s, unsigned var_id, unsigned universal) {
-    assert(universal == 0 || universal == 1);
+void skolem_update_decision(Skolem* s, Lit lit) {
+    int_vector_add(s->decisions, lit);
+    
+    unsigned var_id = lit_to_var(lit);
+    int val = lit>0 ? 1 : -1;
     skolem_enlarge_skolem_var_vector(s, var_id);
     skolem_var* sv = skolem_var_vector_get(s->infos, var_id);
-    if (universal != sv->universal) {
-        V4("Setting universal %d for var %u\n", universal, var_id);
-        union skolem_undo_union suu;
-        suu.sus.var_id = var_id;
-        suu.sus.val = sv->universal;
-        stack_push_op(s->stack, SKOLEM_OP_UPDATE_INFO_UNIVERSAL, suu.ptr);
-        sv->universal = universal;
+    assert(sv->decision_pos == 0 && sv->decision_neg == 0);
+    V4("Setting decision %d for var %u\n", val, var_id);
+    stack_push_op(s->stack, SKOLEM_OP_DECISION, (void*) (long) var_id);
+    if (val > 0) {
+        sv->decision_pos = 1;
+    } else {
+        sv->decision_neg = 1;
     }
 }
 

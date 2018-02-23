@@ -28,7 +28,6 @@ Skolem* skolem_init(QCNF* qcnf, Options* o,
     Skolem* s = malloc(sizeof(Skolem));
     s->options = o;
     s->qcnf = qcnf;
-    s->domain = casesplits_init(qcnf);
     s->u_initially_deterministic = u_initially_deterministic;
     s->e_initially_deterministic = e_initially_deterministic;
     
@@ -69,6 +68,7 @@ Skolem* skolem_init(QCNF* qcnf, Options* o,
         s->decision_indicator_sat_lits = int_vector_init();
     }
     s->decisions = int_vector_init();
+    s->universals_assumptions = int_vector_init();
     
     // Statistics
     s->statistics.propagations = 0;
@@ -98,7 +98,6 @@ Skolem* skolem_init(QCNF* qcnf, Options* o,
 }
 
 void skolem_free(Skolem* s) {
-    if (s->domain) {casesplits_free(s->domain); s->domain = NULL;}
     satsolver_free(s->skolem);
     skolem_var_vector_free(s->infos);
     pqueue_free(s->determinicity_queue);
@@ -106,6 +105,8 @@ void skolem_free(Skolem* s) {
     worklist_free(s->clauses_to_check);
     int_vector_free(s->potentially_conflicted_variables);
     int_vector_free(s->unique_consequence);
+    int_vector_free(s->decisions);
+    int_vector_free(s->universals_assumptions);
     if (s->options->functional_synthesis) {
         int_vector_free(s->decision_indicator_sat_lits);
     }
@@ -157,11 +158,6 @@ double skolem_size_of_active_set(Skolem* s) {
         }
     }
     return (double) not_satisfied / (double) total;
-}
-
-bool skolem_is_initially_deterministic(Skolem* s, unsigned var_id) {
-    Var* v = var_vector_get(s->qcnf->vars, var_id);
-    return v->scope_id < (v->is_universal ? s->u_initially_deterministic : s->e_initially_deterministic);
 }
 
 // Approximation, not accurate. Functions may be constant true but we don't necessarily detect that.
@@ -1037,12 +1033,6 @@ void skolem_undo(void* parent, char type, void* obj) {
             si->deterministic = (unsigned) suu.sus.val;
             break;
             
-        case SKOLEM_OP_UPDATE_INFO_UNIVERSAL:
-            si = skolem_var_vector_get(s->infos, suu.sus.var_id);
-            si->universal = (unsigned) suu.sus.val;
-            LOG_WARNING("Why would someone temporily set a variable to be universal???");
-            break;
-            
         case SKOLEM_OP_UPDATE_INFO_PURE_POS:
             si = skolem_var_vector_get(s->infos, suu.sus.var_id);
             si->pure_pos = (unsigned) suu.sus.val;
@@ -1108,11 +1098,22 @@ void skolem_undo(void* parent, char type, void* obj) {
             
         case SKOLEM_OP_DECISION:
             int_vector_pop(s->decisions);
+            
+            si = skolem_var_vector_get(s->infos, (unsigned) obj);
+            assert(si->decision_pos || si->decision_neg);
+            si->decision_pos = 0;
+            si->decision_neg = 0;
+            
             if (s->options->functional_synthesis) {
                 int_vector_pop(s->decision_indicator_sat_lits);
                 assert(int_vector_count(s->decisions) == int_vector_count(s->decision_indicator_sat_lits));
             }
             break;
+            
+        case SKOLEM_OP_UNIVERSAL_ASSUMPTION:
+            int_vector_pop(s->universals_assumptions);
+            break;
+            
         default:
             V0("Unknown undo operation in skolem.c: %d\n", (int) type);
             NOT_IMPLEMENTED();
@@ -1207,11 +1208,13 @@ void skolem_update_clause_worklist(Skolem* s, int unassigned_lit) {
 }
 
 // Different from satsolver assumptions. Assumes a constant for a variable that is already deterministic
-void skolem_assume_constant_value(Skolem* s, Lit lit) {
-    V3("Skolem: Assume value %d.\n", lit);
-    unsigned var_id = lit_to_var(lit);
-    assert(skolem_is_deterministic(s, var_id));
+void skolem_make_universal_assumption(Skolem* s, Lit lit) { // 
+    assert(skolem_is_deterministic(s, lit_to_var(lit)));
+    int_vector_add(s->universals_assumptions, lit);
+    V2("Added universal assumption %d. New case split depth is %u\n", lit, int_vector_count(s->universals_assumptions));
+    stack_push_op(s->stack, SKOLEM_OP_UNIVERSAL_ASSUMPTION, NULL);
     
+    unsigned var_id = lit_to_var(lit);
     satsolver_add(s->skolem, skolem_get_satsolver_lit(s, lit));
     satsolver_clause_finished(s->skolem);
     
@@ -1357,12 +1360,12 @@ void skolem_propagate_constants_over_clause(Skolem* s, Clause* c) {
         V3("Conflict in explicit propagation in skolem domain for clause %u and var %u\n", s->conflicted_clause->clause_idx, s->conflict_var_id);
         
     } else { // assign value
-        if ((qcnf_is_universal(s->qcnf, lit_to_var(unassigned_lit)) ||
-                skolem_is_initially_deterministic(s, lit_to_var(unassigned_lit)) ) &&
-            s->mode != SKOLEM_MODE_CONSTANT_PROPAGATIONS_TO_DETERMINISTICS) {
-            
-            goto cleanup;
-        }
+        abortif(qcnf_is_universal(s->qcnf, lit_to_var(unassigned_lit)) &&
+                s->mode != SKOLEM_MODE_CONSTANT_PROPAGATIONS_TO_DETERMINISTICS, "Assignment propagation actually caused a conflict; but propagation code is not implemented for that case");
+//        if (qcnf_is_universal(s->qcnf, lit_to_var(unassigned_lit)) &&
+//            s->mode != SKOLEM_MODE_CONSTANT_PROPAGATIONS_TO_DETERMINISTICS) {
+//            goto cleanup;
+//        }
         
         s->statistics.propagations += 1;
         s->statistics.explicit_propagations += 1;
@@ -1387,9 +1390,7 @@ void skolem_decision(Skolem* s, Lit decision_lit) {
     assert(!skolem_is_deterministic(s, decision_var_id));
     assert(skolem_get_constant_value(s, decision_lit) == 0);
     
-    int_vector_add(s->decisions, decision_lit);
-    stack_push_op(s->stack, SKOLEM_OP_DECISION, NULL);
-    
+    skolem_update_decision(s, decision_lit);
     skolem_update_decision_lvl(s, decision_var_id, s->decision_lvl);
     
     /* Tricky bug: In case the decision var is conflicted and both lits are true, the definitions below
@@ -1505,4 +1506,9 @@ void skolem_propagate(Skolem* s) {
             skolem_propagate_pure_variable(s, var_id);
         }
     }
+}
+
+bool skolem_is_universal_assumption_vacuous(Skolem* s, Lit lit) {
+    satsolver_assume(s->skolem, skolem_get_satsolver_lit(s, lit));
+    return satsolver_sat(s->skolem) != SATSOLVER_SATISFIABLE;
 }

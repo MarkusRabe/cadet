@@ -28,8 +28,6 @@ struct Skolem;
 typedef struct Skolem Skolem;
 struct skolem_var;
 typedef struct skolem_var skolem_var;
-struct Casesplits;
-typedef struct Casesplits Casesplits;
 
 bool skolem_is_total(skolem_var*); // pos_lit == neg_lit && pos_lit != 0
 bool skolem_is_top(skolem_var*); // pos_lit == 0 && neg_lit == 0
@@ -84,7 +82,6 @@ struct Skolem {
     
     // Dependent objects
     SATSolver* skolem;
-    Casesplits* domain;
     
     // Core Skolem state and data structures
     unsigned decision_lvl;
@@ -100,9 +97,10 @@ struct Skolem {
     // Stores all the variables that are potentially
     int_vector* potentially_conflicted_variables; // contains var_id
     
-    // Extra data structure required for functional synthesis
-    int_vector* decision_indicator_sat_lits; // contains var_id of temporary vars
+    int_vector* decision_indicator_sat_lits; // contains var_id of temporary vars; required e.g. for functional synthesis
     int_vector* decisions;
+    int_vector* universals_assumptions;
+    
     
     /* Propagation worklists:
      * Constants are propagated through the clauses_to_check worklist.
@@ -151,16 +149,16 @@ bool skolem_is_relevant_clause(void* domain, Clause* c, Lit lit);
 // INTERACTION WITH CADET2
 void skolem_new_clause(Skolem*,Clause*);
 void skolem_assign_constant_value(Skolem*,Lit,union Dependencies, Clause* reason); // reason may be NULL
-void skolem_assume_constant_value(Skolem*,Lit);
+bool skolem_is_universal_assumption_vacuous(Skolem*, Lit);
+void skolem_make_universal_assumption(Skolem*,Lit);
 int skolem_get_constant_value(Skolem*, Lit);
-bool skolem_is_initially_deterministic(Skolem* s, unsigned var_id);
 bool skolem_lit_satisfied(Skolem* s, Lit lit);
 bool skolem_clause_satisfied(Skolem* s, Clause* c);
 double skolem_size_of_active_set(Skolem* s);
 
 bool skolem_can_propagate(Skolem*);
 void skolem_propagate(Skolem*);
-void skolem_decision(Skolem*, Lit lit);
+void skolem_decision(Skolem*, Lit);
 
 void skolem_push(Skolem*);
 void skolem_pop(Skolem*);
@@ -189,7 +187,6 @@ typedef enum {
     SKOLEM_OP_UPDATE_INFO_POS_LIT, // obj contains the variable and the previous poslit, see union skolem_undo_union
     SKOLEM_OP_UPDATE_INFO_NEG_LIT, // obj contains the variable and the previous neglit, see union skolem_undo_union
     SKOLEM_OP_UPDATE_INFO_DETERMINISTIC, // obj contains the variable and a single bit, see union skolem_undo_union
-    SKOLEM_OP_UPDATE_INFO_UNIVERSAL, // obj contains the variable and a single bit, see union skolem_undo_union
     SKOLEM_OP_UPDATE_INFO_PURE_POS, // obj contains the variable and a single bit, see union skolem_undo_union
     SKOLEM_OP_UPDATE_INFO_PURE_NEG, // obj contains the variable and a single bit, see union skolem_undo_union
     SKOLEM_OP_UPDATE_INFO_DEPENDENCIES, // depending on mode, obj contains the variable and previous dependency level, or a pointer to a Dependency_Update_struct
@@ -200,7 +197,8 @@ typedef enum {
     SKOLEM_OP_SKOLEM_CONFLICT,
     SKOLEM_OP_POTENTIALLY_CONFLICTED_VAR,
     SKOLEM_OP_DECISION_LVL,
-    SKOLEM_OP_DECISION
+    SKOLEM_OP_DECISION,
+    SKOLEM_OP_UNIVERSAL_ASSUMPTION
 } SKOLEM_OP;
 
 void skolem_undo(void*,char,void*);

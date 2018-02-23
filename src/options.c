@@ -20,6 +20,8 @@ Options* default_options() {
     o->delay_conflict_checks = false;
     o->use_qbf_engine_also_for_propositional_problems = false;
     o->functional_synthesis = false;
+    o->casesplits = false;
+    o->casesplits_cubes = true;
 
     // Examples domain
     o->examples_max_num = 0; // 0 corresponds to not doing examples at all
@@ -37,10 +39,6 @@ Options* default_options() {
     o->certificate_type = CAQECERT;
     o->certificate_aiger_mode = aiger_ascii_mode;
 
-    // Case splits
-    o->case_splits = false;
-    o->partial_backtracking_from_closed_cases = false;
-    
     // Optimizations
     o->plaisted_greenbaum_completion = false; // pure literal detection is better
     o->qbce = false;
@@ -61,6 +59,7 @@ Options* default_options() {
     o->trace_for_visualization = false;
     o->trace_for_profiling = false;
     o->reinforcement_learning = false;
+    o->cegar_soft_conflict_limit = false;
     
     return o;
 }
@@ -129,7 +128,7 @@ char* options_get_help() {
     o->easy_debugging_mode_c2,
     o->cegar,
     o->cegar_only,
-    o->case_splits,
+    o->casesplits,
     o->functional_synthesis,
     o->use_qbf_engine_also_for_propositional_problems,
     o->miniscoping,

@@ -45,8 +45,8 @@ C2* c2_init_qcnf(QCNF* qcnf, Options* options) {
 
     c2->qcnf = qcnf;
     c2->options = options;
-
-    c2->decision_vals = val_vector_init();
+    c2->cs = casesplits_init(qcnf, options);
+    
     c2->state = C2_READY;
     c2->result = CADET_RESULT_UNKNOWN;
     c2->restarts = 0;
@@ -54,25 +54,20 @@ C2* c2_init_qcnf(QCNF* qcnf, Options* options) {
     c2->restarts_since_last_major = 0;
     c2->restart_base_decision_lvl = 0;
     c2->activity_factor = (float) 1.0;
-
-    c2->stack = stack_init(c2_undo);
     
     c2->current_conflict = NULL;
 
     // DOMAINS
     c2->skolem = skolem_init(c2->qcnf, options, vector_count(qcnf->scopes) + 1, 0);
+    
     c2->examples = examples_init(qcnf, options->examples_max_num);
     c2->ca = conflcit_analysis_init(c2);
     
     // Clause minimization
     c2->minimization_pa = partial_assignment_init(qcnf);
 
-    // Case splits
-    c2->case_split_stack = int_vector_init();
-    c2->case_split_depth = 0;
-    c2->decisions_since_last_conflict = 0;
-
     // Statistics
+    c2->decisions_since_last_conflict = 0;
     c2->statistics.conflicts = 0;
     c2->statistics.added_clauses = 0;
     c2->statistics.decisions = 0;
@@ -126,11 +121,9 @@ C2* c2_init(Options* options) {
 void c2_free(C2* c2) {
     statistics_free(c2->statistics.failed_literals_stats);
     skolem_free(c2->skolem);
+    if (c2->cs) {casesplits_free(c2->cs); c2->cs = NULL;}
     examples_free(c2->examples);
     conflict_analysis_free(c2->ca);
-    val_vector_free(c2->decision_vals);
-    stack_free(c2->stack);
-    int_vector_free(c2->case_split_stack);
     qcnf_free(c2->qcnf);
     if (c2->current_conflict) {
         int_vector_free(c2->current_conflict);
@@ -144,33 +137,6 @@ C2_VAR_DATA c2_initial_var_data() {
     C2_VAR_DATA vd;
     vd.activity = 0.0f;
     return vd;
-}
-
-bool c2_is_decision_var(C2* c2, unsigned var_id) {
-    return c2_get_decision_val(c2, var_id) != 0;
-}
-
-int c2_get_decision_val(C2* c2, unsigned var_id) {
-    if (val_vector_count(c2->decision_vals) <= var_id) {
-        return 0;
-    }
-    int val = val_vector_get(c2->decision_vals, var_id);
-    assert(val <= 1 && val >= -1);
-    return val;
-}
-
-void c2_set_decision_val(C2* c2, unsigned var_id, int decision_val) {
-    assert(var_id != 0);
-    while (var_id >= val_vector_count(c2->decision_vals)) {
-        val_vector_add(c2->decision_vals, 0);
-    }
-
-    int old_val = val_vector_get(c2->decision_vals, var_id);
-    int64_t data = (int64_t) var_id;
-    data = data ^ ((int64_t) old_val << 32);
-    stack_push_op(c2->stack, C2_OP_ASSIGN_DECISION_VAL, (void*) data);
-
-    val_vector_set(c2->decision_vals, var_id, decision_val);
 }
 
 void c2_set_activity(C2* c2, unsigned var_id, float val) {
@@ -245,12 +211,12 @@ Var* c2_pick_most_active_notdeterministic_variable(C2* c2) {
 
 
 void c2_backtrack_to_decision_lvl(C2 *c2, unsigned backtracking_lvl) {
-    V2("Backtrack to level %u\n",backtracking_lvl);
-    assert(c2->stack->push_count == c2->skolem->stack->push_count);
-    assert(c2->stack->push_count == c2->examples->stack->push_count);
-    while (c2->stack->push_count > backtracking_lvl) {
-        assert(c2->stack->push_count > 0);
-        c2_pop(c2);
+    V2("Backtrack to level %u\n", backtracking_lvl);
+    while (c2->skolem->decision_lvl > backtracking_lvl) {
+        assert(c2->skolem->stack->push_count == c2->examples->stack->push_count);
+        assert(c2->skolem->stack->push_count == c2->skolem->decision_lvl);
+        skolem_pop(c2->skolem);
+        examples_pop(c2->examples);
     }
 }
 
@@ -413,7 +379,7 @@ void c2_initial_propagation(C2* c2) {
             abortif( ! skolem_is_deterministic(c2->skolem, var_id), "Constraint variable is not determinsitic. This should be a constraint purely over the universals.");
             satsolver_add(c2->skolem->skolem, skolem_get_satsolver_lit(c2->skolem, (Lit) var_id));
             satsolver_clause_finished(c2->skolem->skolem);
-            skolem_assume_constant_value(c2->skolem, (Lit) var_id);
+            skolem_make_universal_assumption(c2->skolem, (Lit) var_id);
         }
         c2_propagate(c2); // initial propagation may be extended after assuming constants for constraints
     }
@@ -427,7 +393,6 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
 
         assert(c2->state == C2_READY);
         assert(c2->skolem->decision_lvl >= c2->restart_base_decision_lvl);
-        assert(c2->skolem->decision_lvl <= c2->stack->push_count);
         assert(c2->skolem->stack->push_count >= c2->skolem->decision_lvl - c2->restart_base_decision_lvl);
 
         c2_propagate(c2);
@@ -478,7 +443,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                 // Update CEGAR abstraction
                 if (c2->options->cegar && c2->skolem->state == SKOLEM_STATE_SKOLEM_CONFLICT) {
                     
-                    for (unsigned i = 0; i < c2->skolem->domain->cegar_magic.max_cegar_iterations_per_learnt_clause; i++) {
+                    for (unsigned i = 0; i < c2->cs->cegar_magic.max_cegar_iterations_per_learnt_clause; i++) {
                         switch (cegar_one_round_for_conflicting_assignment(c2)) {
                             case CADET_RESULT_SAT:
                                 abortif(true, "CEGAR abstraction cannot conclude CADET_RESULT_SAT here because it is still inside the global conflict check assumptions.");
@@ -494,8 +459,8 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                             default:
                                 abortif(true, "Unexpected value seen for cadet_res");
                         }
-                        bool lets_do_another_round = c2->skolem->domain->cegar_stats.recent_average_cube_size
-                                                        <= c2->skolem->domain->cegar_magic.cegar_effectiveness_threshold;
+                        bool lets_do_another_round = c2->cs->cegar_stats.recent_average_cube_size
+                                                        <= c2->cs->cegar_magic.cegar_effectiveness_threshold;
                         if (lets_do_another_round) {
                             sat_res res = satsolver_sat(c2->skolem->skolem);
                             if (res == SATSOLVER_UNSATISFIABLE) {
@@ -547,7 +512,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                         int lit = learnt_clause->occs[i];
                         int_vector_set(cube, i, lit);
                     }
-                    casesplits_completed_cegar_cube(c2->skolem, cube, NULL);
+                    casesplits_completed_cegar_cube(c2->cs, cube, NULL);
                     continue;
                 }
 
@@ -623,7 +588,8 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                 // Pushing before the actual decision is important to keep things
                 // clean (think of decisions on level 0). This is not a decision yet,
                 // so decision_lvl is not yet increased.
-                c2_push(c2);
+                skolem_push(c2->skolem);
+                examples_push(c2->examples);
 
                 c2->statistics.decisions += 1;
                 c2->decisions_since_last_conflict += 1;
@@ -637,9 +603,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                     
                     // Increase decision level, set
                     skolem_increase_decision_lvl(c2->skolem);
-                    
                     skolem_decision(c2->skolem, phase * (Lit) decision_var->var_id);
-                    c2_set_decision_val(c2, decision_var->var_id, phase);
                 }
             }
         }
@@ -686,26 +650,27 @@ void c2_replenish_skolem_satsolver(C2* c2) {
     assert(c2->skolem->decision_lvl == 0);
     assert(c2->restart_base_decision_lvl == 0);
     assert(c2->skolem->decision_lvl == 0);
-    Skolem* old_skolem = c2->skolem;
+    Casesplits* old_cs = c2->cs;
     
     c2->skolem = skolem_init(c2->qcnf,c2->options,vector_count(c2->qcnf->scopes),0);
     c2_init_clauses_and_variables(c2);
     c2_initial_propagation(c2); // (re-)establishes dlvl 0
     abortif(c2->state != C2_READY, "Conflicted after replenishing.");
     
-    casesplits_update_interface(c2->skolem);
+    casesplits_update_interface(c2->cs, c2->skolem);
     
-    assert(vector_count(old_skolem->domain->solved_cases) == 0 || c2->options->cegar || c2->options->case_splits);
+    assert(vector_count(old_cs->solved_cases) == 0 || c2->options->cegar || c2->options->casesplits);
     
     // Copy the cubes that we have solved already.
-    for (unsigned i = 0; i < vector_count(old_skolem->domain->solved_cases); i++) {
-        Case* pf = (Case*) vector_get(old_skolem->domain->solved_cases, i);
+    for (unsigned i = 0; i < vector_count(old_cs->solved_cases); i++) {
+        Case* pf = (Case*) vector_get(old_cs->solved_cases, i);
         if (pf->type == 0) {
-            casesplits_completed_cegar_cube(c2->skolem, pf->representation.ass.cube, pf->representation.ass.assignment);
+            casesplits_completed_cegar_cube(c2->cs, pf->representation.ass.cube, pf->representation.ass.assignment);
             pf->representation.ass.cube = NULL; // make sure these objects will not be deallocated during free of old_skolem below.
             pf->representation.ass.assignment = NULL;
         } else {
-            casesplits_completed_case_split(c2->skolem, pf->representation.fun.decisions, pf->representation.fun.learnt_clauses);
+            assert(pf->type == 1);
+            casesplits_completed_case_split(c2->cs, pf->representation.fun.decisions, pf->representation.fun.learnt_clauses);
             pf->representation.fun.decisions = NULL;
             pf->representation.fun.learnt_clauses = NULL;
         }
@@ -713,18 +678,18 @@ void c2_replenish_skolem_satsolver(C2* c2) {
     }
     
     // Replace the new interace activities by the old ones
-    float_vector_free(c2->skolem->domain->interface_activities);
-    c2->skolem->domain->interface_activities = old_skolem->domain->interface_activities;
-    old_skolem->domain->interface_activities = NULL;
+    float_vector_free(c2->cs->interface_activities);
+    c2->cs->interface_activities = old_cs->interface_activities;
+    old_cs->interface_activities = NULL;
     
-    c2->skolem->statistics = old_skolem->statistics;
+    c2->cs->cegar_stats = old_cs->cegar_stats;
     
-    c2->skolem->domain->cegar_stats.successful_minimizations = old_skolem->domain->cegar_stats.successful_minimizations;
-    c2->skolem->domain->cegar_stats.additional_assignments_num = old_skolem->domain->cegar_stats.additional_assignments_num;
-    c2->skolem->domain->cegar_stats.successful_minimizations_by_additional_assignments = old_skolem->domain->cegar_stats.successful_minimizations;
-    c2->skolem->domain->cegar_stats.recent_average_cube_size = old_skolem->domain->cegar_stats.recent_average_cube_size;
+    c2->cs->cegar_stats.successful_minimizations = old_cs->cegar_stats.successful_minimizations;
+    c2->cs->cegar_stats.additional_assignments_num = old_cs->cegar_stats.additional_assignments_num;
+    c2->cs->cegar_stats.successful_minimizations_by_additional_assignments = old_cs->cegar_stats.successful_minimizations;
+    c2->cs->cegar_stats.recent_average_cube_size = old_cs->cegar_stats.recent_average_cube_size;
     
-    skolem_free(old_skolem);
+    casesplits_free(old_cs);
     
     abortif(c2_is_in_conflcit(c2) || c2->result != CADET_RESULT_UNKNOWN, "Illegal state afte replenishing");
 }
@@ -762,7 +727,7 @@ void c2_restart_heuristics(C2* c2) {
     
     if (c2->restarts % c2->magic.replenish_frequency == c2->magic.replenish_frequency - 1) {
         V1("Stepping out of case split.\n"); // Needed to simplify replenishing
-        casesplits_backtrack_case_split(c2);
+        c2_backtrack_casesplit(c2);
 //#if (USE_SOLVER == SOLVER_PICOSAT_ASSUMPTIONS)
         c2_replenish_skolem_satsolver(c2);
 //#endif
@@ -821,16 +786,24 @@ cadet_res c2_sat(C2* c2) {
         c2_analysis_determine_number_of_partitions(c2);
     }
     
-    casesplits_update_interface(c2->skolem);
+    casesplits_update_interface(c2->cs, c2->skolem);
     if (c2->options->cegar_only) {
         return cegar_solve_2QBF_by_cegar(c2, -1);
     }
 
     while (c2->result == CADET_RESULT_UNKNOWN) { // This loop controls the restarts
+        
+        if (c2->restart_base_decision_lvl < 1) {
+            skolem_push(c2->skolem);
+            examples_push(c2->examples);
+            skolem_increase_decision_lvl(c2->skolem);
+            c2->restart_base_decision_lvl += 1;
+        }
+        
         c2_run(c2, c2->next_restart);
 
-        if ((c2->result == CADET_RESULT_SAT && c2->options->case_splits) || c2->options->certify_SAT) {
-            bool must_be_done =  int_vector_count(c2->case_split_stack) == 0; // just for safety
+        if ((c2->result == CADET_RESULT_SAT && c2->options->casesplits) || c2->options->certify_SAT) {
+            bool must_be_done = int_vector_count(c2->skolem->universals_assumptions) == 0; // just for safety
             c2_close_case(c2);
             assert(! must_be_done || c2->result == CADET_RESULT_SAT);
         }
@@ -843,10 +816,10 @@ cadet_res c2_sat(C2* c2) {
             c2_simplify(c2);
         }
         
-//        if (c2->options->reinforcement_learning && c2->statistics.conflicts > 1000 && ! c2->options->cegar) {
-//            LOG_WARNING("Switching cegar on after >1000 conflicts to save time during generation of problems for RL. Remove for normal operation.\n");
-//            c2->options->cegar = true;
-//        }
+        if (c2->options->cegar_soft_conflict_limit && c2->statistics.conflicts > 1000 && ! c2->options->cegar) {
+            LOG_WARNING("Switching cegar on after >1000 conflicts to save time during generation of problems for RL. Remove for normal operation.\n");
+            c2->options->cegar = true;
+        }
     }
 
     return c2->result;
@@ -955,40 +928,6 @@ cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
     return res;
 }
 
-void c2_push(C2* c2) {
-    stack_push(c2->stack);
-    skolem_push(c2->skolem);
-    examples_push(c2->examples);
-}
-void c2_pop(C2* c2) {
-    stack_pop(c2->stack, c2);
-    skolem_pop(c2->skolem);
-    examples_pop(c2->examples);
-}
-void c2_undo(void* parent, char type, void* obj) {
-    C2* c2 = (C2*) parent;
-    unsigned var_id = (unsigned) (int64_t) obj; // is 0 in case of type == C2_OP_CASE_SPLIT
-
-    switch ((C2_OPERATION) type) {
-
-        case C2_OP_ASSIGN_DECISION_VAL:
-            assert(true);
-            int old_val = (int) ((size_t) obj >> 32);
-            assert(old_val <= 1 && old_val >= -1);
-            val_vector_set(c2->decision_vals, var_id, old_val);
-            break;
-
-        case C2_OP_UNIVERSAL_ASSUMPTION:
-            assert(true);
-            c2_undo_casesplits(c2, obj);
-            break;
-            
-        default:
-            V0("Unknown undo operation in cadet2.c.\n");
-            NOT_IMPLEMENTED();
-    }
-}
-
 Clause* c2_add_lit(C2* c2, Lit lit) {
     if (lit != 0) {
         qcnf_add_lit(c2->qcnf, lit);
@@ -1004,7 +943,7 @@ Clause* c2_add_lit(C2* c2, Lit lit) {
 
 void c2_new_variable(C2* c2, unsigned var_id) {
     Var* v = var_vector_get(c2->qcnf->vars, var_id);
-    if (v->var_id != 0 && skolem_is_initially_deterministic(c2->skolem, var_id)) {
+    if (v->var_id != 0 && v->is_universal) {
         assert(var_id == v->var_id);
 
         skolem_update_deterministic(c2->skolem, var_id, 1);
@@ -1021,10 +960,6 @@ void c2_new_variable(C2* c2, unsigned var_id) {
             int_vector_add(dep.dependencies, (int) v->var_id);
         }
         skolem_update_dependencies(c2->skolem, var_id, dep);
-
-        if (v->is_universal) {
-            skolem_update_universal(c2->skolem, var_id, 1);
-        }
     }
 }
 

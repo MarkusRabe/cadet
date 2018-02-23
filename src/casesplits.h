@@ -52,6 +52,8 @@ struct Case {
 
 struct Casesplits {
     QCNF* qcnf;
+    Skolem* skolem;
+    Options* options;
     
     // dlvl0 interface
     int_vector* interface_vars;
@@ -71,18 +73,18 @@ struct Casesplits {
 /* Initializes a cegar object, including the SAT solver using
  * the current determinicity information in c2->skolem.
  */
-Casesplits* casesplits_init(QCNF*);
+Casesplits* casesplits_init(QCNF*, Options*);
 bool casesplits_is_initialized(Casesplits*);
 void casesplits_free(Casesplits*);
 
-void casesplits_record_case(Skolem* s);
-void casesplits_completed_case_split(Skolem* s, int_vector* decisions, set* learnt_clauses);
-void casesplits_completed_cegar_cube(Skolem* s, int_vector* cube, int_vector* partial_assignment);
-void casesplits_encode_case_into_satsolver(Skolem* s, Case* c, SATSolver* sat);
+void casesplits_record_case(Casesplits*, int_vector* decsisions);
+void casesplits_completed_case_split(Casesplits*, int_vector* decisions, set* learnt_clauses);
+void casesplits_completed_cegar_cube(Casesplits*, int_vector* cube, int_vector* partial_assignment);
+void casesplits_encode_case_into_satsolver(Skolem*, Case* c, SATSolver* sat);
 void casesplits_print_statistics(Casesplits*);
 
 // Interface
-void casesplits_update_interface(Skolem*);
+void casesplits_update_interface(Casesplits*,Skolem*);
 float casesplits_get_interface_activity(Casesplits*, unsigned var_id);
 void casesplits_add_interface_activity(Casesplits*, unsigned var_id, float value);
 void casesplits_decay_interface_activity(Casesplits*, unsigned var_id);

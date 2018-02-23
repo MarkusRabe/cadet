@@ -253,7 +253,7 @@ void cert_AIG_certificate(C2* c2) {
                 } else if (sv.pure_neg) {
                     cert_encode_unique_antecedents(c2, a, aigerlits, &max_sym, - (Lit) v->var_id);
                 } else {
-                    int val = c2_get_decision_val(c2, v->var_id);
+                    int val = skolem_get_decision_val(c2->skolem, v->var_id);
                     abortif(val < -1 || val > 1, "");
                     if (val == 1) {
                         cert_encode_unique_antecedents(c2, a, aigerlits, &max_sym, - (Lit) v->var_id);
@@ -268,8 +268,8 @@ void cert_AIG_certificate(C2* c2) {
         }
     }
     
-    for (unsigned i = 0; i < vector_count(c2->skolem->domain->solved_cases); i++) {
-        Case* pf = vector_get(c2->skolem->domain->solved_cases, i);
+    for (unsigned i = 0; i < vector_count(c2->cs->solved_cases); i++) {
+        Case* pf = vector_get(c2->cs->solved_cases, i);
         if (pf->representation.ass.cube) {
             assert(pf->representation.ass.assignment);
             unsigned cube_lit = cert_encode_cube(c2, a, &max_sym, aigerlits, pf->representation.ass.cube);
@@ -320,7 +320,7 @@ void cert_AIG_certificate(C2* c2) {
                 } else if (sv.pure_neg) {
                     cert_encode_unique_antecedents(c2, a, aigerlits, &max_sym, - (Lit) v->var_id);
                 } else {
-                    int val = c2_get_decision_val(c2, v->var_id);
+                    int val = skolem_get_decision_val(c2->skolem, v->var_id);
                     abortif(val < -1 || val > 1, "");
                     if (val == 1) {
                         cert_encode_unique_antecedents(c2, a, aigerlits, &max_sym, - (Lit) v->var_id);

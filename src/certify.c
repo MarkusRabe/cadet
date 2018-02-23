@@ -269,13 +269,14 @@ void cert_AIG_certificate(C2* c2) {
     }
     
     for (unsigned i = 0; i < vector_count(c2->cs->solved_cases); i++) {
-        Case* pf = vector_get(c2->cs->solved_cases, i);
-        if (pf->representation.ass.cube) {
-            assert(pf->representation.ass.assignment);
-            unsigned cube_lit = cert_encode_cube(c2, a, &max_sym, aigerlits, pf->representation.ass.cube);
+        Case* c = vector_get(c2->cs->solved_cases, i);
+        abortif(c->type != 0, "Certification of unknown case type.");
+        if (c->universal_assumptions) {
+            assert(c->decisions);
+            unsigned cube_lit = cert_encode_cube(c2, a, &max_sym, aigerlits, c->universal_assumptions);
             
-            for (unsigned j = 0; j < int_vector_count(pf->representation.ass.assignment); j++) {
-                Lit l = int_vector_get(pf->representation.ass.assignment, j);
+            for (unsigned j = 0; j < int_vector_count(c->decisions); j++) {
+                Lit l = int_vector_get(c->decisions, j);
                 unsigned var_id = lit_to_var(l);
                 if (skolem_is_deterministic(c2->skolem, var_id)
                     && skolem_get_decision_lvl(c2->skolem, var_id) == 0) {

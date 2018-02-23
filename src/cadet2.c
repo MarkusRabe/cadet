@@ -512,7 +512,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                         int lit = learnt_clause->occs[i];
                         int_vector_set(cube, i, lit);
                     }
-                    casesplits_completed_cegar_cube(c2->cs, cube, NULL);
+                    casesplits_record_cegar_cube(c2->cs, cube, NULL);
                     continue;
                 }
 
@@ -562,16 +562,10 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                 }
             }
             
-            if (decision_var == NULL) { // no variable could be found
-                if (int_vector_count(c2->skolem->potentially_conflicted_variables) == 0) {
-                    assert(c2->result == CADET_RESULT_UNKNOWN);
-                    c2->result = CADET_RESULT_SAT;
-                    return c2->result;
-                } else {
-                    skolem_global_conflict_check(c2->skolem);
-                    continue;
-                }
-
+            if (decision_var == NULL) { // no variable could be found; all variables have skolem functions
+                assert(c2->result == CADET_RESULT_UNKNOWN);
+                c2->result = CADET_RESULT_SAT;
+                return c2->result;
             } else { // take a decision
                 assert(!skolem_is_conflicted(c2->skolem));
                 
@@ -662,20 +656,7 @@ void c2_replenish_skolem_satsolver(C2* c2) {
     assert(vector_count(old_cs->solved_cases) == 0 || c2->options->cegar || c2->options->casesplits);
     
     // Copy the cubes that we have solved already.
-    for (unsigned i = 0; i < vector_count(old_cs->solved_cases); i++) {
-        Case* pf = (Case*) vector_get(old_cs->solved_cases, i);
-        if (pf->type == 0) {
-            casesplits_completed_cegar_cube(c2->cs, pf->representation.ass.cube, pf->representation.ass.assignment);
-            pf->representation.ass.cube = NULL; // make sure these objects will not be deallocated during free of old_skolem below.
-            pf->representation.ass.assignment = NULL;
-        } else {
-            assert(pf->type == 1);
-            casesplits_completed_case_split(c2->cs, pf->representation.fun.decisions, pf->representation.fun.learnt_clauses);
-            pf->representation.fun.decisions = NULL;
-            pf->representation.fun.learnt_clauses = NULL;
-        }
-        
-    }
+    casesplits_steal_cases(c2->cs, old_cs);
     
     // Replace the new interace activities by the old ones
     float_vector_free(c2->cs->interface_activities);
@@ -966,7 +947,7 @@ void c2_new_variable(C2* c2, unsigned var_id) {
 void c2_new_clause(C2* c2, Clause* c) {
     assert(c->clause_idx <= vector_count(c2->qcnf->clauses));
     assert(c != NULL);
-    c2->result = CADET_RESULT_UNKNOWN;
+    assert(c2->result == CADET_RESULT_UNKNOWN); // if in SAT state, need to backtrack to max dlvl in the clause - 1
     examples_new_clause(c2->examples, c);
     skolem_new_clause(c2->skolem, c);
 }

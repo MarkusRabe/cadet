@@ -242,6 +242,28 @@ QCNF* qcnf_init() {
     return qcnf;
 }
 
+QCNF* qcnf_copy(QCNF* other) {
+    QCNF* this = qcnf_init();
+    for (unsigned i = 0; i < var_vector_count(other->vars); i++) {
+        if (qcnf_var_exists(other, i)) {
+            Var* v = var_vector_get(other->vars, i);
+            qcnf_new_var(this, v->is_universal, v->scope_id, v->var_id);
+        }
+    }
+    for (unsigned i = 0; i < vector_count(other->clauses); i++) {
+        Clause* c = (Clause*) vector_get(other->clauses, i);
+        if (c) {
+            for (unsigned j = 0; j < c->size; j++) {
+                qcnf_add_lit(this, c->occs[j]);
+            }
+            qcnf_close_clause(this);
+        }
+    }
+    assert(int_vector_count(this->universal_clauses) == int_vector_count(other->universal_clauses));
+    this->universals_constraints = int_vector_copy(other->universals_constraints);
+    return this;
+}
+
 Var* qcnf_new_var(QCNF* qcnf, bool is_universal, unsigned scope_id, unsigned var_id) {
     abortif(var_id == 0, "Variables must be greater than 0");
     abortif(qcnf_var_exists(qcnf, var_id), "Tried to create variable %u, but variable with this ID exists already.", var_id);

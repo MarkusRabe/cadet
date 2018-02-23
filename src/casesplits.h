@@ -35,17 +35,9 @@ typedef struct Case Case;
 typedef struct Casesplits Casesplits;
 
 struct Case {
-    union {
-        struct { // for completed cegar rounds
-            int_vector* cube; // optional: cube in which this partial function is valid.
-            int_vector* assignment; // assignment to dlvl>0 vars
-        } ass;
-        struct { // for completed case split
-            int_vector* decisions;
-            set* learnt_clauses;
-        } fun;
-    } representation;
-    
+    int_vector* universal_assumptions;
+    int_vector* decisions; // can be an assignment to dlvl>0 vars (for CEGAR) or decisions to be fed to skolem
+    QCNF* clauses;
     char type; // 0 indicates cegar round, 1 indicates case split
     // type listed last, as this reduces memory footprint of this struct by 7 bytes.
 };
@@ -78,8 +70,9 @@ bool casesplits_is_initialized(Casesplits*);
 void casesplits_free(Casesplits*);
 
 void casesplits_record_case(Casesplits*, int_vector* decsisions);
-void casesplits_completed_case_split(Casesplits*, int_vector* decisions, set* learnt_clauses);
-void casesplits_completed_cegar_cube(Casesplits*, int_vector* cube, int_vector* partial_assignment);
+void casesplits_encode_last_case(Casesplits* cs);
+void casesplits_steal_cases(Casesplits* new_cs, Casesplits* old_cs); // for satsolver refreshs
+void casesplits_record_cegar_cube(Casesplits*, int_vector* cube, int_vector* partial_assignment);
 void casesplits_encode_case_into_satsolver(Skolem*, Case* c, SATSolver* sat);
 void casesplits_print_statistics(Casesplits*);
 

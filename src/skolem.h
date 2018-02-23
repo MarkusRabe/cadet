@@ -163,7 +163,7 @@ void skolem_pop(Skolem*);
 
 void skolem_increase_decision_lvl(Skolem*);
 
-unsigned skolem_global_conflict_check(Skolem*);
+unsigned skolem_global_conflict_check(Skolem*, unsigned var_id);
 bool skolem_is_conflicted(Skolem*);
 
 typedef enum FIX_UNIQUE_ANTECEDENTS_MODE {

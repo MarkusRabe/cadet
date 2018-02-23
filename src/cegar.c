@@ -70,15 +70,15 @@ cadet_res cegar_one_round_for_conflicting_assignment(C2* c2) {
     assert(casesplits_is_initialized(c2->cs));
     assert(c2->result == CADET_RESULT_UNKNOWN);
     assert(c2->state == C2_SKOLEM_CONFLICT);
-    Casesplits* d = c2->cs;
+    Casesplits* cs = c2->cs;
     
     V3("Assuming: ");
-    for (unsigned i = 0 ; i < int_vector_count(d->interface_vars); i++) {
-        unsigned var_id = (unsigned) int_vector_get(d->interface_vars, i);
-        int_vector_set(d->is_used_in_lemma, var_id, 1); // reset values
+    for (unsigned i = 0 ; i < int_vector_count(cs->interface_vars); i++) {
+        unsigned var_id = (unsigned) int_vector_get(cs->interface_vars, i);
+        int_vector_set(cs->is_used_in_lemma, var_id, 1); // reset values
         
         int val = cegar_get_val(c2->skolem, (int) var_id);
-        satsolver_assume(d->exists_solver, val * (Lit) var_id);
+        satsolver_assume(cs->exists_solver, val * (Lit) var_id);
         V3(" %d", val * (Lit) var_id);
     }
     V3("\n");
@@ -89,24 +89,22 @@ cadet_res cegar_one_round_for_conflicting_assignment(C2* c2) {
         if (!v->original) {
             continue;
         }
-        assert(int_vector_get(d->is_used_in_lemma, i) == 1);
+        assert(int_vector_get(cs->is_used_in_lemma, i) == 1);
     }
 #endif
     
-    if (satsolver_sat(d->exists_solver) == SATSOLVER_RESULT_SAT) {
+    if (satsolver_sat(cs->exists_solver) == SATSOLVER_RESULT_SAT) {
+        int_vector_reset(cs->additional_assignment);
         
-        int_vector_reset(d->additional_assignment);
         int_vector* cube = int_vector_init();
-        
-        for (unsigned i = 0 ; i < int_vector_count(d->interface_vars); i++) {
-            unsigned var_id = (unsigned) int_vector_get(d->interface_vars, i);
-            int val = satsolver_deref(d->exists_solver, (int) var_id);
-            
-            if (cegar_var_needs_to_be_set(d, var_id)) {
-                Lit lit = - val * (Lit) var_id;
+        for (unsigned i = 0 ; i < int_vector_count(cs->interface_vars); i++) {
+            unsigned var_id = (unsigned) int_vector_get(cs->interface_vars, i);
+            if (cegar_var_needs_to_be_set(cs, var_id)) {
+                int val = satsolver_deref(cs->exists_solver, (Lit) var_id);
+                Lit lit = val * (Lit) var_id;
                 int_vector_add(cube, lit);
             } else {
-                int_vector_set(d->is_used_in_lemma, var_id, 0);
+                int_vector_set(cs->is_used_in_lemma, var_id, 0);
             }
         }
         
@@ -118,8 +116,8 @@ cadet_res cegar_one_round_for_conflicting_assignment(C2* c2) {
                     continue;
                 }
                 if (! skolem_is_deterministic(c2->skolem, var_id) || skolem_get_decision_lvl(c2->skolem, var_id) > 0) {
-                    int val = satsolver_deref(d->exists_solver, (int) var_id);
-                    if (val == 0 && int_vector_find_sorted(d->additional_assignment, - (int) var_id)) {
+                    int val = satsolver_deref(cs->exists_solver, (int) var_id);
+                    if (val == 0 && int_vector_find_sorted(cs->additional_assignment, - (int) var_id)) {
                         val = -1;
                     } else { // potentially (int) var_id is in additional_assignment
                         val = +1;  // default is +1
@@ -130,7 +128,8 @@ cadet_res cegar_one_round_for_conflicting_assignment(C2* c2) {
             }
         }
         
-        casesplits_completed_cegar_cube(c2->cs, cube, existentials);
+        casesplits_record_cegar_cube(c2->cs, cube, existentials);
+        casesplits_encode_last_case(c2->cs);
         c2->cs->cegar_stats.recent_average_cube_size = (float) int_vector_count(cube) * (float) 0.1 + c2->cs->cegar_stats.recent_average_cube_size * (float) 0.9;
     } else {
         c2->state = C2_CEGAR_CONFLICT;

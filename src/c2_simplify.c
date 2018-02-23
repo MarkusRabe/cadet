@@ -85,7 +85,6 @@ void c2_simplify(C2* c2) {
 //                subsumes something else?
 //            }
             
-//            assert();
             skolem_check_for_unique_consequence(c2->skolem, c);
         }
     }

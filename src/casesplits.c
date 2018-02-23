@@ -288,6 +288,7 @@ void casesplits_steal_cases(Casesplits* new_cs, Casesplits* old_cs) {
             c->clauses = NULL;
         }
     }
+    casesplits_encode_last_case(new_cs);
 }
 
 void casesplits_print_statistics(Casesplits* d) {

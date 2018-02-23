@@ -644,9 +644,13 @@ void c2_replenish_skolem_satsolver(C2* c2) {
     assert(c2->skolem->decision_lvl == 0);
     assert(c2->restart_base_decision_lvl == 0);
     assert(c2->skolem->decision_lvl == 0);
-    Casesplits* old_cs = c2->cs;
     
-    c2->skolem = skolem_init(c2->qcnf,c2->options,vector_count(c2->qcnf->scopes),0);
+    Skolem* old_skolem = c2->skolem;
+    c2->skolem = skolem_init(c2->qcnf, c2->options, vector_count(c2->qcnf->scopes), 0);
+    
+    Casesplits* old_cs = c2->cs;
+    c2->cs = casesplits_init(c2->qcnf, c2->options);
+    
     c2_init_clauses_and_variables(c2);
     c2_initial_propagation(c2); // (re-)establishes dlvl 0
     abortif(c2->state != C2_READY, "Conflicted after replenishing.");
@@ -670,6 +674,7 @@ void c2_replenish_skolem_satsolver(C2* c2) {
     c2->cs->cegar_stats.successful_minimizations_by_additional_assignments = old_cs->cegar_stats.successful_minimizations;
     c2->cs->cegar_stats.recent_average_cube_size = old_cs->cegar_stats.recent_average_cube_size;
     
+    skolem_free(old_skolem);
     casesplits_free(old_cs);
     
     abortif(c2_is_in_conflcit(c2) || c2->result != CADET_RESULT_UNKNOWN, "Illegal state afte replenishing");

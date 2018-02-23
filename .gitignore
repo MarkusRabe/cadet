@@ -1,6 +1,7 @@
 # Build system and binaries
 Makefile
 cadet
+*.qdimacs
 
 # Compiled source #
 ###################

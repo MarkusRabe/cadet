@@ -1258,17 +1258,21 @@ void skolem_assign_constant_value(Skolem* s, Lit lit, union Dependencies propaga
 
     bool potentially_conflicted = false;
     if (s->mode == SKOLEM_MODE_STANDARD) {
-        vector* occs = qcnf_get_occs_of_lit(s->qcnf, -lit);
-        for (unsigned i = 0; i < vector_count(occs); i++) {
-            Clause* c = vector_get(occs, i);
-            if (skolem_get_unique_consequence(s, c) == -lit && ! skolem_clause_satisfied(s, c)) {
-                potentially_conflicted = true;
-                break;
+        if (qcnf_is_universal(s->qcnf, var_id)) {
+            potentially_conflicted = true;
+        } else {
+            vector* occs = qcnf_get_occs_of_lit(s->qcnf, -lit);
+            for (unsigned i = 0; i < vector_count(occs); i++) {
+                Clause* c = vector_get(occs, i);
+                if (skolem_get_unique_consequence(s, c) == -lit && ! skolem_clause_satisfied(s, c)) {
+                    potentially_conflicted = true;
+                    break;
+                }
             }
         }
     }
     
-    if (potentially_conflicted) { // we could alternatively check whether there are clauses with unique consequences for the opposite side.
+    if (potentially_conflicted) {
         V2("Variable %u is assigned a constant but is locally conflicted in the skolem domain.\n", var_id);
         assert(s->options->delay_conflict_checks || int_vector_count(s->potentially_conflicted_variables) == 0);
         
@@ -1360,8 +1364,6 @@ void skolem_propagate_constants_over_clause(Skolem* s, Clause* c) {
         V3("Conflict in explicit propagation in skolem domain for clause %u and var %u\n", s->conflicted_clause->clause_idx, s->conflict_var_id);
         
     } else { // assign value
-        abortif(qcnf_is_universal(s->qcnf, lit_to_var(unassigned_lit)) &&
-                s->mode != SKOLEM_MODE_CONSTANT_PROPAGATIONS_TO_DETERMINISTICS, "Assignment propagation actually caused a conflict; but propagation code is not implemented for that case");
 //        if (qcnf_is_universal(s->qcnf, lit_to_var(unassigned_lit)) &&
 //            s->mode != SKOLEM_MODE_CONSTANT_PROPAGATIONS_TO_DETERMINISTICS) {
 //            goto cleanup;

@@ -17,7 +17,6 @@ Options* default_options() {
     // Computational enginges
     o->cegar = true;
     o->cegar_only = false;
-    o->delay_conflict_checks = false;
     o->use_qbf_engine_also_for_propositional_problems = false;
     o->functional_synthesis = false;
     o->casesplits = false;

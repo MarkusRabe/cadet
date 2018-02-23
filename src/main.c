@@ -167,8 +167,6 @@ int main(int argc, const char* argv[]) {
                         options->cegar_only = ! options->cegar_only;
                     } else if (strcmp(argv[i], "--sat_by_qbf") == 0) {
                         options->use_qbf_engine_also_for_propositional_problems = ! options->use_qbf_engine_also_for_propositional_problems;
-                    } else if (strcmp(argv[i], "--delay_conflicts") == 0) {
-                        options->delay_conflict_checks = ! options->delay_conflict_checks;
                     } else if (strcmp(argv[i], "--pg") == 0) {
                         options->plaisted_greenbaum_completion = ! options->plaisted_greenbaum_completion;
                     } else if (strcmp(argv[i], "--pure_literals") == 0) {

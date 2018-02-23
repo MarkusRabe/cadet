@@ -93,10 +93,8 @@ struct Skolem {
     // All information Skolem domain needs about clauses: the unique consequences for all clauses
     int_vector* unique_consequence; // contains lit indexed by clause_id
     
-    // Extra data structure required for delayed conflict checks (if option is activated)
-    // Stores all the variables that are potentially
+    // Stores all the variables that are potentially conflicted
     int_vector* potentially_conflicted_variables; // contains var_id
-    
     int_vector* decision_indicator_sat_lits; // contains var_id of temporary vars; required e.g. for functional synthesis
     int_vector* decisions;
     int_vector* universals_assumptions;
@@ -165,7 +163,7 @@ void skolem_pop(Skolem*);
 
 void skolem_increase_decision_lvl(Skolem*);
 
-unsigned skolem_global_conflict_check(Skolem*, bool can_delay);
+unsigned skolem_global_conflict_check(Skolem*);
 bool skolem_is_conflicted(Skolem*);
 
 typedef enum FIX_UNIQUE_ANTECEDENTS_MODE {

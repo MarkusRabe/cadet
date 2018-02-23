@@ -568,7 +568,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                     c2->result = CADET_RESULT_SAT;
                     return c2->result;
                 } else {
-                    skolem_global_conflict_check(c2->skolem, false);
+                    skolem_global_conflict_check(c2->skolem);
                     continue;
                 }
 

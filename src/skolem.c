@@ -30,7 +30,6 @@ Skolem* skolem_init(QCNF* qcnf, Options* o) {
     satsolver_trace_commands(s->skolem);
 #endif
     c2_trace_for_profiling_initialize(o, s->skolem);
-    s->mode = SKOLEM_MODE_STANDARD;
     s->state = SKOLEM_STATE_READY;
     s->decision_lvl = 0;
     
@@ -42,6 +41,9 @@ Skolem* skolem_init(QCNF* qcnf, Options* o) {
     s->infos = skolem_var_vector_init_with_size(var_vector_count(qcnf->vars) + var_vector_count(qcnf->vars) / 2); // should usually prevent any resizing of the skolem_var_vector
     s->conflict_var_id = 0;
     s->conflicted_clause = NULL;
+    
+    s->record_conflicts = false;
+    s->ignore_universal_conflicts = false;
     
     if (qcnf_is_DQBF(s->qcnf)) {
         s->empty_dependencies.dependencies = int_vector_init();
@@ -873,7 +875,7 @@ void skolem_encode_global_conflict_check(Skolem* s) {
         //    skolem_add_clauses_with_illegal_dependencies(s, var_id);
         
 #ifdef DEBUG
-        if (s->mode != SKOLEM_MODE_RECORD_POTENTIAL_CONFLICTS) {
+        if (!s->record_conflicts) {
             skolem_var si = skolem_get_info(s, potentially_contflicted);
             assert(si.pos_lit != - si.neg_lit);
             assert(si.pos_lit != - s->satlit_true);
@@ -920,8 +922,7 @@ unsigned skolem_global_conflict_check(Skolem* s, unsigned var_id) {
     abortif(skolem_is_conflicted(s), "Global conflict check was called while in conflict.");
     
     skolem_add_potentially_conflicted(s, var_id);
-    
-    if (s->mode == SKOLEM_MODE_RECORD_POTENTIAL_CONFLICTS) {
+    if (s->record_conflicts) {
         return 0;
     }
     
@@ -1223,10 +1224,10 @@ void skolem_make_universal_assumption(Skolem* s, Lit lit) { //
         deps.dependencies = int_vector_copy(deps.dependencies);
     }
     
-    assert(s->mode == SKOLEM_MODE_STANDARD);
-    s->mode = SKOLEM_MODE_CONSTANT_PROPAGATIONS_TO_DETERMINISTICS;
+    assert(!s->ignore_universal_conflicts);
+    s->ignore_universal_conflicts = true;
     skolem_assign_constant_value(s, lit, deps, NULL);
-    s->mode = SKOLEM_MODE_STANDARD;
+    s->ignore_universal_conflicts = false;
     
     // The assignment might cause many global conflict checks. Suppressing them for variables that are deterministic already seems brutal, but might be OK. If this leads to an inconsistent function definition, no conflicts can be produced in the global conflict check, which is fine in this case. Also, it shouldn't be possible, since we picked a notorious var that had this value already lots of times.
 }
@@ -1257,7 +1258,7 @@ void skolem_assign_constant_value(Skolem* s, Lit lit, union Dependencies propaga
     }
 
     bool potentially_conflicted = false;
-    if (s->mode == SKOLEM_MODE_STANDARD) {
+    if (!s->ignore_universal_conflicts) {
         if (qcnf_is_universal(s->qcnf, var_id)) {
             potentially_conflicted = true;
         } else {
@@ -1274,7 +1275,6 @@ void skolem_assign_constant_value(Skolem* s, Lit lit, union Dependencies propaga
     
     if (potentially_conflicted) {
         V2("Variable %u is assigned a constant but is locally conflicted in the skolem domain.\n", var_id);
-        assert(int_vector_count(s->potentially_conflicted_variables) == 0);
         
         if ( ! skolem_is_deterministic(s, lit_to_var(lit))) {
             // We know the variable is deterministic now; it is in fact constant. But we have to add the opposite side of the clauses to be able to do the conflict check
@@ -1292,7 +1292,7 @@ void skolem_assign_constant_value(Skolem* s, Lit lit, union Dependencies propaga
         // Global conflict check!
         // This check may put s in conflict state; returns after this call.
         // Callee has to check for conflict state.
-        skolem_global_conflict_check(s, var_id); // TODO: look at call sites of skolem_assign_constant_value and see whether we can delay conflict checks maybe.
+        skolem_global_conflict_check(s, var_id);
         
         if (skolem_is_conflicted(s)) {
             return; // no tests for unique consequences needed, so we can quit here

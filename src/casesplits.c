@@ -197,7 +197,7 @@ void casesplits_close_heuristics(Casesplits* cs, int_vector* solved_cube) {
 
 void casesplits_encode_last_case(Casesplits* cs) {
     Case* c = vector_get(cs->solved_cases, vector_count(cs->solved_cases) - 1);
-    if (c->type == 0) { // cube case
+    if (c->type == 0 || c->type == 1 && cs->options->casesplits_cubes) { // cube case
         for (unsigned i = 0; i < int_vector_count(c->universal_assumptions); i++) {
             Lit lit = int_vector_get(c->universal_assumptions, i);
             assert(skolem_is_deterministic(cs->skolem, lit_to_var(lit)));
@@ -210,9 +210,8 @@ void casesplits_encode_last_case(Casesplits* cs) {
         satsolver_clause_finished_for_context(cs->skolem->skolem, 0);
     } else { // function case
         assert(c->type == 1);
-        
         Skolem* encoding_skolem = skolem_init(c->clauses, cs->options);
-        encoding_skolem->mode = SKOLEM_MODE_RECORD_POTENTIAL_CONFLICTS;
+        encoding_skolem->record_conflicts = true;
         satsolver_free(encoding_skolem->skolem);
         encoding_skolem->skolem = cs->skolem->skolem;
         

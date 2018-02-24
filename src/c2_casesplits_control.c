@@ -18,7 +18,6 @@ void c2_backtrack_casesplit(C2* c2) {
     V2("Backtracking from case split.\n");
     
     assert(c2->skolem->decision_lvl == c2->restart_base_decision_lvl);
-    assert(c2->restart_base_decision_lvl == 1);
     
     c2_backtrack_to_decision_lvl(c2, 0);
     c2->restart_base_decision_lvl = 0;
@@ -64,10 +63,10 @@ unsigned c2_case_split_probe(C2* c2, Lit lit) {
 //        V1("Skolem conflict with assumed constant %d: %d\n", lit, c2->skolem->conflict_var_id);
 //        case_split_decision_metric = UINT_MAX;
 //    } else {
-        assert(c2->skolem->mode == SKOLEM_MODE_STANDARD);
-        c2->skolem->mode = SKOLEM_MODE_CONSTANT_PROPAGATIONS_TO_DETERMINISTICS;
+        assert(!c2->skolem->ignore_universal_conflicts);
+        c2->skolem->ignore_universal_conflicts = true;
         skolem_propagate(c2->skolem);
-        c2->skolem->mode = SKOLEM_MODE_STANDARD;
+        c2->skolem->ignore_universal_conflicts = false;
         
         if (skolem_is_conflicted(c2->skolem)) {
             V1("Skolem conflict with assumed constant %d: %d\n", lit, c2->skolem->conflict_var_id);
@@ -179,11 +178,12 @@ bool c2_make_universal_assumption_unless_vacuous(C2* c2, Lit lit) {
     
     skolem_push(c2->skolem);
     examples_push(c2->examples);
-    
     skolem_increase_decision_lvl(c2->skolem);
+    c2->restart_base_decision_lvl += 1;
+    
+    V1("Entering case %d\n", lit);
     skolem_make_universal_assumption(c2->skolem, lit);
     
-    LOG_WARNING("Untested universal assumptions code. Is skolem_propagate necessary? TODO\n");
     skolem_propagate(c2->skolem);
     
     if (skolem_is_conflicted(c2->skolem)) { // actual conflict
@@ -316,14 +316,12 @@ void c2_close_case(C2* c2) {
     c2_backtrack_casesplit(c2);
     assert(c2->skolem->decision_lvl == 0);
     casesplits_encode_last_case(c2->cs);
+    assert(c2->skolem->stack->push_count == c2->skolem->decision_lvl);
     
-    if (c2->restart_base_decision_lvl < 1) {
-        skolem_increase_decision_lvl(c2->skolem);
-        c2->restart_base_decision_lvl += 1;
-    }
-    
-    assert(c2->result == CADET_RESULT_UNKNOWN);
     if (satsolver_sat(c2->skolem->skolem) == SATSOLVER_RESULT_UNSAT) {
         c2->result = CADET_RESULT_SAT;
+    } else {
+        assert(c2->result == CADET_RESULT_UNKNOWN); // because backtrack case splits may not backtrack at all if no casesplit was done. thus also the result may be still valid.
+        
     }
 }

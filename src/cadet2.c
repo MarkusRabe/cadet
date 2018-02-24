@@ -381,10 +381,9 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
 
     while (remaining_conflicts > 0) {
         V4("\nEntering main loop at dlvl %u.\n", c2->skolem->decision_lvl);
-
         assert(c2->state == C2_READY);
         assert(c2->skolem->decision_lvl >= c2->restart_base_decision_lvl);
-        assert(c2->skolem->stack->push_count >= c2->skolem->decision_lvl - c2->restart_base_decision_lvl);
+        assert(c2->skolem->stack->push_count == c2->skolem->decision_lvl);
 
         c2_propagate(c2);
         
@@ -768,13 +767,6 @@ cadet_res c2_sat(C2* c2) {
     }
 
     while (c2->result == CADET_RESULT_UNKNOWN) { // This loop controls the restarts
-        
-        if (c2->restart_base_decision_lvl < 1) {
-            skolem_push(c2->skolem);
-            examples_push(c2->examples);
-            skolem_increase_decision_lvl(c2->skolem);
-            c2->restart_base_decision_lvl += 1;
-        }
         
         c2_run(c2, c2->next_restart);
 

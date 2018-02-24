@@ -222,6 +222,14 @@ int main(int argc, const char* argv[]) {
     if (!options->reinforcement_learning) {
         return c2_solve_qdimacs(file,options);
     } else {
+        if (options->cegar) {
+            LOG_WARNING("Switching off CEGAR for reinforcement learning.\n");
+            options->cegar = false;
+        }
+        if (options->casesplits) {
+            LOG_WARNING("Switching off casesplits for reinforcement learning.\n");
+            options->casesplits = false;
+        }
         return c2_rl_run_c2(options);
     }
 }

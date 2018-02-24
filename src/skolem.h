@@ -33,12 +33,6 @@ bool skolem_is_total(skolem_var*); // pos_lit == neg_lit && pos_lit != 0
 bool skolem_is_top(skolem_var*); // pos_lit == 0 && neg_lit == 0
 
 typedef enum {
-    SKOLEM_MODE_STANDARD, // propagate determinicity and check for conflicts
-    SKOLEM_MODE_CONSTANT_PROPAGATIONS_TO_DETERMINISTICS, // used for assumptions
-    SKOLEM_MODE_RECORD_POTENTIAL_CONFLICTS
-} SKOLEM_MODE;
-
-typedef enum {
     SKOLEM_STATE_CONSTANTS_CONLICT,
     SKOLEM_STATE_SKOLEM_CONFLICT,
     SKOLEM_STATE_READY
@@ -111,7 +105,8 @@ struct Skolem {
     pqueue* pure_var_queue; // contains unsigned var_id
     
     // Configuration
-    SKOLEM_MODE mode; // can be used to switch of all or certain types of conflicts
+    bool ignore_universal_conflicts;
+    bool record_conflicts;
     
     // Static objects
     // Helper variables in the SAT solver

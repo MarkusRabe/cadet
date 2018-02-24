@@ -210,7 +210,32 @@ void casesplits_encode_last_case(Casesplits* cs) {
         satsolver_clause_finished_for_context(cs->skolem->skolem, 0);
     } else { // function case
         assert(c->type == 1);
-        NOT_IMPLEMENTED();
+        
+        Skolem* encoding_skolem = skolem_init(c->clauses, cs->options);
+        encoding_skolem->mode = SKOLEM_MODE_RECORD_POTENTIAL_CONFLICTS;
+        satsolver_free(encoding_skolem->skolem);
+        encoding_skolem->skolem = cs->skolem->skolem;
+        
+        skolem_propagate(encoding_skolem);
+        for (unsigned i = 0; i < int_vector_count(c->decisions); i++) {
+            Lit decision_lit = int_vector_get(c->decisions, i);
+            if (skolem_is_deterministic(encoding_skolem, lit_to_var(decision_lit))) {
+                LOG_WARNING("Discovered during replay that decision %d is not needed.\n", decision_lit);
+            } else {
+                skolem_decision(encoding_skolem, decision_lit);
+            }
+            skolem_propagate(encoding_skolem);
+        }
+        skolem_encode_global_conflict_check(encoding_skolem); // this encodes the disjunction over the potentially conflicted variables.
+        
+        if (c->universal_assumptions) {
+            for (unsigned i = 0; i < int_vector_count(c->universal_assumptions); i++) {
+                skolem_make_universal_assumption(encoding_skolem, int_vector_get(c->universal_assumptions, i));
+            }
+        }
+        
+        encoding_skolem->skolem = satsolver_init();
+        skolem_free(encoding_skolem);
     }
 }
 
@@ -261,7 +286,8 @@ void casesplits_record_case(Casesplits* cs, int_vector* decisions) {
     if (cs->options->casesplits_cubes) {
         // Adjust universal activity values
         casesplits_close_heuristics(cs, cs->skolem->universals_assumptions);
-        casesplits_record_cegar_cube(cs, int_vector_copy(cs->skolem->universals_assumptions), NULL);
+        casesplits_completed_case_split(cs, int_vector_copy(cs->skolem->universals_assumptions), int_vector_copy(decisions), qcnf_copy(cs->qcnf));
+//        casesplits_record_cegar_cube(cs, int_vector_copy(cs->skolem->universals_assumptions), NULL);
     } else {
         // assert(found skolem functions for all variables);
         casesplits_completed_case_split(cs, NULL, int_vector_copy(decisions), qcnf_copy(cs->qcnf));

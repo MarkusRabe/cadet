@@ -41,7 +41,9 @@ void c2_backtrack_casesplit(C2* c2) {
     }
 
     skolem_propagate(c2->skolem);
-    abortif(skolem_is_conflicted(c2->skolem), "Conflicted after backtracking case split.");
+    if (skolem_is_conflicted(c2->skolem)) {
+        LOG_WARNING("Conflicted after backtracking case split.");
+    }
     
     c2->next_restart = c2->magic.initial_restart;
     c2->next_major_restart = c2->magic.major_restart_frequency;
@@ -304,6 +306,7 @@ int_vector* c2_determine_notorious_determinsitic_variables(C2* c2) {
 
 void c2_close_case(C2* c2) {
     assert(c2->result == CADET_RESULT_SAT);
+    
     V1("Case split of depth %u successfully completed.\n", int_vector_count(c2->skolem->universals_assumptions));
     c2->statistics.cases_closed += 1;
     
@@ -319,8 +322,8 @@ void c2_close_case(C2* c2) {
         c2->restart_base_decision_lvl += 1;
     }
     
-    assert(c2->result == CADET_RESULT_SAT);
-    if (satsolver_sat(c2->skolem->skolem) == SATSOLVER_RESULT_SAT) {
-        c2->result = CADET_RESULT_UNKNOWN;
+    assert(c2->result == CADET_RESULT_UNKNOWN);
+    if (satsolver_sat(c2->skolem->skolem) == SATSOLVER_RESULT_UNSAT) {
+        c2->result = CADET_RESULT_SAT;
     }
 }

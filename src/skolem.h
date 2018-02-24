@@ -110,12 +110,8 @@ struct Skolem {
     pqueue* determinicity_queue; // contains unsigned var_id
     pqueue* pure_var_queue; // contains unsigned var_id
     
-    
     // Configuration
     SKOLEM_MODE mode; // can be used to switch of all or certain types of conflicts
-    unsigned u_initially_deterministic; // what should be considered deterministic?
-    unsigned e_initially_deterministic; // what should be considered deterministic?
-    
     
     // Static objects
     // Helper variables in the SAT solver
@@ -136,7 +132,7 @@ struct Skolem {
     struct Skolem_Magic_Values magic;
 };
 
-Skolem* skolem_init(QCNF*,Options*, unsigned u_initially_deterministic, unsigned e_initially_deterministic);
+Skolem* skolem_init(QCNF*, Options*);
 void skolem_free(Skolem*);
 
 // INTERACTION WITH CONFLICT ANALYSIS
@@ -145,7 +141,8 @@ int skolem_get_value_for_conflict_analysis(void* s, Lit lit);
 bool skolem_is_relevant_clause(void* domain, Clause* c, Lit lit);
 
 // INTERACTION WITH CADET2
-void skolem_new_clause(Skolem*,Clause*);
+void skolem_new_clause(Skolem*, Clause*);
+void skolem_new_variable(Skolem*, unsigned var_id);
 void skolem_assign_constant_value(Skolem*,Lit,union Dependencies, Clause* reason); // reason may be NULL
 bool skolem_is_universal_assumption_vacuous(Skolem*, Lit);
 void skolem_make_universal_assumption(Skolem*,Lit);
@@ -164,6 +161,7 @@ void skolem_pop(Skolem*);
 void skolem_increase_decision_lvl(Skolem*);
 
 unsigned skolem_global_conflict_check(Skolem*, unsigned var_id);
+void skolem_encode_global_conflict_check(Skolem* s);
 bool skolem_is_conflicted(Skolem*);
 
 typedef enum FIX_UNIQUE_ANTECEDENTS_MODE {

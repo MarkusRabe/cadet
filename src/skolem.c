@@ -20,16 +20,10 @@
 #include <stdint.h>
 #include <sys/time.h>
 
-Skolem* skolem_init(QCNF* qcnf, Options* o,
-                    unsigned u_initially_deterministic,
-                    unsigned e_initially_deterministic) {
-    assert(u_initially_deterministic != 0); // indicates wrong usage
-    
+Skolem* skolem_init(QCNF* qcnf, Options* o) {
     Skolem* s = malloc(sizeof(Skolem));
     s->options = o;
     s->qcnf = qcnf;
-    s->u_initially_deterministic = u_initially_deterministic;
-    s->e_initially_deterministic = e_initially_deterministic;
     
     s->skolem = satsolver_init();
 #ifdef SATSOLVER_TRACE
@@ -94,6 +88,18 @@ Skolem* skolem_init(QCNF* qcnf, Options* o,
     s->magic.conflict_potential_offset = 0.00f;
     s->magic.blocked_clause_occurrence_cutoff = 20;
     
+    // initialize the initially deterministic variables; these are usually the universals
+    for (unsigned i = 1; i < var_vector_count(qcnf->vars); i++) {
+        if (qcnf_var_exists(qcnf, i)) {
+            skolem_new_variable(s, i);
+        }
+    }
+    // search for unit clauses and clauses with unique consequence
+    for (unsigned i = 0; i < vector_count(s->qcnf->clauses); i++) {
+        Clause* c = vector_get(s->qcnf->clauses, i);
+        if (c) {skolem_new_clause(s, c);}
+    }
+    
     return s;
 }
 
@@ -115,7 +121,6 @@ void skolem_free(Skolem* s) {
 }
 
 void skolem_push(Skolem* s) {
-    
     stack_push(s->stack);
     satsolver_push(s->skolem);
     abortif(pqueue_count(s->determinicity_queue) != 0, "s->determinicity_queue nonempty upon push. Serious because the remaining elements might be forgotten to be tracked upon a pop.");
@@ -142,6 +147,28 @@ void skolem_new_clause(Skolem* s, Clause* c) {
     skolem_check_for_unique_consequence(s, c);
     if (c->size == 1) {
         worklist_push(s->clauses_to_check, c);
+    }
+}
+
+void skolem_new_variable(Skolem* s, unsigned var_id) {
+    Var* v = var_vector_get(s->qcnf->vars, var_id);
+    if (v->var_id != 0 && v->is_universal) {
+        assert(var_id == v->var_id);
+        
+        skolem_update_deterministic(s, var_id, 1);
+        
+        int innerlit = satsolver_inc_max_var(s->skolem);
+        skolem_update_pos_lit(s, var_id, innerlit);
+        skolem_update_neg_lit(s, var_id, - innerlit);
+        
+        union Dependencies dep;
+        if (!qcnf_is_DQBF(s->qcnf)) {
+            dep.dependence_lvl = v->scope_id;
+        } else {
+            dep.dependencies = int_vector_init();
+            int_vector_add(dep.dependencies, (int) v->var_id);
+        }
+        skolem_update_dependencies(s, var_id, dep);
     }
 }
 
@@ -558,7 +585,6 @@ bool skolem_is_locally_conflicted(Skolem* s, unsigned var_id) {
 
 void skolem_propagate_determinicity(Skolem* s, unsigned var_id) {
     assert(!skolem_is_conflicted(s));
-    assert(!qcnf_is_universal(s->qcnf, var_id));
     if (skolem_is_deterministic(s, var_id)) {
         return;
     }
@@ -829,7 +855,7 @@ void skolem_propagate_partial_over_clause_for_lit(Skolem* s, Clause* c, Lit lit,
     skolem_update_dependencies(s, lit_to_var(lit), dependencies_copy);
 }
 
-void skolem_encode_global_conflict_check(Skolem* s, unsigned var_id) {
+void skolem_encode_global_conflict_check(Skolem* s) {
     
     if (s->options->functional_synthesis) {
         for (unsigned i = 0; i < int_vector_count(s->decision_indicator_sat_lits); i++) {
@@ -847,10 +873,12 @@ void skolem_encode_global_conflict_check(Skolem* s, unsigned var_id) {
         //    skolem_add_clauses_with_illegal_dependencies(s, var_id);
         
 #ifdef DEBUG
-        skolem_var si = skolem_get_info(s, potentially_contflicted);
-        assert(si.pos_lit != - si.neg_lit);
-        assert(si.pos_lit != - s->satlit_true);
-        assert(si.neg_lit != - s->satlit_true);
+        if (s->mode != SKOLEM_MODE_RECORD_POTENTIAL_CONFLICTS) {
+            skolem_var si = skolem_get_info(s, potentially_contflicted);
+            assert(si.pos_lit != - si.neg_lit);
+            assert(si.pos_lit != - s->satlit_true);
+            assert(si.neg_lit != - s->satlit_true);
+        }
 #endif
         
         int conjunction_lit = satsolver_inc_max_var(s->skolem); // Could save a variable name here by reserving some variable names for conflict checks initially.
@@ -913,7 +941,7 @@ unsigned skolem_global_conflict_check(Skolem* s, unsigned var_id) {
     
     satsolver_push(s->skolem);
     
-    skolem_encode_global_conflict_check(s, var_id);
+    skolem_encode_global_conflict_check(s);
     
     s->statistics.global_conflict_checks++;
     sat_res result = satsolver_sat(s->skolem);
@@ -1342,8 +1370,6 @@ void skolem_propagate_constants_over_clause(Skolem* s, Clause* c) {
         
         s->statistics.propagations += 1;
         s->statistics.explicit_propagations += 1;
-        
-        assert(skolem_get_unique_consequence(s, c) != 0);
         
         skolem_assign_constant_value(s, unassigned_lit, maximal_deps, c);
     }

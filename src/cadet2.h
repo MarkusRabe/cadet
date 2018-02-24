@@ -119,16 +119,16 @@ struct C2 {
 
 C2* c2_init(Options* options);
 C2* c2_init_qcnf(QCNF*, Options* options);
-void c2_free(C2* c2);
+void c2_free(C2*);
 
-Clause* c2_add_lit(C2* c2, Lit lit);
-void c2_new_variable(C2* c2, unsigned var_id);
-void c2_new_clause(C2* c2, Clause* c);
-void c2_simplify(C2* c2);
+Clause* c2_add_lit(C2*, Lit lit);
+void c2_new_variable(C2*, bool is_universal, unsigned scope_id, unsigned var_id);
+void c2_new_clause(C2*, Clause* c);
+void c2_simplify(C2*);
 
 cadet_res c2_sat(C2*);
-cadet_res c2_solve_qdimacs(FILE*,Options*);
-cadet_res c2_solve(C2* c2);
+cadet_res c2_solve_qdimacs(FILE*, Options*);
+cadet_res c2_solve(C2*);
 
 // Case splits
 void c2_backtrack_casesplit(C2*);

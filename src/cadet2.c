@@ -25,27 +25,13 @@
 #include <stdint.h>
 #include <sys/time.h>
 
-void c2_init_clauses_and_variables(C2* c2) {
-    // initialize the initially deterministic variables; these are usually the universals
-    for (unsigned i = 1; i < var_vector_count(c2->qcnf->vars); i++) {
-        if (qcnf_var_exists(c2->qcnf, i)) {
-            c2_new_variable(c2, i);
-        }
-    }
-    // search for unit clauses and clauses with unique consequence
-    for (unsigned i = 0; i < vector_count(c2->qcnf->clauses); i++) {
-        Clause* c = vector_get(c2->qcnf->clauses, i);
-        if (c != NULL) {c2_new_clause(c2, c);}
-    }
-}
-
 C2* c2_init_qcnf(QCNF* qcnf, Options* options) {
 
     C2* c2 = malloc(sizeof(C2));
 
     c2->qcnf = qcnf;
     c2->options = options;
-    c2->cs = casesplits_init(qcnf, options);
+
     
     c2->state = C2_READY;
     c2->result = CADET_RESULT_UNKNOWN;
@@ -56,15 +42,6 @@ C2* c2_init_qcnf(QCNF* qcnf, Options* options) {
     c2->activity_factor = (float) 1.0;
     
     c2->current_conflict = NULL;
-
-    // DOMAINS
-    c2->skolem = skolem_init(c2->qcnf, options, vector_count(qcnf->scopes) + 1, 0);
-    
-    c2->examples = examples_init(qcnf, options->examples_max_num);
-    c2->ca = conflcit_analysis_init(c2);
-    
-    // Clause minimization
-    c2->minimization_pa = partial_assignment_init(qcnf);
 
     // Statistics
     c2->decisions_since_last_conflict = 0;
@@ -107,8 +84,17 @@ C2* c2_init_qcnf(QCNF* qcnf, Options* options) {
     c2->conflicts_between_case_splits_countdown = 1;
     c2->magic.case_split_linear_depth_penalty_factor = options->easy_debugging_mode_c2 ? 1 : 5;
 
-    c2_init_clauses_and_variables(c2);
-
+    
+    c2->cs = casesplits_init(qcnf, options);
+    // DOMAINS
+    c2->skolem = skolem_init(c2->qcnf, options);
+    
+    c2->examples = examples_init(qcnf, options->examples_max_num);
+    c2->ca = conflcit_analysis_init(c2);
+    
+    // Clause minimization
+    c2->minimization_pa = partial_assignment_init(qcnf);
+    
     return c2;
 }
 
@@ -211,6 +197,11 @@ Var* c2_pick_most_active_notdeterministic_variable(C2* c2) {
 
 
 void c2_backtrack_to_decision_lvl(C2 *c2, unsigned backtracking_lvl) {
+    
+    if (backtracking_lvl < c2->skolem->decision_lvl) {
+        c2->result = CADET_RESULT_UNKNOWN;
+    }
+    
     V2("Backtrack to level %u\n", backtracking_lvl);
     while (c2->skolem->decision_lvl > backtracking_lvl) {
         assert(c2->skolem->stack->push_count == c2->examples->stack->push_count);
@@ -646,12 +637,11 @@ void c2_replenish_skolem_satsolver(C2* c2) {
     assert(c2->skolem->decision_lvl == 0);
     
     Skolem* old_skolem = c2->skolem;
-    c2->skolem = skolem_init(c2->qcnf, c2->options, vector_count(c2->qcnf->scopes), 0);
+    c2->skolem = skolem_init(c2->qcnf, c2->options);
     
     Casesplits* old_cs = c2->cs;
     c2->cs = casesplits_init(c2->qcnf, c2->options);
     
-    c2_init_clauses_and_variables(c2);
     c2_initial_propagation(c2); // (re-)establishes dlvl 0
     abortif(c2->state != C2_READY, "Conflicted after replenishing.");
     
@@ -788,10 +778,10 @@ cadet_res c2_sat(C2* c2) {
         
         c2_run(c2, c2->next_restart);
 
-        if ((c2->result == CADET_RESULT_SAT && c2->options->casesplits) || c2->options->certify_SAT) {
-            bool must_be_done = int_vector_count(c2->skolem->universals_assumptions) == 0; // just for safety
+        if (c2->result == CADET_RESULT_SAT && (c2->options->casesplits || c2->options->certify_SAT)) {
+            bool must_be_SAT = int_vector_count(c2->skolem->universals_assumptions) == 0; // just for safety
             c2_close_case(c2);
-            assert(! must_be_done || c2->result == CADET_RESULT_SAT);
+            assert(! must_be_SAT || c2->result == CADET_RESULT_SAT);
         }
         
         if (c2->result == CADET_RESULT_UNKNOWN) {
@@ -927,26 +917,9 @@ Clause* c2_add_lit(C2* c2, Lit lit) {
     }
 }
 
-void c2_new_variable(C2* c2, unsigned var_id) {
-    Var* v = var_vector_get(c2->qcnf->vars, var_id);
-    if (v->var_id != 0 && v->is_universal) {
-        assert(var_id == v->var_id);
-
-        skolem_update_deterministic(c2->skolem, var_id, 1);
-
-        int innerlit = satsolver_inc_max_var(c2->skolem->skolem);
-        skolem_update_pos_lit(c2->skolem, var_id, innerlit);
-        skolem_update_neg_lit(c2->skolem, var_id, - innerlit);
-
-        union Dependencies dep;
-        if (!qcnf_is_DQBF(c2->qcnf)) {
-            dep.dependence_lvl = v->scope_id;
-        } else {
-            dep.dependencies = int_vector_init();
-            int_vector_add(dep.dependencies, (int) v->var_id);
-        }
-        skolem_update_dependencies(c2->skolem, var_id, dep);
-    }
+void c2_new_variable(C2* c2, bool is_universal, unsigned scope_id, unsigned var_id) {
+    qcnf_new_var(c2->qcnf, is_universal, scope_id, var_id);
+    skolem_new_variable(c2->skolem, var_id);
 }
 
 void c2_new_clause(C2* c2, Clause* c) {

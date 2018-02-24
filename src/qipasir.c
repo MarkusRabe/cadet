@@ -31,8 +31,7 @@ void qipasir_new_variable(void * solver, int lit, int quantifier) {
     assert(lit > 0);
     assert(quantifier >= 0);
     C2* c2 = (C2*) solver;
-    qcnf_new_var(c2->qcnf, quantifier % 2, (unsigned) ((quantifier+1)/2), lit_to_var(lit));
-    c2_new_variable(solver, lit_to_var(lit));
+    c2_new_variable(c2, quantifier % 2, (unsigned) ((quantifier+1)/2), lit_to_var(lit));
 }
 
 void qipasir_add (void * solver, int lit_or_zero) {

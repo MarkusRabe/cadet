@@ -81,7 +81,7 @@ void c2_rl_new_clause(Options* o, Clause* c) {
     if (!o->reinforcement_learning) {
         return;
     }
-    LOG_PRINTF("c %u %u", c->clause_idx, !c->original);
+    LOG_PRINTF("clause %u %u lits", c->clause_idx, !c->original);
     for (unsigned i = 0; i < c->size; i++) {
         LOG_PRINTF(" %d",c->occs[i]);
     }

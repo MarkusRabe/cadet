@@ -262,6 +262,8 @@ void skolem_set_unique_consequence(Skolem* s, Clause* c, Lit l) {
     
     stack_push_op(s->stack, SKOLEM_OP_UNIQUE_CONSEQUENCE, (void*) (uint64_t) ucui.data); // (uint64_t) c->clause_id
     int_vector_set(s->unique_consequence, c->clause_idx, l);
+    
+    c2_rl_update_unique_consequence(s->options, c->clause_idx, l);
 }
 
 Lit skolem_get_unique_consequence(Skolem* s, Clause* c) {
@@ -296,7 +298,7 @@ void skolem_check_for_unique_consequence(Skolem* s, Clause* c) {
         int lit = c->occs[i];
         if (! skolem_is_deterministic(s, lit_to_var(lit))) {
             if (undecided_lit == 0) {
-                undecided_lit = c->occs[i];
+                undecided_lit = lit;
             } else {
                 return;
             }
@@ -1067,6 +1069,7 @@ void skolem_undo(void* parent, char type, void* obj) {
             UNIQUE_CONSEQUENCE_UNDO_INFO_UNION ucui;
             ucui.data = (int64_t) obj;
             int_vector_set(s->unique_consequence, ucui.components.clause_id, ucui.components.lit);
+            c2_rl_update_unique_consequence(s->options, ucui.components.clause_id, 0);
             break;
             
         case SKOLEM_OP_PROPAGATION_CONFLICT:
@@ -1200,9 +1203,8 @@ int skolem_get_constant_value(Skolem* s, Lit lit) {
     return val;
 }
 
-void skolem_update_clause_worklist(Skolem* s, int unassigned_lit) {
-    Var* v = var_vector_get(s->qcnf->vars, lit_to_var(unassigned_lit));
-    vector* opp_occs = unassigned_lit > 0 ? &v->neg_occs : &v->pos_occs;
+void skolem_update_clause_worklist(Skolem* s, Lit lit) {
+    vector* opp_occs = qcnf_get_occs_of_lit(s->qcnf, - lit);
     for (unsigned i = 0; i < vector_count(opp_occs); i++) {
         worklist_push(s->clauses_to_check, vector_get(opp_occs, i));
     }
@@ -1243,7 +1245,6 @@ void skolem_assign_constant_value(Skolem* s, Lit lit, union Dependencies propaga
     abortif(skolem_get_satsolver_lit(s, -lit) == s->satlit_true, "Propagation ended in inconsistent state.\n");
     
     V3("Skolem: Assign value %d.\n",lit);
-    skolem_update_clause_worklist(s, lit);
     skolem_update_reason_for_constant(s, var_id, reason ? reason->clause_idx : INT_MAX, s->decision_lvl);
     
     if (propagation_deps.dependence_lvl == 1) {
@@ -1297,14 +1298,18 @@ void skolem_assign_constant_value(Skolem* s, Lit lit, union Dependencies propaga
         if (skolem_is_conflicted(s)) {
             return; // no tests for unique consequences needed, so we can quit here
         }
-    } else {
-        int polarity = lit > 0 ? 1 : -1;
-        skolem_update_pos_lit(s, var_id,   polarity * s->satlit_true);
-        skolem_update_neg_lit(s, var_id, - polarity * s->satlit_true);
     }
+    
+    // may be necessary, even after conflict check; if not conflicted, the other satlit must still be updated to the correct constant.
+    int polarity = lit > 0 ? 1 : -1;
+    skolem_update_pos_lit(s, var_id,   polarity * s->satlit_true);
+    skolem_update_neg_lit(s, var_id, - polarity * s->satlit_true);
     
     skolem_update_dependencies(s, var_id, propagation_deps);
     
+    c2_rl_update_constant_value(s->options, var_id, skolem_get_constant_value(s, (Lit) var_id));
+    
+    skolem_update_clause_worklist(s, lit);
     if ( ! was_deterministic_already) {
         skolem_update_deterministic(s, var_id, 1);
         skolem_check_occs_for_unique_consequences(s,   (Lit) var_id);
@@ -1356,7 +1361,7 @@ void skolem_propagate_constants_over_clause(Skolem* s, Clause* c) {
             }
         }
         abortif(max_dlvl_var == 0, "No variable in clause found.");
-        s->conflict_var_id = lit_to_var(c->occs[c->size - 1]); // conflict is the last variable in the clause :/
+        s->conflict_var_id = max_dlvl_var; // lit_to_var(c->occs[c->size - 1]);
         s->state = SKOLEM_STATE_CONSTANTS_CONLICT;
         stack_push_op(s->stack, SKOLEM_OP_PROPAGATION_CONFLICT, NULL);
         

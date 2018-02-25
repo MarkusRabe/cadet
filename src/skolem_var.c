@@ -166,8 +166,6 @@ void skolem_undo_decision_lvl(Skolem* s, void* data) {
     suu.ptr = data;
     skolem_var* sv = skolem_var_vector_get(s->infos, suu.sus.var_id);
     sv->decision_lvl = (unsigned) suu.sus.val;
-    
-    c2_rl_update_D(s->options, suu.sus.var_id, false);
 }
 
 void skolem_update_pos_lit(Skolem* s, unsigned var_id, int pos_lit) {

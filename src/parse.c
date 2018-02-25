@@ -32,6 +32,7 @@
 #include "qcnf.h"
 #include "aiger.h"
 #include "aiger_utils.h"
+#include "c2_rl.h"
 
 #include <string.h>
 #include <assert.h>
@@ -67,7 +68,7 @@ inline static int get_next_lit(char* buffer, size_t* pos, int line_num) {
 }
 
 // Has to be called with line being the header from the QDIMACS file.
-QCNF* create_qcnf_from_qdimacs(FILE* file, char* header, int line_num) {
+QCNF* create_qcnf_from_qdimacs(Options* options, FILE* file, char* header, int line_num) {
     assert(header != NULL);
     
     // Parse number of variables and number of clauses.
@@ -236,7 +237,8 @@ QCNF* create_qcnf_from_qdimacs(FILE* file, char* header, int line_num) {
                 goto error;
             }
             if (next_lit == 0) {
-                qcnf_close_clause(qcnf);
+                Clause* c = qcnf_close_clause(qcnf);
+                if (c) {c2_rl_new_clause(options, c);}
             } else {
                 qcnf_add_lit(qcnf, next_lit);
             }
@@ -504,7 +506,7 @@ QCNF* create_qcnf_from_file(FILE* file, Options* options) {
     char* aiger_header_start = "aig ";
     char* aiger_ascii_header_start = "aag ";
     if (strncmp(qcnf_header_start, line, strlen(qcnf_header_start)) == 0) {
-        qcnf = create_qcnf_from_qdimacs(file, line, line_num);
+        qcnf = create_qcnf_from_qdimacs(options, file, line, line_num);
     } else if (   strncmp(aiger_header_start, line, strlen(aiger_header_start)) == 0
                || strncmp(aiger_ascii_header_start, line, strlen(aiger_ascii_header_start)) == 0) {
         

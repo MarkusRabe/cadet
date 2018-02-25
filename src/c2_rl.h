@@ -16,8 +16,11 @@
 
 void c2_rl_print_state(C2* c2, unsigned conflicts_until_next_restart);
 void c2_rl_print_decision(Options* o, unsigned decision_var_id, int phase);
-void c2_rl_update_D(Options* o, unsigned var_id, bool deterministic); // Update the member of of var_id in D. True for adding, False for removing.
-void c2_rl_learnt_clause(Options* o, Clause* c);
+void c2_rl_update_constant_value(Options* o, unsigned var_id, int val); // val indicates if the variable is assigned a constant
+void c2_rl_update_unique_consequence(Options* o, unsigned clause_idx, Lit lit);
+void c2_rl_update_D(Options* o, unsigned var_id, bool deterministic); // Update the member of of var_id in D. True for adding, False for removing
+void c2_rl_new_clause(Options* o, Clause* c);
+void c2_rl_conflict(Options* o, unsigned var_id);
 void c2_rl_print_activity(Options* o, unsigned var_id, float activity);
 int c2_rl_get_decision();
 

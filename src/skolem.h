@@ -193,7 +193,7 @@ typedef enum {
 } SKOLEM_OP;
 
 void skolem_undo(void*,char,void*);
-void skolem_update_clause_worklist(Skolem* s, int unassigned_lit);
+void skolem_update_clause_worklist(Skolem* s, Lit);
 void skolem_propagate_determinicity_over_clause(Skolem*,QCNF*,Clause*);
 void skolem_propagate_explicit_assignments(Skolem* s);
 

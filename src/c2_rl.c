@@ -49,6 +49,27 @@ void c2_rl_print_activity(Options* o, unsigned var_id, float activity) {
     }
 }
 
+void c2_rl_conflict(Options* o, unsigned var_id) {
+    if (!o->reinforcement_learning) {
+        return;
+    }
+    LOG_PRINTF("conflict %u\n", var_id);
+}
+
+void c2_rl_update_constant_value(Options* o, unsigned var_id, int val) {
+    if (!o->reinforcement_learning) {
+        return;
+    }
+    LOG_PRINTF("v %u %d\n", var_id, val);
+}
+
+void c2_rl_update_unique_consequence(Options* o, unsigned clause_idx, Lit lit) {
+    if (!o->reinforcement_learning) {
+        return;
+    }
+    LOG_PRINTF("uc %u %d\n", clause_idx, lit);
+}
+
 void c2_rl_update_D(Options* o, unsigned var_id, bool deterministic) {
     if (!o->reinforcement_learning) {
         return;
@@ -56,11 +77,11 @@ void c2_rl_update_D(Options* o, unsigned var_id, bool deterministic) {
     LOG_PRINTF("u%c %u\n", deterministic?'+':'-',var_id);
 }
 
-void c2_rl_learnt_clause(Options* o, Clause* c) {
+void c2_rl_new_clause(Options* o, Clause* c) {
     if (!o->reinforcement_learning) {
         return;
     }
-    LOG_PRINTF("c");
+    LOG_PRINTF("c %u %u", c->clause_idx, !c->original);
     for (unsigned i = 0; i < c->size; i++) {
         LOG_PRINTF(" %d",c->occs[i]);
     }
@@ -138,10 +159,7 @@ char* c2_rl_readline() {
     fflush(stdout); // flush stdout to make sure listening processes get the full state before printing a decision
     if (buffer == NULL) {
         buffer = (char *)malloc(bufsize * sizeof(char));
-        if( buffer == NULL) {
-            perror("Unable to allocate input buffer for reinforcement learning");
-            exit(1);
-        }
+        abortif(buffer == NULL, "Unable to allocate input buffer for reinforcement learning.");
     }
     long characters = getline(&buffer, &bufsize, stdin);
     abortif(characters == 0, "Could not read number from stdin");

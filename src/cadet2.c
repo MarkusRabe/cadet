@@ -332,6 +332,7 @@ void c2_propagate(C2* c2) {
         assert(c2->state == C2_READY);
         c2->state = C2_EXAMPLES_CONFLICT;
         PartialAssignment* pa = examples_get_conflicted_assignment(c2->examples);
+        c2_rl_conflict(c2->options, pa->conflicted_var);
         c2->current_conflict = analyze_assignment_conflict(c2,
                                                pa->conflicted_var,
                                                pa->conflicted_clause,
@@ -346,6 +347,7 @@ void c2_propagate(C2* c2) {
     
     skolem_propagate(c2->skolem);
     if (skolem_is_conflicted(c2->skolem)) {
+        c2_rl_conflict(c2->options, c2->skolem->conflict_var_id);
         assert(c2->state == C2_READY);
         c2->state = C2_SKOLEM_CONFLICT;
         c2->current_conflict = analyze_assignment_conflict(c2,
@@ -391,7 +393,7 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
             
             for (unsigned i = 0; i < int_vector_count(c2->current_conflict); i++) {
                 int lit = int_vector_get(c2->current_conflict, i);
-                c2_add_lit(c2, - lit);
+                qcnf_add_lit(c2->qcnf, - lit);
             }
             Clause* learnt_clause = qcnf_close_clause(c2->qcnf);
             abortif(learnt_clause == NULL, "Conflict clause could not be created. Conflict counter: %zu", c2->statistics.conflicts);
@@ -474,11 +476,11 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                 if (new_example) {
                     examples_redo(c2->examples, c2->skolem, new_example);
                 }
-                
-                c2_rl_learnt_clause(c2->options, learnt_clause);
+
                 c2_log_clause(c2, learnt_clause);
                 c2_new_clause(c2, learnt_clause);
-
+                c2_rl_new_clause(c2->options, learnt_clause);
+                
                 c2_decay_activity(c2);
 
                 V2("Learnt clause has length %u. Backtracking %u lvls to lvl %u\n", learnt_clause->size, old_dlvl - c2->skolem->decision_lvl, c2->skolem->decision_lvl);

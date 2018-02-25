@@ -197,7 +197,7 @@ void casesplits_close_heuristics(Casesplits* cs, int_vector* solved_cube) {
 
 void casesplits_encode_last_case(Casesplits* cs) {
     Case* c = vector_get(cs->solved_cases, vector_count(cs->solved_cases) - 1);
-    if (c->type == 0 || c->type == 1 && cs->options->casesplits_cubes) { // cube case
+    if (c->type == 0 || (c->type == 1 && cs->options->casesplits_cubes)) { // cube case
         for (unsigned i = 0; i < int_vector_count(c->universal_assumptions); i++) {
             Lit lit = int_vector_get(c->universal_assumptions, i);
             assert(skolem_is_deterministic(cs->skolem, lit_to_var(lit)));
@@ -224,7 +224,15 @@ void casesplits_encode_last_case(Casesplits* cs) {
                 skolem_decision(encoding_skolem, decision_lit);
             }
             skolem_propagate(encoding_skolem);
+            assert(!skolem_is_conflicted(encoding_skolem));
         }
+        
+#ifdef DEBUG
+        for (unsigned i = 0; i < var_vector_count(c->clauses->vars); i++) {
+            abortif(qcnf_var_exists(c->clauses, i) && ! skolem_is_deterministic(encoding_skolem, i),
+                    "kaputt");
+        }
+#endif
         skolem_encode_global_conflict_check(encoding_skolem); // this encodes the disjunction over the potentially conflicted variables.
         
         if (c->universal_assumptions) {

@@ -325,7 +325,7 @@ void casesplits_record_case(Casesplits* cs) {
         } else if (decision_val) {
             lit = decision_val * lit;
         } else if (pure_val) {
-            lit = pure_val * lit;
+            lit = - pure_val * lit;
         }
         
         int_vector_add(determinizations_with_polarity, lit);

@@ -15,11 +15,11 @@ Options* default_options() {
     o->easy_debugging_mode_c2 = false;
 
     // Computational enginges
-    o->cegar = true;
+    o->cegar = false;
     o->cegar_only = false;
     o->use_qbf_engine_also_for_propositional_problems = false;
     o->functional_synthesis = false;
-    o->casesplits = false;
+    o->casesplits = true;
     o->casesplits_cubes = false;
 
     // Examples domain

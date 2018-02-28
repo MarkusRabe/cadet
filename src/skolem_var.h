@@ -63,6 +63,7 @@ unsigned skolem_get_decision_lvl_for_conflict_analysis(void*, unsigned var_id);
 unsigned skolem_get_decision_lvl(Skolem*, unsigned var_id);
 unsigned skolem_is_decision_var(Skolem*, unsigned var_id);
 int skolem_get_decision_val(Skolem*, unsigned var_id);
+int skolem_get_pure_val(Skolem*, unsigned var_id);
 void skolem_update_decision_lvl(Skolem*, unsigned var_id, unsigned dlvl);
 void skolem_undo_decision_lvl(Skolem*, void* data);
 

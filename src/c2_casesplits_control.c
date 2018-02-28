@@ -308,6 +308,10 @@ void c2_close_case(C2* c2) {
     assert(c2->result == CADET_RESULT_SAT);
     
     V1("Case split of depth %u successfully completed.\n", int_vector_count(c2->skolem->universals_assumptions));
+    for (unsigned i = 0; i < int_vector_count(c2->skolem->universals_assumptions); i++) {
+        V1(" %d", int_vector_get(c2->skolem->universals_assumptions, i));
+    }
+    V1("\n");
     c2->statistics.cases_closed += 1;
     
     casesplits_record_case(c2->cs);

@@ -442,7 +442,7 @@ Clause* qcnf_new_clause(QCNF* qcnf, int_vector* literals) {
             V1("Warning: Variable %d is not bound.\n", var_id);
             qcnf_new_var(qcnf, false, qcnf_get_empty_scope(qcnf), var_id);
         }
-        V3("clause %u, lit is %d\n", qcnf->clauses->count, lit);
+        V4("clause %u, lit is %d\n", c->clause_idx, lit);
     }
     
     abortif(static_qcnf_variable_for_sorting != NULL, "Memory curruption or concurrent usage of static variable static_qcnf_variable_for_sorting.");

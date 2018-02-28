@@ -61,6 +61,14 @@ void conflict_analysis_free(conflict_analysis* ca) {
     free(ca);
 }
 
+unsigned conflict_analysis_get_decision_lvl(conflict_analysis*  ca, unsigned var_id) {
+    if (ca->conflicted_var_id == var_id) {
+        return ca->c2->skolem->decision_lvl;
+    } else {
+        return ca->domain_get_decision_lvl(ca->domain, var_id);
+    }
+}
+
 void conflict_analysis_schedule_causing_vars_in_work_queue(conflict_analysis* ca, Clause* reason, Lit consequence) {
     assert(consequence != 0);
     assert(lit_to_var(consequence) < var_vector_count(ca->c2->qcnf->vars));
@@ -73,7 +81,7 @@ void conflict_analysis_schedule_causing_vars_in_work_queue(conflict_analysis* ca
         if (consequence == l) { // not strictly necessary
             continue;
         }
-        assert(ca->domain_get_decision_lvl(ca->domain, lit_to_var(consequence)) >= ca->domain_get_decision_lvl(ca->domain, lit_to_var(l)) || ca->domain_get_value(ca->domain, consequence) == 1);
+        assert(conflict_analysis_get_decision_lvl(ca, lit_to_var(consequence)) >= ca->domain_get_decision_lvl(ca->domain, lit_to_var(l)) || ca->domain_get_value(ca->domain, consequence) == 1);
         
         if (! ca->domain_is_legal_dependence(ca->c2->skolem, lit_to_var(consequence), lit_to_var(l))) {
             assert(ca->domain_get_value(ca->domain, l) == -1);
@@ -171,7 +179,7 @@ void conflict_analysis_follow_implication_graph(conflict_analysis* ca) {
         abortif(ca->c2->examples->state != EXAMPLES_STATE_INCONSISTENT_DECISION_CONFLICT && ca->domain_get_value(ca->domain, lit) != 1, "Variable to track in conflict analysis has no value.");
         
         Var* v = var_vector_get(ca->c2->qcnf->vars, lit_to_var(lit));
-        unsigned d_lvl = ca->domain_get_decision_lvl(ca->domain, lit_to_var(lit));
+        unsigned d_lvl = conflict_analysis_get_decision_lvl(ca, lit_to_var(lit));
         assert(d_lvl <= ca->conflict_decision_lvl);
         
 //        bool is_value_decision = c2_is_decision_var(ca->c2, v->var_id) && skolem_get_constant_value(ca->c2->skolem, lit) == 1;
@@ -279,7 +287,7 @@ int_vector* analyze_assignment_conflict(C2* c2,
         }
     } else {
         assert(conflicted_var != 0);
-        ca->conflict_decision_lvl = domain_get_decision_lvl(domain, conflicted_var); // ca->c2->skolem->decision_lvl;
+        ca->conflict_decision_lvl = ca->c2->skolem->decision_lvl;
         
         assert(domain_get_value(domain,   (Lit) conflicted_var) == 1);
         assert(domain_get_value(domain, - (Lit) conflicted_var) == 1);

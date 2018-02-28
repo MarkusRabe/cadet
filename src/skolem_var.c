@@ -52,9 +52,19 @@ int skolem_get_decision_val(Skolem* s, unsigned var_id) {
     assert(skolem_is_deterministic(s, var_id));
     skolem_enlarge_skolem_var_vector(s, var_id);
     skolem_var* sv = skolem_var_vector_get(s->infos, var_id);
-    return 2 * sv->decision_pos - 2 * sv->decision_neg;
+    int res = sv->decision_pos - sv->decision_neg;
+    assert(res == 1 || res == -1 || res == 0);
+    return res;
 }
-
+int skolem_get_pure_val(Skolem* s, unsigned var_id) {
+    assert(var_id < var_vector_count(s->qcnf->vars));
+    assert(skolem_is_deterministic(s, var_id));
+    skolem_enlarge_skolem_var_vector(s, var_id);
+    skolem_var* sv = skolem_var_vector_get(s->infos, var_id);
+    int res = sv->pure_pos - sv->pure_neg;
+    assert(res == 1 || res == -1 || res == 0);
+    return res;
+}
 unsigned skolem_get_dlvl_for_constant(Skolem* s, unsigned var_id) {
     skolem_enlarge_skolem_var_vector(s, var_id);
     skolem_var* sv = skolem_var_vector_get(s->infos, var_id);
@@ -231,6 +241,7 @@ void skolem_update_deterministic(Skolem* s, unsigned var_id) {
     if (skolem_is_deterministic(s, var_id)) {
         return;
     }
+    
     int_vector_add(s->determinization_order, (int) var_id);
     c2_rl_update_D(s->options, var_id, true);
     
@@ -239,7 +250,7 @@ void skolem_update_deterministic(Skolem* s, unsigned var_id) {
     suu.sus.var_id = var_id;
     suu.sus.val = skolem_is_deterministic(s, var_id);
     stack_push_op(s->stack, SKOLEM_OP_UPDATE_INFO_DETERMINISTIC, suu.ptr);
-    skolem_enlarge_skolem_var_vector(s, var_id);
+    
     skolem_var* sv = skolem_var_vector_get(s->infos, var_id);
     sv->deterministic = 1;
 }

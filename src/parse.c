@@ -427,15 +427,16 @@ QCNF* create_qcnf_from_aiger(aiger* aig, Options* o) {
     qcnf_close_clause(qcnf);
     
     if (o->aiger_negated_encoding) {
+        LOG_WARNING("Double-check polarity of bad signals and constraints in negated AIGER encoding.\n");
         qcnf_add_lit(qcnf, (Lit) - bads_qcnf_var);
         qcnf_close_clause(qcnf);
         qcnf_add_lit(qcnf, (Lit) constraints_qcnf_var);
         qcnf_close_clause(qcnf);
         
     } else {
-        // putting constraints and bads together
-        qcnf_add_lit(qcnf, (Lit) bads_qcnf_var);
+        // putting constraints and bads together: if the constraints hold, then the bads should be false.
         qcnf_add_lit(qcnf, (Lit) - constraints_qcnf_var);
+        qcnf_add_lit(qcnf, (Lit) - bads_qcnf_var);
         qcnf_close_clause(qcnf);
     }
     

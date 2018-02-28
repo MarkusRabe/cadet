@@ -91,6 +91,7 @@ struct Skolem {
     int_vector* potentially_conflicted_variables; // contains var_id
     int_vector* decision_indicator_sat_lits; // contains var_id of temporary vars; required e.g. for functional synthesis
     int_vector* decisions;
+    int_vector* determinization_order; // stores all determinizations in the order they happened
     int_vector* universals_assumptions;
     
     
@@ -115,9 +116,6 @@ struct Skolem {
     // THE empty_dependency object
     // Used when non-existent skolem_vars should return a dependency set; avoids alloc/free management
     union Dependencies empty_dependencies;
-    
-    // Keeping track of progress; not essential currently
-    size_t deterministic_variables;
     
     // Backtracking
     Stack* stack;

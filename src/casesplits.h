@@ -69,7 +69,7 @@ Casesplits* casesplits_init(QCNF*, Options*);
 bool casesplits_is_initialized(Casesplits*);
 void casesplits_free(Casesplits*);
 
-void casesplits_record_case(Casesplits*, int_vector* decsisions);
+void casesplits_record_case(Casesplits*);
 void casesplits_encode_last_case(Casesplits* cs);
 void casesplits_steal_cases(Casesplits* new_cs, Casesplits* old_cs); // for satsolver refreshs
 void casesplits_record_cegar_cube(Casesplits*, int_vector* cube, int_vector* partial_assignment);

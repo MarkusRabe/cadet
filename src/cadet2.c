@@ -743,7 +743,7 @@ cadet_res c2_sat(C2* c2) {
     
     c2_initial_propagation(c2);
     
-    V1("Deterministic vars on dlvl 0: %zu", c2->skolem->deterministic_variables);
+    V1("Deterministic vars on dlvl 0: %u", int_vector_count(c2->skolem->determinization_order));
     if (debug_verbosity >= VERBOSITY_HIGH) {
         V1("    These:")
         for (unsigned i = 0; i < var_vector_count(c2->qcnf->vars); i++) {

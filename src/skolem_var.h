@@ -54,7 +54,7 @@ void skolem_update_neg_lit(Skolem*, unsigned var_id, int pos_lit);
 void skolem_update_satlit(Skolem* s, Lit lit, int new_satlit);
 void skolem_update_pure_pos(Skolem*, unsigned var_id, unsigned pos_lit);
 void skolem_update_pure_neg(Skolem*, unsigned var_id, unsigned pos_lit);
-void skolem_update_deterministic(Skolem*, unsigned var_id, unsigned deterministic);
+void skolem_update_deterministic(Skolem*, unsigned var_id);
 void skolem_update_decision(Skolem* s, Lit lit);
 void skolem_update_dependencies(Skolem*, unsigned var_id, union Dependencies deps);
 void skolem_undo_dependencies(Skolem*, void* data);

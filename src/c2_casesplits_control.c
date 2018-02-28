@@ -310,7 +310,7 @@ void c2_close_case(C2* c2) {
     V1("Case split of depth %u successfully completed.\n", int_vector_count(c2->skolem->universals_assumptions));
     c2->statistics.cases_closed += 1;
     
-    casesplits_record_case(c2->cs, c2->skolem->decisions);
+    casesplits_record_case(c2->cs);
     c2_backtrack_to_decision_lvl(c2, c2->restart_base_decision_lvl);
     assert(c2->skolem->decision_lvl == c2->restart_base_decision_lvl);
     c2_backtrack_casesplit(c2);

@@ -101,11 +101,11 @@ void c2_rl_print_state(C2* c2, unsigned conflicts_until_next_restart) {
     float var_ratio = (float) uvar_num / (float) (var_num + 1);
     
     // Solver state
-    LOG_PRINTF("s %u,%u,%zu,%f,%zu,%zu,%u,",
+    LOG_PRINTF("s %u,%u,%u,%f,%zu,%zu,%u,",
                c2->restart_base_decision_lvl,
                c2->skolem->decision_lvl,
-               c2->skolem->deterministic_variables,
-               (float) c2->skolem->deterministic_variables / (float) (var_num + 1),
+               int_vector_count(c2->skolem->determinization_order),
+               (float) int_vector_count(c2->skolem->determinization_order) / (float) (var_num + 1),
                c2->restarts,
                c2->restarts_since_last_major,
                conflicts_until_next_restart

@@ -227,22 +227,21 @@ void skolem_update_pure_neg(Skolem* s, unsigned var_id, unsigned pure_neg) {
         sv->pure_neg = pure_neg;
     }
 }
-void skolem_update_deterministic(Skolem* s, unsigned var_id, unsigned deterministic) {
-    assert(deterministic == 0 || deterministic == 1);
+void skolem_update_deterministic(Skolem* s, unsigned var_id) {
+    if (skolem_is_deterministic(s, var_id)) {
+        return;
+    }
+    int_vector_add(s->determinization_order, (int) var_id);
+    c2_rl_update_D(s->options, var_id, true);
+    
+    V4("Setting var %u deterministic\n", var_id);
+    union skolem_undo_union suu;
+    suu.sus.var_id = var_id;
+    suu.sus.val = skolem_is_deterministic(s, var_id);
+    stack_push_op(s->stack, SKOLEM_OP_UPDATE_INFO_DETERMINISTIC, suu.ptr);
     skolem_enlarge_skolem_var_vector(s, var_id);
     skolem_var* sv = skolem_var_vector_get(s->infos, var_id);
-    if (deterministic && ! sv->deterministic) {
-        s->deterministic_variables += 1;
-        c2_rl_update_D(s->options, var_id, true);
-    }
-    if (deterministic != sv->deterministic) {
-        V4("Setting deterministic %d for var %u\n", deterministic, var_id);
-        union skolem_undo_union suu;
-        suu.sus.var_id = var_id;
-        suu.sus.val = sv->deterministic;
-        stack_push_op(s->stack, SKOLEM_OP_UPDATE_INFO_DETERMINISTIC, suu.ptr);
-        sv->deterministic = deterministic;
-    }
+    sv->deterministic = 1;
 }
 void skolem_update_decision(Skolem* s, Lit lit) {
     int_vector_add(s->decisions, lit);

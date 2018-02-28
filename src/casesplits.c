@@ -136,7 +136,7 @@ void casesplits_update_interface(Casesplits* cs, Skolem* skolem) {
         cegar_remember_original_satlit(cs, interface_var);
     }
     
-    V1("Deterministic vars: %zu\n", cs->skolem->deterministic_variables);
+    V1("Deterministic vars: %u\n", int_vector_count(cs->skolem->determinization_order));
     V1("Interface vars: (%u in total) ... ", int_vector_count(cs->interface_vars));
     if (debug_verbosity >= VERBOSITY_HIGH || (debug_verbosity >= VERBOSITY_LOW && int_vector_count(cs->interface_vars) < 20)) {
         int_vector_print(cs->interface_vars);
@@ -215,7 +215,7 @@ void casesplits_encode_last_case(Casesplits* cs) {
         satsolver_free(encoding_skolem->skolem);
         encoding_skolem->skolem = cs->skolem->skolem;
         
-        skolem_propagate(encoding_skolem);
+        skolem_propagate(encoding_skolem); // initial propagation
         for (unsigned i = 0; i < int_vector_count(c->decisions); i++) {
             Lit decision_lit = int_vector_get(c->decisions, i);
             if (skolem_is_deterministic(encoding_skolem, lit_to_var(decision_lit))) {
@@ -289,16 +289,12 @@ void casesplits_record_cegar_cube(Casesplits* cs, int_vector* cube, int_vector* 
     V2("\n");
 }
 
-void casesplits_record_case(Casesplits* cs, int_vector* decisions) {
-    if (cs->options->casesplits_cubes) {
-        // Adjust universal activity values
-        casesplits_close_heuristics(cs, cs->skolem->universals_assumptions);
-        casesplits_completed_case_split(cs, int_vector_copy(cs->skolem->universals_assumptions), int_vector_copy(decisions), qcnf_copy(cs->qcnf));
-//        casesplits_record_cegar_cube(cs, int_vector_copy(cs->skolem->universals_assumptions), NULL);
-    } else {
-        // assert(found skolem functions for all variables);
-        casesplits_completed_case_split(cs, NULL, int_vector_copy(decisions), qcnf_copy(cs->qcnf));
-    }
+void casesplits_record_case(Casesplits* cs) {
+    casesplits_close_heuristics(cs, cs->skolem->universals_assumptions);
+    casesplits_completed_case_split(cs,
+                                    int_vector_copy(cs->skolem->universals_assumptions),
+                                    int_vector_copy(cs->skolem->decisions),
+                                    qcnf_copy(cs->qcnf));
 }
 
 void casesplits_steal_cases(Casesplits* new_cs, Casesplits* old_cs) {

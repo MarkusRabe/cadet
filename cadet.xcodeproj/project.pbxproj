@@ -255,7 +255,6 @@
 				287C3B171E3C035500F7096A /* skolem_ext */,
 				287C3B121E399C7A00F7096A /* casesplits.h */,
 				28FA8D341E14F4E900A43B7B /* casesplits.c */,
-				287C3B111E399C7A00F7096A /* c2_casesplits_control.c */,
 				28C1C181202D3EB40094DB4E /* cegar.c */,
 				287BB7C11E0609B000AAE180 /* partitions.c */,
 				28675A121DDAA9D000951212 /* certify.h */,
@@ -296,6 +295,7 @@
 		287C3B181E3C03A400F7096A /* cadet2_ext */ = {
 			isa = PBXGroup;
 			children = (
+				287C3B111E399C7A00F7096A /* c2_casesplits_control.c */,
 				287C3B0F1E396B7600F7096A /* c2_traces.h */,
 				287C3B0E1E396B7600F7096A /* c2_traces.c */,
 				28C1C17D20197A000094DB4E /* c2_rl.h */,

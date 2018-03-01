@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <assert.h>
 
-//#define SATSOLVER_TRACE
+#define SATSOLVER_TRACE
 
 #define VERBOSITY_ALL    4
 #define VERBOSITY_HIGH   3

@@ -50,10 +50,6 @@ struct Skolem_Statistics {
     size_t explicit_propagations;
     size_t explicit_propagation_conflicts;
     
-    size_t successfully_avoided_conflict_checks;
-    size_t delayed_conflict_checks;
-    size_t unnecessary_propagations;
-    
     size_t decisions;
     
     Stats* global_conflict_checks_sat;
@@ -88,8 +84,8 @@ struct Skolem {
     int_vector* unique_consequence; // contains lit indexed by clause_id
     
     // Stores all the variables that are potentially conflicted
-    int_vector* potentially_conflicted_variables; // contains var_id
-    int_vector* decision_indicator_sat_lits; // contains var_id of temporary vars; required e.g. for functional synthesis
+    int_vector* potential_conflicts_satlits; // contains satlits that represent that represent a potential conflict
+    int_vector* decision_indicator_satlits; // contains var_id of temporary vars; required e.g. for functional synthesis
     int_vector* decisions;
     int_vector* determinization_order; // stores all determinizations in the order they happened
     int_vector* universals_assumptions;

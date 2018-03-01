@@ -195,6 +195,37 @@ void casesplits_close_heuristics(Casesplits* cs, int_vector* solved_cube) {
     }
 }
 
+void skolem_is_assignment_possible(Skolem* s, int_vector* ass) {
+    for (unsigned i = 0; i < int_vector_count(ass); i++) {
+        Lit lit = int_vector_get(ass, i);
+        int satlit = skolem_get_satsolver_lit(s, lit);
+        satsolver_assume(s->skolem, satlit);
+    }
+    sat_res res = satsolver_sat(s->skolem);
+    if (res == SATSOLVER_RESULT_UNSAT) {
+        V1("Illegally excluded assignment.\n");
+        abort();
+    }
+}
+
+void skolem_print_assignment(Skolem* s) {
+    V1("Assignment is:")
+    for (unsigned i = 0; i < var_vector_count(s->qcnf->vars); i++) {
+        if (qcnf_var_exists(s->qcnf, i)) {
+            assert(skolem_is_deterministic(s, i));
+            int satlit_pos = skolem_get_satsolver_lit(s,   (Lit) i);
+            int satlit_neg = skolem_get_satsolver_lit(s, - (Lit) i);
+            int satval_pos = satsolver_deref(s->skolem, satlit_pos);
+            int satval_neg = satsolver_deref(s->skolem, satlit_neg);
+            if (satval_pos != - satval_neg) {
+                LOG_WARNING(" Variable %u is conflicted! ", i);
+            }
+            V1(" %d", satval_pos * (Lit) i);
+        }
+    }
+    V1("\n");
+}
+
 void casesplits_encode_last_case(Casesplits* cs) {
     Case* c = vector_get(cs->solved_cases, vector_count(cs->solved_cases) - 1);
     if (c->type == 0 || (c->type == 1 && cs->options->casesplits_cubes)) { // cube case
@@ -216,6 +247,7 @@ void casesplits_encode_last_case(Casesplits* cs) {
         encoding_skolem->skolem = cs->skolem->skolem;
         
         skolem_propagate(encoding_skolem); // initial propagation
+        
         for (unsigned i = 0; i < int_vector_count(c->decisions); i++) {
             Lit decision_lit = int_vector_get(c->decisions, i);
             if (skolem_is_deterministic(encoding_skolem, lit_to_var(decision_lit))) {
@@ -228,7 +260,14 @@ void casesplits_encode_last_case(Casesplits* cs) {
         }
         
         V2("max satlit %d\n", satsolver_get_max_var(cs->skolem->skolem));
+        
         skolem_encode_global_conflict_check(encoding_skolem); // this encodes the disjunction over the potentially conflicted variables.
+        
+//        int_vector* ass = int_vector_init();
+//        int_vector_add(ass, 2);
+//        int_vector_add(ass, -5);
+//        skolem_is_assignment_possible(cs->skolem, ass);
+//        int_vector_free(ass);
         
 #ifdef DEBUG // test if the function is correct
         for (unsigned i = 0; i < var_vector_count(c->qcnf->vars); i++) {
@@ -237,15 +276,16 @@ void casesplits_encode_last_case(Casesplits* cs) {
         V1("Universal assumption is: ");
         for (unsigned i = 0; i < int_vector_count(c->universal_assumptions); i++) {
             Lit lit = int_vector_get(c->universal_assumptions, i);
+            assert(skolem_is_deterministic(cs->skolem, lit_to_var(lit))); // may be violated as soon as we allow universal assumption on dlvl>0
             int satlit = skolem_get_satsolver_lit(cs->skolem, lit);
+            assert(abs(satlit) != 1);
             satsolver_assume(cs->skolem->skolem, satlit);
             V1(" %d (%d)", lit, satlit);
         }
         V1("\n");
-        
+
         sat_res res = satsolver_sat(cs->skolem->skolem);
         if (res != SATSOLVER_RESULT_UNSAT) {
-            
             V1("Violating assignment is: ");
             for (unsigned i = 0; i < var_vector_count(c->qcnf->vars); i++) {
                 if (qcnf_var_exists(c->qcnf, i) && qcnf_is_universal(c->qcnf, i)) {

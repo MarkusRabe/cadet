@@ -26,9 +26,7 @@ Skolem* skolem_init(QCNF* qcnf, Options* o) {
     s->qcnf = qcnf;
     
     s->skolem = satsolver_init();
-#ifdef SATSOLVER_TRACE
-    satsolver_trace_commands(s->skolem);
-#endif
+
     c2_trace_for_profiling_initialize(o, s->skolem);
     s->state = SKOLEM_STATE_READY;
     s->decision_lvl = 0;
@@ -53,14 +51,14 @@ Skolem* skolem_init(QCNF* qcnf, Options* o) {
     
     s->determinicity_queue = pqueue_init(); // worklist_init(qcnf_compare_variables_by_occ_num);
     s->pure_var_queue = pqueue_init();
-    s->potentially_conflicted_variables = int_vector_init();
+    s->potential_conflicts_satlits = int_vector_init();
     s->unique_consequence = int_vector_init();
     s->stack = stack_init(skolem_undo);
     
     s->clauses_to_check = worklist_init(qcnf_compare_clauses_by_size);
     
     if (s->options->functional_synthesis) {
-        s->decision_indicator_sat_lits = int_vector_init();
+        s->decision_indicator_satlits = int_vector_init();
     }
     s->decisions = int_vector_init();
     s->determinization_order = int_vector_init();
@@ -75,10 +73,6 @@ Skolem* skolem_init(QCNF* qcnf, Options* o) {
     s->statistics.global_conflict_checks = 0;
     s->statistics.pure_vars = 0;
     s->statistics.pure_constants = 0;
-    
-    s->statistics.successfully_avoided_conflict_checks = 0;
-    s->statistics.delayed_conflict_checks = 0;
-    s->statistics.unnecessary_propagations = 0;
     
     s->statistics.global_conflict_checks_sat = statistics_init(10000);
     s->statistics.global_conflict_checks_unsat = statistics_init(10000);
@@ -109,12 +103,12 @@ void skolem_free(Skolem* s) {
     pqueue_free(s->determinicity_queue);
     pqueue_free(s->pure_var_queue);
     worklist_free(s->clauses_to_check);
-    int_vector_free(s->potentially_conflicted_variables);
+    int_vector_free(s->potential_conflicts_satlits);
     int_vector_free(s->unique_consequence);
     int_vector_free(s->decisions);
     int_vector_free(s->universals_assumptions);
     if (s->options->functional_synthesis) {
-        int_vector_free(s->decision_indicator_sat_lits);
+        int_vector_free(s->decision_indicator_satlits);
     }
     stack_free(s->stack);
     free(s);
@@ -213,7 +207,7 @@ bool skolem_is_conflicted(Skolem* s) {
     return s->conflict_var_id != 0;
 }
 bool skolem_is_potentially_conflicted(Skolem* s){
-    return int_vector_count(s->potentially_conflicted_variables) != 0;
+    return int_vector_count(s->potential_conflicts_satlits) != 0;
 }
 bool skolem_can_propagate(Skolem* s) {
     return (worklist_count(s->clauses_to_check) || pqueue_count(s->determinicity_queue) || pqueue_count(s->pure_var_queue))
@@ -221,8 +215,40 @@ bool skolem_can_propagate(Skolem* s) {
 }
 
 void skolem_add_potentially_conflicted(Skolem* s, unsigned var_id) {
-    int_vector_add(s->potentially_conflicted_variables, (int) var_id);
+    
     stack_push_op(s->stack, SKOLEM_OP_POTENTIALLY_CONFLICTED_VAR, (void*) (size_t) var_id);
+    
+    // don't need an additional satlit in case one side is a constant
+    int poslit = skolem_get_satsolver_lit(s,   (Lit) var_id);
+    int neglit = skolem_get_satsolver_lit(s, - (Lit) var_id);
+    assert(poslit != s->satlit_true || neglit != s->satlit_true);
+    if (poslit == s->satlit_true) {
+        int_vector_add(s->potential_conflicts_satlits, neglit);
+        return;
+    }
+    if (neglit == s->satlit_true) {
+        int_vector_add(s->potential_conflicts_satlits, poslit);
+        return;
+    }
+    
+    int potential_conflict_satlit = satsolver_inc_max_var(s->skolem); // Could save a variable name here by reserving some variable names for conflict checks initially.
+    int_vector_add(s->potential_conflicts_satlits, potential_conflict_satlit);
+    
+    satsolver_add(s->skolem, - potential_conflict_satlit);
+    satsolver_add(s->skolem, skolem_get_satsolver_lit(s,   (Lit) var_id));
+    satsolver_clause_finished(s->skolem);
+    
+    satsolver_add(s->skolem, - potential_conflict_satlit);
+    satsolver_add(s->skolem, skolem_get_satsolver_lit(s, - (Lit) var_id));
+    satsolver_clause_finished(s->skolem);
+    
+    // also needed when we want to know which of the conflicts was responsible
+    if (s->options->functional_synthesis) {
+        satsolver_add(s->skolem, potential_conflict_satlit);
+        satsolver_add(s->skolem, - skolem_get_satsolver_lit(s,   (Lit) var_id));
+        satsolver_add(s->skolem, - skolem_get_satsolver_lit(s, - (Lit) var_id));
+        satsolver_clause_finished(s->skolem);
+    }
 }
 
 // Returns false, if the lit is undefined. Otherwise returns satsolver lit corresponding to the lit-definition.
@@ -867,55 +893,16 @@ void skolem_propagate_partial_over_clause_for_lit(Skolem* s, Clause* c, Lit lit,
 void skolem_encode_global_conflict_check(Skolem* s) {
     
     if (s->options->functional_synthesis) {
-        for (unsigned i = 0; i < int_vector_count(s->decision_indicator_sat_lits); i++) {
-            satsolver_add(s->skolem, int_vector_get(s->decision_indicator_sat_lits, i));
+        for (unsigned i = 0; i < int_vector_count(s->decision_indicator_satlits); i++) {
+            satsolver_add(s->skolem, int_vector_get(s->decision_indicator_satlits, i));
         }
         satsolver_clause_finished(s->skolem);
     }
     
-    int_vector* conjunction_lits = int_vector_init();
-    
-    for (unsigned i = 0; i < int_vector_count(s->potentially_conflicted_variables); i++) {
-        unsigned potentially_contflicted = (unsigned) int_vector_get(s->potentially_conflicted_variables, i);
-        
-        //    // add illegal dependencies, including z-variable, which is called s->dependency_choice_sat_lit
-        //    skolem_add_clauses_with_illegal_dependencies(s, var_id);
-        
-#ifdef DEBUG
-        if (!s->record_conflicts) {
-            skolem_var si = skolem_get_info(s, potentially_contflicted);
-            assert(si.pos_lit != - si.neg_lit);
-            assert(si.pos_lit != - s->satlit_true);
-            assert(si.neg_lit != - s->satlit_true);
-        }
-#endif
-        
-        int conjunction_lit = satsolver_inc_max_var(s->skolem); // Could save a variable name here by reserving some variable names for conflict checks initially.
-        int_vector_add(conjunction_lits, conjunction_lit);
-        
-        satsolver_add(s->skolem, - conjunction_lit);
-        satsolver_add(s->skolem, skolem_get_satsolver_lit(s,   (Lit) potentially_contflicted));
-        satsolver_clause_finished(s->skolem);
-        
-        satsolver_add(s->skolem, - conjunction_lit);
-        satsolver_add(s->skolem, skolem_get_satsolver_lit(s, - (Lit) potentially_contflicted));
-        satsolver_clause_finished(s->skolem);
-        
-        //        satsolver_set_default_phase_lit(s->skolem, skolem_get_satsolver_lit(s,   (Lit) potentially_contflicted), 1);
-        //        satsolver_set_default_phase_lit(s->skolem, skolem_get_satsolver_lit(s, - (Lit) potentially_contflicted), 1);
-        
-        // we later check which of the conjunction lits is set to true, so we need also this side
-        satsolver_add(s->skolem, conjunction_lit);
-        satsolver_add(s->skolem, - skolem_get_satsolver_lit(s,   (Lit) potentially_contflicted));
-        satsolver_add(s->skolem, - skolem_get_satsolver_lit(s, - (Lit) potentially_contflicted));
-        satsolver_clause_finished(s->skolem);
-    }
-    
-    for (unsigned i = 0; i < int_vector_count(conjunction_lits); i++) {
-        satsolver_add(s->skolem, int_vector_get(conjunction_lits, i));
+    for (unsigned i = 0; i < int_vector_count(s->potential_conflicts_satlits); i++) {
+        satsolver_add(s->skolem, int_vector_get(s->potential_conflicts_satlits, i));
     }
     satsolver_clause_finished(s->skolem);
-    int_vector_free(conjunction_lits);
 }
 
 unsigned skolem_global_conflict_check(Skolem* s, unsigned var_id) {
@@ -925,31 +912,27 @@ unsigned skolem_global_conflict_check(Skolem* s, unsigned var_id) {
     if (s->record_conflicts) {
         return 0;
     }
+    assert(int_vector_count(s->potential_conflicts_satlits) == 1); // otherwise we cannot determine properly which variable was conflicted
     
-    V4("Global conflit check over %u vars.\n", int_vector_count(s->potentially_conflicted_variables));
-//    if (debug_verbosity >= VERBOSITY_ALL) {
-//        assert(satsolver_sat(s->skolem) == SATSOLVER_SATISFIABLE); // Sanity check: function definitions are not contradicting each other
-//    }
-    if (int_vector_count(s->potentially_conflicted_variables) > 1) {
-        V2("Checking multiple conflicts at once.\n");
-        V3("Potentially conflicted vars are:");
-        if (debug_verbosity >= VERBOSITY_HIGH) {
-            int_vector_print(s->potentially_conflicted_variables);
-        }
-    }
+    V4("Global conflit check for var %u\n", var_id);
     
     double time_stamp_start = get_seconds();
-    
     satsolver_push(s->skolem);
-    
     skolem_encode_global_conflict_check(s);
-    
     s->statistics.global_conflict_checks++;
     sat_res result = satsolver_sat(s->skolem);
+    double time_stamp_end = get_seconds();
     
-    assert(s->conflict_var_id == 0);
     if (result == SATSOLVER_SATISFIABLE) {
         V3("Conflict! For variable %u\n", var_id);
+        statistic_add_value(s->statistics.global_conflict_checks_sat, time_stamp_end - time_stamp_start);
+        
+        skolem_bump_conflict_potential(s, var_id);
+        s->conflict_var_id = var_id;
+        
+        abortif(s->conflicted_clause != NULL, "Conflicted clause should not be set here.");
+        s->state = SKOLEM_STATE_SKOLEM_CONFLICT;
+        stack_push_op(s->stack, SKOLEM_OP_SKOLEM_CONFLICT, NULL);
         
 #ifdef DEBUG
         for (unsigned i = 0; i < var_vector_count(s->qcnf->vars); i++) {
@@ -960,64 +943,23 @@ unsigned skolem_global_conflict_check(Skolem* s, unsigned var_id) {
                 assert(val_pos_lit != -1 || val_neg_lit != -1);
             }
         }
+        int val_pos_lit = satsolver_deref(s->skolem, skolem_get_satsolver_lit(s,   (Lit) var_id));
+        int val_neg_lit = satsolver_deref(s->skolem, skolem_get_satsolver_lit(s, - (Lit) var_id));
+        assert(val_pos_lit == 1 && val_neg_lit == 1);
 #endif
-        
-        double time_stamp_end = get_seconds();
-        statistic_add_value(s->statistics.global_conflict_checks_sat, time_stamp_end - time_stamp_start);
-        
-        // In case the check was over multiple potentially conflicted variables, pick the first
-        for (unsigned i = 0; i < int_vector_count(s->potentially_conflicted_variables); i++) {
-//            int val = satsolver_deref(s->skolem, int_vector_get(conjunction_lits, i));
-            unsigned var_id = (unsigned) (unsigned) int_vector_get(s->potentially_conflicted_variables, i);
-            int val_pos_lit = satsolver_deref(s->skolem, skolem_get_satsolver_lit(s,   (Lit) var_id));
-            int val_neg_lit = satsolver_deref(s->skolem, skolem_get_satsolver_lit(s, - (Lit) var_id));
-            if (val_pos_lit == 1 && val_neg_lit == 1) {
-                s->statistics.successfully_avoided_conflict_checks += i;
-                s->statistics.unnecessary_propagations += int_vector_count(s->potentially_conflicted_variables) - i - 1;
-                if (int_vector_count(s->potentially_conflicted_variables) > 1) {
-                    V4("...skipped %u of %u potentially conflicted vars\n",i,int_vector_count(s->potentially_conflicted_variables));
-                }
-                skolem_bump_conflict_potential(s, var_id);
-                
-                s->conflict_var_id = var_id;
-                break;
-            } else {
-                assert(satsolver_deref(s->skolem, skolem_get_satsolver_lit(s,   (Lit) var_id)) == 1 ||
-                       satsolver_deref(s->skolem, skolem_get_satsolver_lit(s, - (Lit) var_id)) == 1);
-            }
-        }
-        
-        abortif(s->conflicted_clause != NULL, "Conflicted clause should not be set here.");
-        s->state = SKOLEM_STATE_SKOLEM_CONFLICT;
-        stack_push_op(s->stack, SKOLEM_OP_SKOLEM_CONFLICT, NULL);
     } else {
         V3("Not globally conflicted.\n");
-        
-        double time_stamp_end = get_seconds();
         statistic_add_value(s->statistics.global_conflict_checks_unsat, time_stamp_end - time_stamp_start);
-        
         satsolver_pop(s->skolem);
+        skolem_slash_conflict_potential(s, var_id);
         
-        assert(int_vector_count(s->potentially_conflicted_variables) > 0);
-        s->statistics.successfully_avoided_conflict_checks += int_vector_count(s->potentially_conflicted_variables) - 1;
-        for (unsigned i = 0; i < int_vector_count(s->potentially_conflicted_variables); i++) {
-            unsigned var_id = (unsigned) int_vector_get(s->potentially_conflicted_variables, i);
-            skolem_slash_conflict_potential(s, var_id);
-            
-            // Make the two variables equal; the other binary clause was already asserted before the conflict check.
-            satsolver_add(s->skolem, - skolem_get_satsolver_lit(s,   (Lit) var_id));
-            satsolver_add(s->skolem, - skolem_get_satsolver_lit(s, - (Lit) var_id));
-            satsolver_clause_finished(s->skolem);
-        }
-        int_vector_reset(s->potentially_conflicted_variables);
+        // Make the two variables equal; the other binary clause was already asserted before the conflict check.
+        satsolver_add(s->skolem, - skolem_get_satsolver_lit(s,   (Lit) var_id));
+        satsolver_add(s->skolem, - skolem_get_satsolver_lit(s, - (Lit) var_id));
+        satsolver_clause_finished(s->skolem);
+        
+        int_vector_reset(s->potential_conflicts_satlits);
     }
-    
-//    for (unsigned i = 0; i < int_vector_count(s->potentially_conflicted_variables); i++) {
-//        unsigned potentially_contflicted = (unsigned) int_vector_get(s->potentially_conflicted_variables, i);
-//        satsolver_set_default_phase_lit(s->skolem, skolem_get_satsolver_lit(s,   (Lit) potentially_contflicted), 2);
-//        satsolver_set_default_phase_lit(s->skolem, skolem_get_satsolver_lit(s, - (Lit) potentially_contflicted), 2);
-//    }
-    
     return s->conflict_var_id;
 }
 
@@ -1103,10 +1045,8 @@ void skolem_undo(void* parent, char type, void* obj) {
             
         case SKOLEM_OP_POTENTIALLY_CONFLICTED_VAR:
             assert(obj);
-            unsigned var_id = (unsigned) obj;
-            if (int_vector_count(s->potentially_conflicted_variables) > 0) {
-                int elem = int_vector_pop(s->potentially_conflicted_variables);
-                abortif(elem != (int) var_id, "Popping potentially conflicted variable failed.");
+            if (int_vector_count(s->potential_conflicts_satlits) > 0) {
+                int_vector_pop(s->potential_conflicts_satlits);
             }
             break;
             
@@ -1123,8 +1063,8 @@ void skolem_undo(void* parent, char type, void* obj) {
             si->decision_neg = 0;
             
             if (s->options->functional_synthesis) {
-                int_vector_pop(s->decision_indicator_sat_lits);
-                assert(int_vector_count(s->decisions) == int_vector_count(s->decision_indicator_sat_lits));
+                int_vector_pop(s->decision_indicator_satlits);
+                assert(int_vector_count(s->decisions) == int_vector_count(s->decision_indicator_satlits));
             }
             break;
             
@@ -1309,6 +1249,7 @@ void skolem_assign_constant_value(Skolem* s, Lit lit, union Dependencies propaga
     
     skolem_update_deterministic(s, var_id);
     
+    
     // may be necessary, even after conflict check; if not conflicted, the other satlit must still be updated to the correct constant.
     int polarity = lit > 0 ? 1 : -1;
     skolem_update_pos_lit(s, var_id,   polarity * s->satlit_true);
@@ -1457,7 +1398,7 @@ void skolem_decision(Skolem* s, Lit decision_lit) {
         // Define the sat_lit_fresh := new_val_satlit && -val_satlit  // - opposite_satlit && - val_satlit
         int sat_lit_fresh = satsolver_inc_max_var(s->skolem);
         
-        int_vector_add(s->decision_indicator_sat_lits, sat_lit_fresh);
+        int_vector_add(s->decision_indicator_satlits, sat_lit_fresh);
 
         satsolver_add(s->skolem, sat_lit_fresh);
         satsolver_add(s->skolem, - new_val_satlit);

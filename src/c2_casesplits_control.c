@@ -326,6 +326,5 @@ void c2_close_case(C2* c2) {
         c2->result = CADET_RESULT_SAT;
     } else {
         assert(c2->result == CADET_RESULT_UNKNOWN); // because backtrack case splits may not backtrack at all if no casesplit was done. thus also the result may be still valid.
-        
     }
 }

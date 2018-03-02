@@ -80,17 +80,17 @@ def print_result(name,config,expected,result,return_value,seconds,memory):
         
     if result == TEST_FAILED:
         failed = True
-        log_progress(red('FAILED: '))
+        log_progress(red('FAILED:  '))
     elif result == TEST_TIMEOUT:
-        log_progress(yellow('TIMEOUT:'))
+        log_progress(yellow('TIMEOUT: '))
     else:
         if result == TEST_UNKNOWN:
-            log_progress(cyan('UNKNOWN:'))
+            log_progress(cyan('UNKNOWN: '))
         else:
-            log_progress(green('SUCCESS:'))
+            log_progress(green('SUCCESS: '))
         
     if seconds != None and memory != None:
-        log_progress(' [{:.2f}s, {:.1f}MB] '.format(seconds, memory))
+        log_progress('[{:.2f}s, {:.1f}MB] '.format(seconds, memory))
     
     log_progress(name + ' ' + config)
     log_progress('\n')
@@ -535,7 +535,7 @@ if __name__ == "__main__":
         ARGS.all = False
         ARGS.timeout = 3
         ARGS.csv = False
-        ARGS.threads = 1
+        ARGS.threads = 2
         ARGS.instances = None
         # ARGS.certify = False
         categories = ['test_files']

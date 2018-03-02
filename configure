@@ -62,6 +62,7 @@ elif [[ "$OSTYPE" == "darwin"* ]]; then # OSX
         # Lightweight shell and GNU utilities compiled for Windows (part of MinGW)
 else
     echo 'Building shared libraries not supported for this OS. See configure script'
+    echo 'SHARED = ' >> Makefile
 fi
 
 cat Makefile.in >> Makefile

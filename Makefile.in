@@ -37,5 +37,5 @@ profile: default
 
 clean:
 	cd $(SRCDIR) && rm -f *.o *.so *.h.gch *.plist minisat/*.o lingeling/*.o
-	-rm -f $(TARGET)
+	-rm -f $(TARGET) libcadet.so
 

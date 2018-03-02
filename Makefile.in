@@ -29,10 +29,13 @@ $(TARGET): $(OBJECTS) $(LGL_OBJECTS) $(MINISAT_OBJECTS)
 test: default
 	python scripts/tester.py --test -f
 
+shared: default
+	$(CC) $(CFLAGS) $(OBJECTS) $(LGL_OBJECTS) $(MINISAT_OBJECTS) $(LIBS) $(SHARED)
+
 profile: default
 	$(CC) $(CFLAGS) -pg $(OBJECTS) $(MINISAT_OBJECTS) $(LIBS) -o $(TARGET) 
 
 clean:
-	cd $(SRCDIR) && rm -f *.o *.h.gch *.plist minisat/*.o lingeling/*.o
+	cd $(SRCDIR) && rm -f *.o *.so *.h.gch *.plist minisat/*.o lingeling/*.o
 	-rm -f $(TARGET)
 

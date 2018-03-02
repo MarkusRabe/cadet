@@ -35,47 +35,7 @@ UNKNOWN = 30
 TIMEOUT = -15
 
 categories = []
-HANDMADE_INSTANCES = ['handmade']
-QBFLIB2010_INSTANCES = ['qbflib2010-2QBF']
-QBFEVAL2016_2QBF_INSTANCES = ['qbfeval2016-2QBF']
-QBFEVAL2017_2QBF = ['qbfeval2017-2QBF']
-QBFEVAL2016_INSTANCES = ['qbfeval2016']
-EVAL2012r2 = ['eval2012r2']
-HARDWAREFIXPOINT = ['hardwarefixpoint']
-PEC_2QBF = ['pec-2qbf']
-COMPLEXITY = ['complexity']
-SYNTHESIS = ['synthesis']
-EASY_INSTANCES = ['easy']
-RANKING = ['rankingfunctions']
-RANDOM2QBF =['random2QBF']
-TERMINATOR =['terminator']
-HORN = ['horn']
-RENHORN = ['renHorn']
-RF_1133qd = ['reduction-finding-1133qd']
-IRQ = ['irq']
-WMI = ['wmi']
-SORTING = ['sorting']
-CIRCUIT_UNDERSTANDING_3QBF = ['circuit-understanding-3qbf']
-HOLCOMB = ['holcomb']
-SYGUS_MINITEST = ['sygus-minitest']
-SYGUS_PERFORMANCE = ['sygus-performance']
-SYGUS_GALLERY = ['sygus-gallery']
-SYGUS_MINITEST3QBF = ['sygus-minitest3QBF']
-SYGUS_PERFORMANCE3QBF = ['sygus-performance3QBF']
-SYGUS_GALLERY3QBF = ['sygus-gallery3QBF']
-TICTACTOE3x3 = ['gttt3x3']
-TICTACTOE4x4 = ['gttt4x4']
-TICTACTOE5x5 = ['gttt5x5']
-TICTACTOE6x6 = ['gttt6x6']
-RIENER = ['riener']
-BMC2006 = ['bmc2006']
-STRATEGIC_COMPANIES = ['strategiccompanies']
-QREVENGE_ADDER_SELF = ['qrevenge-adder-self-2QBF']
-FUNCTIONAL_SYNTHESIS = ['functional-synthesis']
-FUZZSAT_QBF = ['fuzzsat-qbf']
-BENCHMARK = ['benchmark']
-ALL_INSTANCES = HANDMADE_INSTANCES + EASY_INSTANCES + QBFLIB2010_INSTANCES + QBFEVAL2016_2QBF_INSTANCES + QBFEVAL2016_INSTANCES + CIRCUIT_UNDERSTANDING_3QBF + HARDWAREFIXPOINT + PEC_2QBF + COMPLEXITY + SYNTHESIS + RANKING + RANDOM2QBF + TERMINATOR + HORN + RENHORN + RF_1133qd + IRQ + WMI + SORTING + HOLCOMB + SYGUS_MINITEST + SYGUS_PERFORMANCE + SYGUS_GALLERY + SYGUS_MINITEST3QBF + SYGUS_PERFORMANCE3QBF + SYGUS_GALLERY3QBF + TICTACTOE3x3 + TICTACTOE4x4 + TICTACTOE5x5 + TICTACTOE6x6 + EVAL2012r2 + RIENER + BMC2006 + STRATEGIC_COMPANIES + QREVENGE_ADDER_SELF + FUNCTIONAL_SYNTHESIS + QBFEVAL2017_2QBF + FUZZSAT_QBF + BENCHMARK
-# PERFORMANCE_BENCHMARKS = QBFEVAL2016_2QBF_INSTANCES + HARDWAREFIXPOINT + SYGUS_PERFORMANCE + FUNCTIONAL_SYNTHESIS
+configs = [''] # configurations to run the tool in
 
 TIME_UTIL = '/usr/bin/time -v '
 if sys.platform == 'darwin':
@@ -86,8 +46,8 @@ TIME_UTIL = 'exec ' + TIME_UTIL
 def log_fail(name, log):
     for line in log.split('\n'):
         if line:
-            print ('> ' + line)
-    print ('')
+            print('> ' + line)
+    print('')
 
 def log_return_value(name, return_value):
     if return_value == SATISFIABLE:
@@ -110,7 +70,7 @@ def compute_average(results):
     memory /= len(results)
     return seconds, memory
 
-def print_result(name,result,return_value,seconds,memory):
+def print_result(name,config,expected,result,return_value,seconds,memory):
     if return_value == SATISFIABLE:
         return_value = "SAT"
     elif return_value == UNSATISFIABLE:
@@ -120,23 +80,24 @@ def print_result(name,result,return_value,seconds,memory):
         
     if result == TEST_FAILED:
         failed = True
-        log_progress(red('FAILED:  ') + name)
+        log_progress(red('FAILED: '))
     elif result == TEST_TIMEOUT:
-        log_progress(yellow('TIMEOUT: ') + name)
+        log_progress(yellow('TIMEOUT:'))
     else:
         if result == TEST_UNKNOWN:
-            log_progress(cyan('UNKNOWN: ') + name)
+            log_progress(cyan('UNKNOWN:'))
         else:
-            log_progress(green('SUCCESS: ') + name)
-    
-    if seconds != None and memory != None:
-        log_progress(' [{:.2f}s, {:.1f}MB]'.format(seconds, memory))
+            log_progress(green('SUCCESS:'))
         
+    if seconds != None and memory != None:
+        log_progress(' [{:.2f}s, {:.1f}MB] '.format(seconds, memory))
+    
+    log_progress(name + ' ' + config)
     log_progress('\n')
             
 def print_stats():
     global failed
-    print ('\nStatistics:')
+    print('\nStatistics:')
     i = 0
     for name in testcases:
         if name not in testcase_result:
@@ -148,7 +109,7 @@ def print_stats():
         if name in benchmark_results:
             seconds, memory = compute_average(benchmark_results[name])
         print_result(name,result,return_value,seconds,memory)
-    print ('Printed {} results in total'.format(i))
+    print('Printed {} results in total'.format(i))
     
     log_progress(green( 'SUCCESS: ') + "{}\n".format(SUCCESSES))
     log_progress(red(   'FAILED:  ') + "{}\n".format(FAILEDS))
@@ -190,7 +151,7 @@ def worker_loop(job_queue, result_queue, process_id):
     while True:
         # print 'new_iteration of thread {}'.format(process_id)
         try:
-            job = job_queue.get(block=True,timeout=1) # This is hacky times out after 1 second if no element is in the queue. This terminates the tread!
+            job = job_queue.get(block=True,timeout=1) # This is hacky; times out after 1 second if no element is in the queue. This terminates the tread!
             result_queue.put(run_testcase(job),block=True)
             
         except Queue.Empty:
@@ -210,10 +171,11 @@ def run_testcases(threads, runs=1):
     # Test instances
     for category in categories:
         if category in all_testcases:
-            for testcase in all_testcases[category]:
-                to_run.append(testcase)
+            for (path,result) in all_testcases[category]:
+                for config in configs:
+                    to_run.append((path,result,config))
     
-    testcases = [name for name,_ in to_run]
+    testcases = [name + ' ' + config for name,_,config in to_run]
     
     to_run = to_run * runs
     
@@ -251,7 +213,7 @@ def run_testcases(threads, runs=1):
                 global UNKNOWNS
                 UNKNOWNS += 1
             else:
-                print ('Unexpected return code. Statistics might be affected.')
+                print('Unexpected return code. Statistics might be affected.')
         except KeyboardInterrupt:
             interrupted = True
             for worker in workers:
@@ -339,9 +301,9 @@ def profile_entry(testcase,output,seconds,memory,return_value):
     for attribute, value in p.items():
         print('  {} : {}'.format(attribute, value))
 
-def run_testcase(testcase):
-    testcase, expected = testcase
-    parameters = []
+def run_testcase(testcase_input):
+    testcase, expected, config = testcase_input
+    parameters = config.split()
     if ARGS.certify:
         # random_string = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(N))
         cert_file = testcase+'.cert1.aig';
@@ -400,7 +362,7 @@ def run_testcase(testcase):
     else:
         code = TEST_FAILED
             
-    print_result(testcase,code,return_value,seconds,memory)
+    print_result(testcase, config, expected,code,return_value,seconds,memory)
     
     if code == TEST_FAILED:
         log_fail(testcase, output + error)
@@ -449,9 +411,9 @@ def getTestCases():
     if ARGS.directory:
         test_cases['directory'] = []
         for (dirpath, dirnames, filenames) in os.walk(ARGS.directory):
-            # print ('dirpath' + dirpath + '\n')
+            # print('dirpath' + dirpath + '\n')
             # for dn in dirnames:
-                # print ('  dn: ' + dn + '\n')
+                # print('  dn: ' + dn + '\n')
             # file_count = 0
 #             for fn in filenames:
 #                 file_count += 1
@@ -542,14 +504,16 @@ if __name__ == "__main__":
                         help='Write CSV to file (default: tester.csv)')
     parser.add_argument('--threads', dest='threads', action='store', nargs='?', type=int, metavar='num', default=1,
                         help='Number of threads to use (default: {})'.format(multiprocessing.cpu_count()))
-    parser.add_argument('instances', nargs='*',
-                        help='Instances to run the tester on')
-    parser.add_argument('--tool', dest='tool', action='store', default=os.path.join(BASE_PATH, './cadet -v 1'), help='provide an alternative tool name, E.g. depqbf depqbf5.0 rareqs caqe qesto quantor ...')
+    parser.add_argument('--tool', dest='tool', action='store', default=os.path.join(BASE_PATH, './cadet -v 1'), 
+                        help='provide an alternative tool name, E.g. depqbf depqbf5.0 rareqs caqe qesto quantor ...')
+    # parser.add_argument('--config', dest='configs', action='store', default='',
+                        # help='provide a list of configurations in which to run each file')
+    parser.add_argument('--config', metavar='C', type=str, nargs='*', 
+                        help='provide a list of command line configurations to run the tool in')
     parser.add_argument('--bloqqer', dest='use_bloqqer', action='store_true', 
                         help='Use bloqqer to preprocess the formulas.')
-    parser.add_argument('--preprocessor', dest='preprocessor', action='store', default=None, help='Use this command to set a preprocessor command.')
-    parser.add_argument('--optimize_params_bloqqer', dest='bloqqer_params', action='store_true',
-                        help='Find to find optimal parameters of bloqqer.')
+    parser.add_argument('--preprocessor', dest='preprocessor', action='store', default=None, 
+                        help='Use this command to set a preprocessor command.')
     parser.add_argument('--certify', dest='certify', action='store_true',
                         help='Also test certificates. CADET only.')
     parser.add_argument('-d', '--directory', dest='directory', action='store', default=None,
@@ -559,29 +523,36 @@ if __name__ == "__main__":
     parser.add_argument('-f', '--force', dest='force', action='store_true', default=None,
                         help='Override CPU load check.')
                         
-    for instance in ALL_INSTANCES:
-        parser.add_argument('--{}'.format(instance), dest=instance, action='store_true', help='Run the {} formulas'.format(instance))
-
+    instances_file = open('integration-tests/instances.txt', 'r').read()
+    all_categories = re.findall(r'\[([A-Za-z0-9_]+)\]', instances_file)
+    for cat in all_categories:
+        parser.add_argument('--{}'.format(cat), dest=cat, action='store_true', help='Run the {} formulas'.format(cat))
+    
     ARGS = parser.parse_args()
     
     if ARGS.test:
         print('Test mode')
         ARGS.all = False
-        ARGS.timeout = 5
+        ARGS.timeout = 3
         ARGS.csv = False
         ARGS.threads = 1
         ARGS.instances = None
         # ARGS.certify = False
-        categories = ['test']
+        categories = ['test_files']
+        configs = ['', '--cegar', '--case_splits', '--cegar --case_splits']
+    
+    if ARGS.config:
+        configs = []
+        for c in ARGS.config:
+            configs.append(c)
     
     if ARGS.directory:
         categories = ['directory']
     
-    for instance in ALL_INSTANCES:
-        if getattr(ARGS, instance):
-            if not instance in categories:
-                categories.append(instance)
-        
+    for cat in all_categories:
+        if getattr(ARGS, cat):
+            if not cat in categories:
+                categories.append(cat)
     if not categories:
         parser.print_help()
         exit()

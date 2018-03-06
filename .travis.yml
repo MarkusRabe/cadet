@@ -6,21 +6,22 @@ os:
 
 dist: trusty
 
-python:
-  - "2.7.9"
-  - "2.7.13"
-  - "3.4"
-  - "3.5"
-  - "3.6"
+# python:
+#   - "2.7.9"
+#   - "2.7.13"
+#   - "3.4"
+#   - "3.5"
+#   - "3.6"
 
 compiler:
   - clang
   - gcc
   
 before_install:
+  - sudo apt-get update
   - sudo apt-get install python-tk python-numpy python-matplotlib
   # - pip install --user subprocess32 numpy cycler python-dateutil functools32 pytz pyparsing matplotlib
-  - pip install --user matplotlib
+  # - pip install --user matplotlib
   
 script: ./configure && make && make test
 

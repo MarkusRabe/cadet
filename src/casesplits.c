@@ -254,9 +254,9 @@ void casesplits_encode_last_case(Casesplits* cs) {
                 V2("Discovered during replay that decision %d is not needed.\n", decision_lit);
             } else {
                 skolem_decision(encoding_skolem, decision_lit);
+                skolem_propagate(encoding_skolem);
+                assert(!skolem_is_conflicted(encoding_skolem));
             }
-            skolem_propagate(encoding_skolem);
-            assert(!skolem_is_conflicted(encoding_skolem));
         }
         
         V2("max satlit %d\n", satsolver_get_max_var(cs->skolem->skolem));
@@ -278,7 +278,7 @@ void casesplits_encode_last_case(Casesplits* cs) {
             Lit lit = int_vector_get(c->universal_assumptions, i);
             assert(skolem_is_deterministic(cs->skolem, lit_to_var(lit))); // may be violated as soon as we allow universal assumption on dlvl>0
             int satlit = skolem_get_satsolver_lit(cs->skolem, lit);
-            assert(abs(satlit) != 1);
+            assert(satlit != - cs->skolem->satlit_true);
             satsolver_assume(cs->skolem->skolem, satlit);
             V1(" %d (%d)", lit, satlit);
         }

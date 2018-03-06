@@ -10,8 +10,7 @@
 typedef enum {
     CADET_RESULT_SAT      = 10, // currently also internally used to represent completed cases; should be refactored
     CADET_RESULT_UNSAT    = 20,
-    CADET_RESULT_UNKNOWN  = 30,
-    CADET_RESULT_ABORT_RL = 40
+    CADET_RESULT_UNKNOWN  = 30
 } cadet_res;
 
 // initializes the array 'permutation' wit h a random permutation of the indices of the item_array, which is assumed to beterminated by a 0 entry. Returns the size of item_array (i.e. the incdex of the 0 entry). 

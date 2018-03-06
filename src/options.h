@@ -25,14 +25,13 @@ typedef struct {
     bool cegar_soft_conflict_limit; // switches cegar on after 1000 conflicts to also solve hard problems. 
     
     // Use a configuration of CADET 2 that is easier to debug than the performance-oriented configuration
-    bool easy_debugging_mode_c2;
+    bool easy_debugging;
     
     // Computational enginge
     bool cegar;
     bool cegar_only;
     bool use_qbf_engine_also_for_propositional_problems;
     unsigned examples_max_num;
-    unsigned initial_examples;
     bool functional_synthesis;
     
     // Aiger interpretations

@@ -29,19 +29,6 @@ void cert_write_aiger(aiger* a, Options* o) {
     }
 }
 
-void c2_print_qdimacs_output_from_universal_clause(QCNF* qcnf) {
-    assert(int_vector_count(qcnf->universal_clauses) > 0);
-    unsigned universal_clause_idx = (unsigned) int_vector_get(qcnf->universal_clauses, 0); // must contain at least one element
-    Clause* universal_clause = vector_get(qcnf->clauses, universal_clause_idx);
-    assert(universal_clause->universal_clause);
-    printf("V"); // using printf, since everything else will otherwise be prefixed with a "c " when log_qdimacs_compliant is activated
-    for (unsigned i = 0; i < universal_clause->size; i++) {
-        assert(qcnf_is_universal(qcnf, lit_to_var(universal_clause->occs[i])));
-        printf(" %d", - universal_clause->occs[i]);
-    }
-    printf("\n");
-}
-
 void c2_print_qdimacs_output(QCNF* qcnf, void* domain, int (*get_value)(void* domain, Lit lit)) {
     printf("V"); // using printf, since everything else will otherwise be prefixed with a "c " when log_qdimacs_compliant is activated
     for (unsigned i = 1; i < var_vector_count(qcnf->vars); i++) {

@@ -123,7 +123,7 @@ int main(int argc, const char* argv[]) {
                     } else if (strcmp(argv[i], "--aiger_negated") == 0) {
                         options->aiger_negated_encoding = true;
                     } else if (strcmp(argv[i], "--debugging") == 0) {
-                        options->easy_debugging_mode_c2 = true;
+                        options->easy_debugging = true;
                     } else if (strcmp(argv[i], "--aiger_controllable_inputs") == 0) {
                         if (i + 1 >= argc) {
                             LOG_ERROR("Missing string for argument --aiger_ci\n");

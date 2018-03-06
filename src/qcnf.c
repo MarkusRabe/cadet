@@ -511,6 +511,7 @@ void qcnf_register_clause(QCNF* qcnf, Clause* c) {
     
     qcnf_check_if_clause_is_universal(qcnf, c);
     if (c->universal_clause) {
+        V1("CNF contains a universal clause (clause id %u).\n", c->clause_idx);
         int_vector_add(qcnf->universal_clauses, (int) c->clause_idx);
     }
 }

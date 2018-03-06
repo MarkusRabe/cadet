@@ -155,26 +155,22 @@ void c2_casesplits_reset_countdown(C2* c2) {
 }
 
 bool c2_make_universal_assumption_unless_vacuous(C2* c2, Lit lit) {
+    assert(! c2_is_in_conflcit(c2));
+    assert(lit);
+    
+    if (skolem_check_if_domain_is_empty(c2->skolem)) {
+        c2->state = C2_CLOSE_CASE; // this case is finished
+        return true;
+    }
+    
     bool is_vacuous = false;
     if (skolem_is_universal_assumption_vacuous(c2->skolem, lit)) {
         is_vacuous = true;
         V1("   Vacuous assumption: %d\n", - lit);
         V3("This case admits no assignments to the universals that are consistent with dlvl 0, switching polarity and assuming %d instead.\n", - lit);
         lit = - lit;
-        if (skolem_is_universal_assumption_vacuous(c2->skolem, lit)) {
-            V1("Also the SAT check of the other polarity failed. Exhausted the search space on the universal side.\n");
-            assert(c2->result == CADET_RESULT_UNKNOWN);
-            if (int_vector_count(c2->skolem->universals_assumptions) == 0) {
-                c2->result = CADET_RESULT_SAT;
-            } else {
-                abortif(! c2->options->cegar, "This case can only occur when something else added assumptions.");
-                //                casesplits_close_case(c2); // watch out: this might be a recursive call
-            }
-            lit = 0; // suppresses that case split happens
-            return true;
-        }
+        assert(! c2->options->easy_debugging || ! skolem_is_universal_assumption_vacuous(c2->skolem, lit));
     }
-    assert(lit != 0);
     
     skolem_push(c2->skolem);
     examples_push(c2->examples);
@@ -189,8 +185,6 @@ bool c2_make_universal_assumption_unless_vacuous(C2* c2, Lit lit) {
     if (skolem_is_conflicted(c2->skolem)) { // actual conflict
         assert(c2->skolem->decision_lvl == c2->restart_base_decision_lvl); // otherwise we need to go into conflict analysis
         V1("Case split lead to immediate conflict.\n");
-        assert(c2->result == CADET_RESULT_UNKNOWN);
-        c2->result = CADET_RESULT_UNSAT;
         c2->state = C2_SKOLEM_CONFLICT;
     }
     return is_vacuous;
@@ -305,7 +299,7 @@ int_vector* c2_determine_notorious_determinsitic_variables(C2* c2) {
 }
 
 void c2_close_case(C2* c2) {
-    assert(c2->result == CADET_RESULT_SAT);
+    assert(c2->state == C2_CLOSE_CASE);
     
     V1("Case split of depth %u successfully completed.\n", int_vector_count(c2->skolem->universals_assumptions));
     for (unsigned i = 0; i < int_vector_count(c2->skolem->universals_assumptions); i++) {
@@ -314,17 +308,16 @@ void c2_close_case(C2* c2) {
     V1("\n");
     c2->statistics.cases_closed += 1;
     
-    casesplits_record_case(c2->cs);
+    bool completed_casesplit = ! skolem_has_empty_domain(c2->skolem);
+    if (completed_casesplit) {casesplits_record_case(c2->cs);}
     c2_backtrack_to_decision_lvl(c2, c2->restart_base_decision_lvl);
     assert(c2->skolem->decision_lvl == c2->restart_base_decision_lvl);
     c2_backtrack_casesplit(c2);
     assert(c2->skolem->decision_lvl == 0);
-    casesplits_encode_last_case(c2->cs);
+    if (completed_casesplit) {casesplits_encode_last_case(c2->cs);}
     assert(c2->skolem->stack->push_count == c2->skolem->decision_lvl);
     
-    if (satsolver_sat(c2->skolem->skolem) == SATSOLVER_RESULT_UNSAT) {
-        c2->result = CADET_RESULT_SAT;
-    } else {
-        assert(c2->result == CADET_RESULT_UNKNOWN); // because backtrack case splits may not backtrack at all if no casesplit was done. thus also the result may be still valid.
+    if (skolem_check_if_domain_is_empty(c2->skolem)) {
+        c2->state = C2_SAT;
     }
 }

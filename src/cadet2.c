@@ -32,9 +32,7 @@ C2* c2_init_qcnf(QCNF* qcnf, Options* options) {
     c2->qcnf = qcnf;
     c2->options = options;
 
-    
     c2->state = C2_READY;
-    c2->result = CADET_RESULT_UNKNOWN;
     c2->restarts = 0;
     c2->major_restarts = 0;
     c2->restarts_since_last_major = 0;
@@ -70,8 +68,8 @@ C2* c2_init_qcnf(QCNF* qcnf, Options* options) {
     c2->magic.major_restart_frequency = 15;
     c2->magic.replenish_frequency = 100;
     c2->next_major_restart = c2->magic.major_restart_frequency;
-    c2->magic.num_restarts_before_Jeroslow_Wang = options->easy_debugging_mode_c2 ? 1000 : 3;
-    c2->magic.num_restarts_before_case_splits = options->easy_debugging_mode_c2 ? 0 : 3;
+    c2->magic.num_restarts_before_Jeroslow_Wang = options->easy_debugging ? 1000 : 3;
+    c2->magic.num_restarts_before_case_splits = options->easy_debugging ? 0 : 3;
     c2->magic.keeping_clauses_threshold = 3;
 
     // Magic constants for case splits
@@ -82,12 +80,15 @@ C2* c2_init_qcnf(QCNF* qcnf, Options* options) {
 //    c2->case_split_depth_penalty = C2_CASE_SPLIT_DEPTH_PENALTY_QUADRATIC;
     c2->case_split_depth_penalty = C2_CASE_SPLIT_DEPTH_PENALTY_LINEAR;
     c2->conflicts_between_case_splits_countdown = 1;
-    c2->magic.case_split_linear_depth_penalty_factor = options->easy_debugging_mode_c2 ? 1 : 5;
+    c2->magic.case_split_linear_depth_penalty_factor = options->easy_debugging ? 1 : 5;
 
     
     c2->cs = casesplits_init(qcnf, options);
     // DOMAINS
     c2->skolem = skolem_init(c2->qcnf, options);
+    if (skolem_is_conflicted(c2->skolem)) {
+        c2->state = C2_UNIVERSAL_ASSIGNMENT_CONFLICT;
+    }
     
     c2->examples = examples_init(qcnf, options->examples_max_num);
     c2->ca = conflcit_analysis_init(c2);
@@ -197,12 +198,16 @@ Var* c2_pick_most_active_notdeterministic_variable(C2* c2) {
 
 
 void c2_backtrack_to_decision_lvl(C2 *c2, unsigned backtracking_lvl) {
-    
-    if (backtracking_lvl < c2->skolem->decision_lvl) {
-        c2->result = CADET_RESULT_UNKNOWN;
+    assert(backtracking_lvl <= c2->skolem->decision_lvl);
+    if (backtracking_lvl == c2->skolem->decision_lvl) {
+        V4("No backtracking happening.");
+        return;
     }
-    
-    V2("Backtrack to level %u\n", backtracking_lvl);
+    if (c2->state == C2_UNIVERSAL_ASSIGNMENT_CONFLICT) {
+        LOG_WARNING("Backtracking from permanent conflict state. Potential inefficiency or usage mistake.\n");
+    }
+    V2("Backtracking to level %u\n", backtracking_lvl);
+    c2->state = C2_READY;
     while (c2->skolem->decision_lvl > backtracking_lvl) {
         assert(c2->skolem->stack->push_count == c2->examples->stack->push_count);
         assert(c2->skolem->stack->push_count == c2->skolem->decision_lvl);
@@ -315,10 +320,9 @@ float c2_Jeroslow_Wang_log_weight(vector* clauses) {
 }
 
 bool c2_is_in_conflcit(C2* c2) {
-    bool res =    c2->state == C2_CEGAR_CONFLICT
-               || c2->state == C2_EXAMPLES_CONFLICT
-               || c2->state == C2_EMPTY_CLAUSE_CONFLICT
-               || c2->state == C2_SKOLEM_CONFLICT;
+    bool res = c2->state == C2_UNIVERSAL_ASSIGNMENT_CONFLICT
+            || c2->state == C2_EXAMPLES_CONFLICT
+            || c2->state == C2_SKOLEM_CONFLICT;
 //    assert(! res ||   c2->current_conflict); // currently not given because we eagerly clean up the current_conflict
     assert(  res || ! c2->current_conflict);
     return res;
@@ -379,8 +383,8 @@ void c2_initial_propagation(C2* c2) {
 }
 
 // MAIN LOOPS
-cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
-
+void c2_run(C2* c2, unsigned remaining_conflicts) {
+    
     while (remaining_conflicts > 0) {
         V4("\nEntering main loop at dlvl %u.\n", c2->skolem->decision_lvl);
         assert(c2->state == C2_READY);
@@ -425,45 +429,32 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                 if (c2->skolem->state == SKOLEM_STATE_SKOLEM_CONFLICT) {
                     new_example = examples_add_assignment_from_skolem(c2->examples, c2->skolem);
                     if (new_example && partial_assignment_is_conflicted(new_example)) {
-                        assert(c2->result == CADET_RESULT_UNKNOWN);
-                        c2->result = CADET_RESULT_UNSAT;
+                        assert(c2->state == C2_READY);
                         c2->state = C2_EXAMPLES_CONFLICT;
-                        return c2->result;
+                        return;
                     }
                 }
 
-                // Update CEGAR abstraction
+                // Do CEGAR iteration(s)
                 if (c2->options->cegar && c2->skolem->state == SKOLEM_STATE_SKOLEM_CONFLICT) {
                     
                     for (unsigned i = 0; i < c2->cs->cegar_magic.max_cegar_iterations_per_learnt_clause; i++) {
-                        switch (cegar_one_round_for_conflicting_assignment(c2)) {
-                            case CADET_RESULT_SAT:
-                                abortif(true, "CEGAR abstraction cannot conclude CADET_RESULT_SAT here because it is still inside the global conflict check assumptions.");
-                                c2->state = C2_READY;
-                                c2->result = CADET_RESULT_SAT;
-                                return c2->result;
-                            case CADET_RESULT_UNSAT:
-                                c2->state = C2_CEGAR_CONFLICT;
-                                c2->result = CADET_RESULT_UNSAT;
-                                return c2->result;
-                            case CADET_RESULT_UNKNOWN:
-                                break;
-                            default:
-                                abortif(true, "Unexpected value seen for cadet_res");
+                        cegar_one_round_for_conflicting_assignment(c2);
+                        if (c2->state == C2_UNIVERSAL_ASSIGNMENT_CONFLICT) {
+                            return;
                         }
-                        bool lets_do_another_round = c2->cs->cegar_stats.recent_average_cube_size
-                                                        <= c2->cs->cegar_magic.cegar_effectiveness_threshold;
-                        if (lets_do_another_round) {
-                            sat_res res = satsolver_sat(c2->skolem->skolem);
-                            if (res == SATSOLVER_UNSATISFIABLE) {
-                                lets_do_another_round = false; // simply continue; cannot conclude SAT, because check relied on assumptions in global conflict check
+                        assert(c2->state == C2_SKOLEM_CONFLICT);
+                        if (c2->cs->cegar_stats.recent_average_cube_size
+                            <= c2->cs->cegar_magic.cegar_effectiveness_threshold) {
+                            V4("One more round of CEGAR\n");
+                            if (satsolver_sat(c2->skolem->skolem) == SATSOLVER_UNSATISFIABLE) { // makes another SAT call
+                                break; // simply continue; cannot conclude SAT, because check relied on assumptions in global conflict check
                             }
-                        }
-                        if (!lets_do_another_round) {
+                        } else { // enough CEGAR
                             break;
                         }
                     }
-                    assert(skolem_is_conflicted(c2->skolem));
+                    assert(skolem_has_empty_domain(c2->skolem) || skolem_is_conflicted(c2->skolem));
                 }
                 
                 unsigned backtracking_lvl = c2_determine_backtracking_lvl(c2, learnt_clause);
@@ -508,22 +499,24 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                     continue;
                 }
 
-                assert(c2->result == CADET_RESULT_UNKNOWN);
-                c2->result = CADET_RESULT_UNSAT;
-                return c2->result;
+                assert(c2->state == C2_SKOLEM_CONFLICT);
+                c2->state = C2_UNIVERSAL_ASSIGNMENT_CONFLICT;
+                return;
             }
 
         } else { // No conflict
             // Now case splits and decisions are needed to make further progress.
-
+            assert(c2->state == C2_READY);
+            assert(c2->skolem->state == SKOLEM_STATE_READY);
+            
             if (skolem_can_propagate(c2->skolem)) {
                 continue; // can happen when a potentially conflicted variable is not actually conflicted
             }
 
             // try case splits
             bool progress_through_case_split = c2_casesplits_assume_single_lit(c2);
-            if (c2->result != CADET_RESULT_UNKNOWN) { // either the above if statement or c2_case_split may result in SAT/UNSAT
-                return c2->result;
+            if (c2->state != C2_READY) {
+                return;
             }
             if (progress_through_case_split) {
                 assert(c2->conflicts_between_case_splits_countdown > 0);
@@ -543,8 +536,8 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
                 c2_rl_print_state(c2, remaining_conflicts);
                 int d = c2_rl_get_decision();
                 if (d == 0) {
-                    c2->result = CADET_RESULT_ABORT_RL;
-                    return c2->result;
+                    c2->state = C2_ABORT_RL;
+                    return;
                 } else {
                     phase = d>0 ? 1 : -1;
                     decision_var = var_vector_get(c2->qcnf->vars, lit_to_var(d));
@@ -555,9 +548,8 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
             }
             
             if (decision_var == NULL) { // no variable could be found; all variables have skolem functions
-                assert(c2->result == CADET_RESULT_UNKNOWN);
-                c2->result = CADET_RESULT_SAT;
-                return c2->result;
+                c2->state = C2_CLOSE_CASE;
+                return;
             } else { // take a decision
                 assert(!skolem_is_conflicted(c2->skolem));
                 
@@ -595,9 +587,25 @@ cadet_res c2_run(C2* c2, unsigned remaining_conflicts) {
         }
     }
     
-    abortif(c2->result != CADET_RESULT_UNKNOWN, "Expected going into restart but result is not unknown.");
-    c2_backtrack_to_decision_lvl(c2, c2->restart_base_decision_lvl);
-    return c2->result; // results in a restart
+    abortif(c2_result(c2) != CADET_RESULT_UNKNOWN, "Expected going into restart but result known.");
+    return; // results in a restart
+}
+
+cadet_res c2_result(C2* c2) {
+    switch (c2->state) {
+        case C2_SAT:
+            assert(skolem_has_empty_domain(c2->skolem));
+            return CADET_RESULT_SAT;
+        case C2_UNIVERSAL_ASSIGNMENT_CONFLICT:
+            assert(satsolver_state(c2->skolem->skolem) == SATSOLVER_RESULT_SAT);
+            assert(! skolem_has_empty_domain(c2->skolem));
+            return CADET_RESULT_UNSAT;
+        case C2_READY:
+            return CADET_RESULT_UNKNOWN;
+        default:
+            LOG_ERROR("CAllED c2_result in state %d", c2->state);
+            abort();
+    }
 }
 
 cadet_res c2_check_propositional(QCNF* qcnf, Options* o) {
@@ -668,37 +676,29 @@ void c2_replenish_skolem_satsolver(C2* c2) {
     skolem_free(old_skolem);
     casesplits_free(old_cs);
     
-    abortif(c2_is_in_conflcit(c2) || c2->result != CADET_RESULT_UNKNOWN, "Illegal state afte replenishing");
+    abortif(c2_is_in_conflcit(c2) || c2->state != C2_READY, "Illegal state afte replenishing");
 }
 
 
 void c2_restart_heuristics(C2* c2) {
     c2->restarts_since_last_major += 1;
-
     c2->next_restart = (unsigned) (c2->next_restart * c2->magic.restart_factor) ;
-    
     V3("Next restart in %u conflicts.\n", c2->next_restart);
-    
     c2_rescale_activity_values(c2);
     
     if (c2->next_major_restart == c2->restarts_since_last_major) {
-
         c2->major_restarts += 1;
         c2->restarts_since_last_major = 0;
         c2->next_restart = c2->magic.initial_restart; // resets restart frequency
-        
 //        c2_delete_learnt_clauses_greater_than(c2, c2->magic.keeping_clauses_threshold);
         c2->magic.keeping_clauses_threshold += 1;
-        
         V1("Major restart no %zu. Resetting all activity values to 0 and some random ones to 1.\n", c2->major_restarts);
-        
         for (unsigned i = 0; i < var_vector_count(c2->qcnf->vars); i++) {
             if (qcnf_var_exists(c2->qcnf, i)) {
                 c2_set_activity(c2, i, 0.0f);
             }
         }
         assert(c2->activity_factor == 1.0f);
-
         c2->next_major_restart = (size_t) (c2->next_major_restart * c2->magic.restart_factor);
     }
     
@@ -713,20 +713,6 @@ void c2_restart_heuristics(C2* c2) {
 
 cadet_res c2_sat(C2* c2) {
 
-    if (c2->result != CADET_RESULT_UNKNOWN) {
-        return c2->result;
-    }
-
-    if (int_vector_count(c2->qcnf->universal_clauses) > 0) {
-        unsigned universal_clause_idx = (unsigned) int_vector_get(c2->qcnf->universal_clauses, 0); // must be at least one clause in there
-        Clause* universal_clause = vector_get(c2->qcnf->clauses, universal_clause_idx);
-        assert(universal_clause->universal_clause);
-        V1("CNF contains a universal clause (clause id %u).\n", universal_clause->clause_idx);
-        c2->result = CADET_RESULT_UNSAT;
-        c2->state = C2_EMPTY_CLAUSE_CONFLICT;
-        return CADET_RESULT_UNSAT;
-    }
-
     ////// THIS RESTRICTS US TO 2QBF
     if (! qcnf_is_2QBF(c2->qcnf) && ! qcnf_is_propositional(c2->qcnf)) {
         V0("Is not 2QBF. Currently not supported.\n");
@@ -734,56 +720,53 @@ cadet_res c2_sat(C2* c2) {
     }
     //////
     
-    for (unsigned i = 0; i < c2->options->initial_examples; i ++) {
-        PartialAssignment* pa = examples_add_random_assignment(c2->examples);
-        if (pa && partial_assignment_is_conflicted(pa)) {
-            break;
-        }
+    if (c2->state == C2_UNIVERSAL_ASSIGNMENT_CONFLICT) {
+        V1("In permanent conflict state upon c2_sat call.\n");
+        return CADET_RESULT_UNSAT;
+    }
+    assert(int_vector_count(c2->qcnf->universal_clauses) == 0); // they must have been detected through c2_new_clause
+    
+    if (c2->state == C2_SAT) {
+        abortif(int_vector_count(c2->skolem->universals_assumptions) != 0, "There are universal assumptions before solving started.");
+        return CADET_RESULT_SAT;
     }
     
     c2_initial_propagation(c2);
-    
-    V1("Deterministic vars on dlvl 0: %u", int_vector_count(c2->skolem->determinization_order));
-    if (debug_verbosity >= VERBOSITY_HIGH) {
-        V1("    These:")
-        for (unsigned i = 0; i < var_vector_count(c2->qcnf->vars); i++) {
-            if (qcnf_var_exists(c2->qcnf, i) && qcnf_is_existential(c2->qcnf, i) && skolem_is_deterministic(c2->skolem, i)) {
-                V1(" %u", i);
-            }
-        }
-    }
-    V1("\n");
-    
     if (c2_is_in_conflcit(c2)) {
-        c2->result = CADET_RESULT_UNSAT;
-        return c2->result;
+        return CADET_RESULT_UNSAT;
     }
     
-    if (c2->options->miniscoping) {
-        c2_analysis_determine_number_of_partitions(c2);
-    }
-    
+    V1("Deterministic vars on dlvl 0: %u \n", int_vector_count(c2->skolem->determinization_order));
+    if (debug_verbosity >= VERBOSITY_HIGH) {skolem_print_deterministic_vars(c2->skolem);}
+    if (c2->options->miniscoping) {c2_analysis_determine_number_of_partitions(c2);}
     casesplits_update_interface(c2->cs, c2->skolem);
     if (c2->options->cegar_only) {
-        return cegar_solve_2QBF_by_cegar(c2, -1);
+        cegar_solve_2QBF_by_cegar(c2, -1);
+        assert(c2->state == C2_SAT || c2_is_in_conflcit(c2));
+        return c2_result(c2);
     }
 
-    while (c2->result == CADET_RESULT_UNKNOWN) { // This loop controls the restarts
+    while (c2->state == C2_READY) { // This loop controls the restarts
         
         c2_run(c2, c2->next_restart);
-
-        if (c2->result == CADET_RESULT_SAT && (c2->options->casesplits || c2->options->certify_SAT)) {
+        
+        if (c2->state == C2_CLOSE_CASE) { //} skolem_is_complete(c2->skolem) && (c2->options->casesplits || c2->options->certify_SAT)) {
             bool must_be_SAT = int_vector_count(c2->skolem->universals_assumptions) == 0; // just for safety
             c2_close_case(c2);
-            assert(! must_be_SAT || c2->result == CADET_RESULT_SAT);
+            assert(! must_be_SAT || c2->state == C2_SAT);
         }
-        
-        if (c2->result == CADET_RESULT_UNKNOWN) {
-            V1("Restart %zu\n", c2->restarts);
-            assert(c2->skolem->decision_lvl == c2->restart_base_decision_lvl);
-            c2->restarts += 1;
-            c2_restart_heuristics(c2);
-            c2_simplify(c2);
+        if (c2->state == C2_SKOLEM_CONFLICT || c2->state == C2_EXAMPLES_CONFLICT) {
+            c2_backtrack_to_decision_lvl(c2, c2->restart_base_decision_lvl);
+            if (c2->state == C2_SKOLEM_CONFLICT) {
+                // didn't go away through backtracking; must be permanent
+                c2->state = C2_UNIVERSAL_ASSIGNMENT_CONFLICT;
+            }
+            if (c2->state == C2_READY) {
+                V1("Restart %zu\n", c2->restarts);
+                c2->restarts += 1;
+                c2_restart_heuristics(c2);
+                c2_simplify(c2);
+            }
         }
         
         if (c2->options->cegar_soft_conflict_limit && c2->statistics.conflicts > 1000 && ! c2->options->cegar) {
@@ -791,8 +774,7 @@ cadet_res c2_sat(C2* c2) {
             c2->options->cegar = true;
         }
     }
-
-    return c2->result;
+    return c2_result(c2);
 }
 
 /**
@@ -819,14 +801,12 @@ cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
     }
     
     C2* c2 = c2_init_qcnf(qcnf, options);
-    
-    c2_sat(c2);
 
+    cadet_res res = c2_sat(c2);
     if (debug_verbosity >= VERBOSITY_LOW) {
         c2_print_statistics(c2);
     }
-
-    switch (c2->result) {
+    switch (res) {
         case CADET_RESULT_UNKNOWN:
             V0("UNKNOWN\n");
             break;
@@ -835,65 +815,53 @@ cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
             if (log_qdimacs_compliant) {
                 printf("s cnf 1\n");
             }
+            if (c2->options->certify_SAT) {
+                cert_AIG_certificate(c2);
+            }
             break;
         case CADET_RESULT_UNSAT:
             V0("UNSAT\n");
             if (log_qdimacs_compliant) {
                 printf("s cnf 0\n");
             }
+            if (c2->options->certify_UNSAT) {
+                NOT_IMPLEMENTED();
+            }
+            switch (c2->state) {
+                case C2_SKOLEM_CONFLICT:
+                    V1("  UNSAT via Skolem conflict.\n");
+                    c2_print_qdimacs_output(c2->qcnf, c2->skolem, skolem_get_value_for_conflict_analysis);
+                    abortif(c2->options->certify_internally_UNSAT
+                            && ! cert_check_UNSAT(c2->qcnf, c2->skolem, skolem_get_value_for_conflict_analysis) ,
+                            "Check failed! UNSAT result could not be certified.");
+                    abortif(c2->options->functional_synthesis, "Should not reach UNSAT output in functional synthesis mode.");
+                    V1("Result verified.\n");
+                    break;
+                case C2_UNIVERSAL_ASSIGNMENT_CONFLICT:
+                    V1("  UNSAT via Cegar conflict.\n");
+                    c2_print_qdimacs_output(c2->qcnf, c2->skolem, cegar_get_val);
+                    abortif(c2->options->certify_internally_UNSAT
+                            && ! cert_check_UNSAT(c2->qcnf, c2->skolem, cegar_get_val),
+                            "Check failed! UNSAT result could not be certified.");
+                    //                abortif(c2->options->functional_synthesis, "Should not reach UNSAT output in functional synthesis mode.");
+                    V1("Result verified.\n");
+                    break;
+                case C2_EXAMPLES_CONFLICT:
+                    V1("  UNSAT via Examples conflict.\n");
+                    c2_print_qdimacs_output(c2->qcnf, c2->examples, examples_get_value_for_conflict_analysis);
+                    abortif(c2->options->certify_internally_UNSAT
+                            && ! cert_check_UNSAT(c2->qcnf, c2->examples, examples_get_value_for_conflict_analysis) ,
+                            "Check failed! UNSAT result could not be certified.");
+                    abortif(c2->options->functional_synthesis, "Should not reach UNSAT output in functional synthesis mode.");
+                    V1("Result verified.\n");
+                    break;
+                default:
+                    LOG_ERROR("Unknown type of conflict state. Such confused, very WOW.");
+                    abort();
+                    break;
+            }
             break;
-        case CADET_RESULT_ABORT_RL:
-            break; // do nothing, just output result, caller has to handle this case
     }
-
-    if (c2->result == CADET_RESULT_SAT && c2->options->certify_SAT) {
-        cert_AIG_certificate(c2);
-    }
-    if (c2->result == CADET_RESULT_UNSAT) {
-        if (c2->options->certify_UNSAT) {
-            NOT_IMPLEMENTED();
-        }
-        switch (c2->state) {
-            case C2_SKOLEM_CONFLICT:
-                V1("  UNSAT via Skolem conflict.\n");
-                c2_print_qdimacs_output(c2->qcnf, c2->skolem, skolem_get_value_for_conflict_analysis);
-                abortif(c2->options->certify_internally_UNSAT
-                        && ! cert_check_UNSAT(c2->qcnf, c2->skolem, skolem_get_value_for_conflict_analysis) ,
-                        "Check failed! UNSAT result could not be certified.");
-                abortif(c2->options->functional_synthesis, "Should not reach UNSAT output in functional synthesis mode.");
-                V1("Result verified.\n");
-                break;
-            case C2_CEGAR_CONFLICT:
-                V1("  UNSAT via Cegar conflict.\n");
-                c2_print_qdimacs_output(c2->qcnf, c2->skolem, cegar_get_val);
-                abortif(c2->options->certify_internally_UNSAT
-                        && ! cert_check_UNSAT(c2->qcnf, c2->skolem, cegar_get_val),
-                        "Check failed! UNSAT result could not be certified.");
-//                abortif(c2->options->functional_synthesis, "Should not reach UNSAT output in functional synthesis mode.");
-                V1("Result verified.\n");
-                break;
-            case C2_EXAMPLES_CONFLICT:
-                V1("  UNSAT via Examples conflict.\n");
-                c2_print_qdimacs_output(c2->qcnf, c2->examples, examples_get_value_for_conflict_analysis);
-                abortif(c2->options->certify_internally_UNSAT
-                        && ! cert_check_UNSAT(c2->qcnf, c2->examples, examples_get_value_for_conflict_analysis) ,
-                        "Check failed! UNSAT result could not be certified.");
-                abortif(c2->options->functional_synthesis, "Should not reach UNSAT output in functional synthesis mode.");
-                V1("Result verified.\n");
-                break;
-            case C2_EMPTY_CLAUSE_CONFLICT:
-                V1("  UNSAT because at least one clause contains only universals.\n");
-                assert(int_vector_count(c2->qcnf->universal_clauses) > 0);
-                c2_print_qdimacs_output_from_universal_clause(c2->qcnf);
-                break;
-            default:
-                LOG_ERROR("Unknown type of conflict. Such confused, very WOW.");
-                abort();
-                break;
-        }
-    }
-
-    cadet_res res = c2->result;
     c2_free(c2);
     return res;
 }
@@ -919,7 +887,11 @@ void c2_new_variable(C2* c2, bool is_universal, unsigned scope_id, unsigned var_
 void c2_new_clause(C2* c2, Clause* c) {
     assert(c->clause_idx <= vector_count(c2->qcnf->clauses));
     assert(c != NULL);
-    assert(c2->result == CADET_RESULT_UNKNOWN); // if in SAT state, need to backtrack to max dlvl in the clause - 1
+    assert(!c2_is_in_conflcit(c2)); // sort of weird, indicates error in usage
     examples_new_clause(c2->examples, c);
+    assert(!examples_is_conflicted(c2->examples)); // need to handle this
     skolem_new_clause(c2->skolem, c);
+    if (skolem_is_conflicted(c2->skolem)) {
+        c2->state = C2_UNIVERSAL_ASSIGNMENT_CONFLICT;
+    }
 }

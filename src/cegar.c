@@ -66,9 +66,8 @@ bool cegar_var_needs_to_be_set(Casesplits* d, unsigned var_id) {
     return false;
 }
 
-cadet_res cegar_one_round_for_conflicting_assignment(C2* c2) {
+void cegar_one_round_for_conflicting_assignment(C2* c2) {
     assert(casesplits_is_initialized(c2->cs));
-    assert(c2->result == CADET_RESULT_UNKNOWN);
     assert(c2->state == C2_SKOLEM_CONFLICT);
     Casesplits* cs = c2->cs;
     
@@ -127,31 +126,29 @@ cadet_res cegar_one_round_for_conflicting_assignment(C2* c2) {
                 }
             }
         }
-        
         casesplits_record_cegar_cube(c2->cs, cube, existentials);
         casesplits_encode_last_case(c2->cs);
         c2->cs->cegar_stats.recent_average_cube_size = (float) int_vector_count(cube) * (float) 0.1 + c2->cs->cegar_stats.recent_average_cube_size * (float) 0.9;
     } else {
-        c2->state = C2_CEGAR_CONFLICT;
-        c2->result = CADET_RESULT_UNSAT;
+        c2->state = C2_UNIVERSAL_ASSIGNMENT_CONFLICT;
     }
-    assert(c2->result != CADET_RESULT_SAT);
-    return c2->result;
+    return;
 }
 
-cadet_res cegar_solve_2QBF_by_cegar(C2* c2, int rounds_num) {
-    
+void cegar_solve_2QBF_by_cegar(C2* c2, int rounds_num) {
+    assert(c2->state == C2_READY);
     assert(casesplits_is_initialized(c2->cs));
     
     // solver loop
-    while (c2->result == CADET_RESULT_UNKNOWN && rounds_num--) {
-        if (satsolver_sat(c2->skolem->skolem) == SATSOLVER_RESULT_SAT) {
+    while (c2->state == C2_READY && rounds_num--) {
+        if (!skolem_check_if_domain_is_empty(c2->skolem)) {
             cegar_one_round_for_conflicting_assignment(c2);
         } else {
-            c2->result = CADET_RESULT_SAT;
+            c2->state = C2_SAT;
+            break; // skolem is in 'complete' state
         }
     }
-    return c2->result;
+    return;
 }
 
 int cegar_get_val(void* domain, Lit lit) {

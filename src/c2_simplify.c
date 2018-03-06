@@ -40,7 +40,7 @@ void c2_delete_learnt_clauses_greater_than(C2* c2, unsigned max_size) {
 }
 
 void c2_simplify(C2* c2) {
-    if (c2->options->minimize_conflicts) {
+    if (c2->options->minimize_conflicts && c2->state == C2_READY) {
         for (int i = (int) vector_count(c2->qcnf->clauses) - 1; i >= 0; i--) {
             Clause* c = vector_get(c2->qcnf->clauses, (unsigned) i);
             if (! c || skolem_get_unique_consequence(c2->skolem, c) != 0) {
@@ -51,41 +51,14 @@ void c2_simplify(C2* c2) {
             }
             
             unsigned removed_literals = c2_minimize_clause(c2, c);
-            
-            if (c->universal_clause) {
-                c2->result = CADET_RESULT_UNSAT;
-                c2->state = C2_EMPTY_CLAUSE_CONFLICT;
-                break;
-            }
-            
-            // Make sure that if the
-            if (removed_literals > 0) {
-                bool all_deterministic = true;
-                for (unsigned i = 0; i < c->size; i++) {
-                    all_deterministic = all_deterministic && skolem_is_deterministic(c2->skolem, lit_to_var(c->occs[i]));
-                }
-                if (all_deterministic) {
-                    for (unsigned i = 0; i < c->size; i++) {
-                        int satlit = skolem_get_satsolver_lit(c2->skolem, - c->occs[i]);
-                        assert(satlit);
-                        satsolver_assume(c2->skolem->skolem, satlit);
-                    }
-                    sat_res res = satsolver_sat(c2->skolem->skolem);
-                    if (res == SATSOLVER_SATISFIABLE) {
-                        V1("Clause minimization resulted in a clause consisting only of dlvl0 variables. Terminating.");
-                        c2->result = CADET_RESULT_UNSAT;
-                        c2->state = C2_CEGAR_CONFLICT;
-                        break;
-                    }
-                }
+            if (removed_literals) {
+                c2_new_clause(c2, c);
             }
             
             // TODO: check if minimized clause subsumes other clauses
 //            if (removed_literals) {
 //                subsumes something else?
 //            }
-            
-            skolem_check_for_unique_consequence(c2->skolem, c);
         }
     }
 }

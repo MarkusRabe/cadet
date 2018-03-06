@@ -342,6 +342,11 @@ void examples_new_clause(Examples* e, Clause* c) {
     for (unsigned i = 0; i < vector_count(e->ex); i++) {
         PartialAssignment* pa = vector_get(e->ex, i);
         partial_assignment_new_clause(pa, c);
+        if (partial_assignment_is_conflicted(pa)) {
+            e->conflicted_pa = pa;
+            e->state = EXAMPLES_STATE_PROPAGATION_CONFLICT;
+            return;
+        }
     }
 }
 

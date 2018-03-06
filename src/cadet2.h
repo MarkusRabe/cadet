@@ -25,9 +25,11 @@ typedef struct C2 C2;
 typedef enum {
     C2_READY,
     C2_SKOLEM_CONFLICT,
-    C2_CEGAR_CONFLICT,
-    C2_EMPTY_CLAUSE_CONFLICT,
-    C2_EXAMPLES_CONFLICT
+    C2_UNIVERSAL_ASSIGNMENT_CONFLICT, // assignment in the satsolver of the skolem domain is a refuting assignment
+    C2_EXAMPLES_CONFLICT,
+    C2_ABORT_RL, // allows RL code to terminate current computation
+    C2_SAT,
+    C2_CLOSE_CASE
 } c2_state;
 
 typedef enum {
@@ -84,7 +86,6 @@ struct C2 {
 
     // Essential C2 data structures
     c2_state state;
-    cadet_res result;
     size_t restarts;
     size_t major_restarts;
     size_t restarts_since_last_major;
@@ -125,10 +126,10 @@ Clause* c2_add_lit(C2*, Lit lit);
 void c2_new_variable(C2*, bool is_universal, unsigned scope_id, unsigned var_id);
 void c2_new_clause(C2*, Clause* c);
 void c2_simplify(C2*);
-
+bool c2_is_in_conflcit(C2*);
+cadet_res c2_result(C2*);
 cadet_res c2_sat(C2*);
 cadet_res c2_solve_qdimacs(FILE*, Options*);
-cadet_res c2_solve(C2*);
 
 // Case splits
 void c2_backtrack_casesplit(C2*);
@@ -144,9 +145,9 @@ void c2_close_case(C2*);
  *
  * May change the state of C2 when termination criterion is found.
  */
-cadet_res cegar_one_round_for_conflicting_assignment(C2*);
+void cegar_one_round_for_conflicting_assignment(C2*);
 int cegar_get_val(void* domain, Lit lit);
-cadet_res cegar_solve_2QBF_by_cegar(C2* c2, int rounds_num);
+void cegar_solve_2QBF_by_cegar(C2* c2, int rounds_num);
 
 // PRINTING
 void c2_print_statistics(C2*);

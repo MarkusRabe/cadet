@@ -131,16 +131,54 @@ void skolem_pop(Skolem* s) {
     if (pqueue_count(s->pure_var_queue) > 0) {
         pqueue_reset(s->pure_var_queue);
     }
-    
     stack_pop(s->stack, s);
     satsolver_pop(s->skolem);
 }
 
+void skolem_update_state(Skolem* s, SKOLEM_STATE state) {
+    stack_push_op(s->stack, SKOLEM_OP_UPDATE_SKOLEM_STATE, (void*) s->state);
+    s->state = state;
+}
+
 void skolem_new_clause(Skolem* s, Clause* c) {
     abortif(c == NULL, "Clause pointer is NULL in skolem_new_clause.\n");
-    skolem_check_for_unique_consequence(s, c);
-    if (c->size == 1) {
-        worklist_push(s->clauses_to_check, c);
+    
+    if (skolem_clause_satisfied(s, c)) {
+        return;
+    }
+    
+    bool fully_deterministic = true;
+    unsigned non_constants = 0;
+    for (int i = c->size - 1; i >= 0; i--) { // iterating backwards as existentials are in the back of the clause
+        int lit = c->occs[i];
+        if (! skolem_is_deterministic(s, lit_to_var(lit))) {
+            fully_deterministic = false;
+        }
+        if (skolem_get_constant_value(s, lit) == 0) {
+            non_constants += 1;
+        }
+    }
+    if (fully_deterministic) {
+        LOG_WARNING("Added fully consistent clause.\n");
+        for (unsigned i = 0; i < c->size; i++) {
+            satsolver_assume(s->skolem, skolem_get_satsolver_lit(s, - c->occs[i]));
+        }
+        sat_res res = satsolver_sat(s->skolem);
+        if (res == SATSOLVER_RESULT_SAT) {
+            V1("Clause %u makes formula unsatisfiable.\n", c->clause_idx);
+            Lit lastlit = c->occs[c->size - 1];
+            skolem_set_unique_consequence(s, c, lastlit);
+            skolem_update_state(s, SKOLEM_STATE_SKOLEM_CONFLICT);
+            s->conflict_var_id = lit_to_var(lastlit);
+            stack_push_op(s->stack, SKOLEM_OP_SKOLEM_CONFLICT, NULL);
+        } else {
+            LOG_WARNING("Deterministic clause is consistent.\n");
+        }
+    } else {
+        skolem_check_for_unique_consequence(s, c);
+        if (non_constants == 1) {
+            worklist_push(s->clauses_to_check, c);
+        }
     }
 }
 
@@ -202,8 +240,8 @@ bool skolem_clause_satisfied(Skolem* s, Clause* c) {
 }
 bool skolem_is_conflicted(Skolem* s) {
     assert(s->state != SKOLEM_STATE_CONSTANTS_CONLICT || (s->conflict_var_id == 0) == (s->conflicted_clause == NULL));
-    assert(s->conflict_var_id != 0 || s->state == SKOLEM_STATE_READY);
-    assert(s->conflict_var_id == 0 || s->state != SKOLEM_STATE_READY);
+    assert(s->conflict_var_id != 0 || s->state == SKOLEM_STATE_READY || s->state == SKOLEM_STATE_EMPTY_DOMAIN);
+    assert(s->conflict_var_id == 0 || s->state == SKOLEM_STATE_SKOLEM_CONFLICT || s->state == SKOLEM_STATE_CONSTANTS_CONLICT);
     return s->conflict_var_id != 0;
 }
 bool skolem_is_potentially_conflicted(Skolem* s){
@@ -212,6 +250,9 @@ bool skolem_is_potentially_conflicted(Skolem* s){
 bool skolem_can_propagate(Skolem* s) {
     return (worklist_count(s->clauses_to_check) || pqueue_count(s->determinicity_queue) || pqueue_count(s->pure_var_queue))
            && ! skolem_is_conflicted(s);
+}
+bool skolem_has_empty_domain(Skolem* s) {
+    return s->state == SKOLEM_STATE_EMPTY_DOMAIN;
 }
 
 void skolem_add_potentially_conflicted(Skolem* s, unsigned var_id) {
@@ -931,7 +972,7 @@ unsigned skolem_global_conflict_check(Skolem* s, unsigned var_id) {
         s->conflict_var_id = var_id;
         
         abortif(s->conflicted_clause != NULL, "Conflicted clause should not be set here.");
-        s->state = SKOLEM_STATE_SKOLEM_CONFLICT;
+        skolem_update_state(s, SKOLEM_STATE_SKOLEM_CONFLICT);
         stack_push_op(s->stack, SKOLEM_OP_SKOLEM_CONFLICT, NULL);
         
 #ifdef DEBUG
@@ -1028,7 +1069,6 @@ void skolem_undo(void* parent, char type, void* obj) {
             assert(s->conflict_var_id != 0);
             assert(s->conflicted_clause != NULL);
             assert(s->state == SKOLEM_STATE_CONSTANTS_CONLICT);
-            s->state = SKOLEM_STATE_READY;
             s->conflict_var_id = 0;
             s->conflicted_clause = NULL;
             break;
@@ -1039,8 +1079,15 @@ void skolem_undo(void* parent, char type, void* obj) {
             assert( s->conflicted_clause == NULL);
             assert(s->state == SKOLEM_STATE_SKOLEM_CONFLICT);
             satsolver_pop(s->skolem); // to compensate the push before the SAT call
-            s->state = SKOLEM_STATE_READY;
             s->conflict_var_id = 0;
+            break;
+            
+        case SKOLEM_OP_UPDATE_SKOLEM_STATE:
+            s->state = (SKOLEM_STATE) obj;
+            assert(   s->state == SKOLEM_STATE_CONSTANTS_CONLICT
+                   || s->state == SKOLEM_STATE_SKOLEM_CONFLICT
+                   || s->state == SKOLEM_STATE_READY
+                   || s->state == SKOLEM_STATE_EMPTY_DOMAIN);
             break;
             
         case SKOLEM_OP_POTENTIALLY_CONFLICTED_VAR:
@@ -1131,6 +1178,16 @@ void skolem_print_debug_info(Skolem* s) {
         }
     }
     V1("\n");
+}
+
+void skolem_print_deterministic_vars(Skolem* s) {
+    LOG_PRINTF("  Deterministic vars:");
+    for (unsigned i = 0; i < var_vector_count(s->qcnf->vars); i++) {
+        if (qcnf_var_exists(s->qcnf, i) && qcnf_is_existential(s->qcnf, i) && skolem_is_deterministic(s, i)) {
+            LOG_PRINTF(" %u", i);
+        }
+    }
+    LOG_PRINTF("\n");
 }
 
 ////////// CONSTANT PROPAGATION /////////////////
@@ -1311,7 +1368,7 @@ void skolem_propagate_constants_over_clause(Skolem* s, Clause* c) {
         }
         abortif(max_dlvl_var == 0, "No variable in clause found.");
         s->conflict_var_id = max_dlvl_var; // lit_to_var(c->occs[c->size - 1]);
-        s->state = SKOLEM_STATE_CONSTANTS_CONLICT;
+        skolem_update_state(s, SKOLEM_STATE_CONSTANTS_CONLICT);
         stack_push_op(s->stack, SKOLEM_OP_PROPAGATION_CONFLICT, NULL);
         
         V3("Conflict in explicit propagation in skolem domain for clause %u and var %u\n", s->conflicted_clause->clause_idx, s->conflict_var_id);
@@ -1461,6 +1518,14 @@ void skolem_propagate(Skolem* s) {
 }
 
 bool skolem_is_universal_assumption_vacuous(Skolem* s, Lit lit) {
+    assert(lit);
     satsolver_assume(s->skolem, skolem_get_satsolver_lit(s, lit));
     return satsolver_sat(s->skolem) != SATSOLVER_SATISFIABLE;
+}
+
+bool skolem_check_if_domain_is_empty(Skolem* s) {
+    if (s->state != SKOLEM_STATE_EMPTY_DOMAIN && satsolver_sat(s->skolem) == SATSOLVER_UNSATISFIABLE) {
+        skolem_update_state(s, SKOLEM_STATE_EMPTY_DOMAIN);
+    }
+    return s->state == SKOLEM_STATE_EMPTY_DOMAIN;
 }

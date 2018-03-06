@@ -29,13 +29,11 @@ typedef struct Skolem Skolem;
 struct skolem_var;
 typedef struct skolem_var skolem_var;
 
-bool skolem_is_total(skolem_var*); // pos_lit == neg_lit && pos_lit != 0
-bool skolem_is_top(skolem_var*); // pos_lit == 0 && neg_lit == 0
-
 typedef enum {
     SKOLEM_STATE_CONSTANTS_CONLICT,
     SKOLEM_STATE_SKOLEM_CONFLICT,
-    SKOLEM_STATE_READY
+    SKOLEM_STATE_READY,
+    SKOLEM_STATE_EMPTY_DOMAIN // all variables have skolem functions (possibly underassumptions) or Skolem domain is empty
 } SKOLEM_STATE;
 
 struct Skolem_Statistics {
@@ -134,6 +132,7 @@ void skolem_new_clause(Skolem*, Clause*);
 void skolem_new_variable(Skolem*, unsigned var_id);
 void skolem_assign_constant_value(Skolem*,Lit,union Dependencies, Clause* reason); // reason may be NULL
 bool skolem_is_universal_assumption_vacuous(Skolem*, Lit);
+bool skolem_check_if_domain_is_empty(Skolem* s);
 void skolem_make_universal_assumption(Skolem*,Lit);
 int skolem_get_constant_value(Skolem*, Lit);
 bool skolem_lit_satisfied(Skolem* s, Lit lit);
@@ -152,6 +151,7 @@ void skolem_increase_decision_lvl(Skolem*);
 unsigned skolem_global_conflict_check(Skolem*, unsigned var_id);
 void skolem_encode_global_conflict_check(Skolem* s);
 bool skolem_is_conflicted(Skolem*);
+bool skolem_has_empty_domain(Skolem*);
 
 typedef enum FIX_UNIQUE_ANTECEDENTS_MODE {
     FUAM_ONLY_LEGALS = 2,
@@ -165,7 +165,7 @@ void skolem_add_potentially_conflicted(Skolem*, unsigned var_id);
 // PRINTING
 void skolem_print_debug_info(Skolem*);
 void skolem_print_statistics(Skolem*);
-
+void skolem_print_deterministic_vars(Skolem*);
 // PRIVATE FUNCTIONS
 
 typedef enum {
@@ -180,6 +180,7 @@ typedef enum {
     SKOLEM_OP_UNIQUE_CONSEQUENCE,
     SKOLEM_OP_PROPAGATION_CONFLICT,
     SKOLEM_OP_SKOLEM_CONFLICT,
+    SKOLEM_OP_UPDATE_SKOLEM_STATE,
     SKOLEM_OP_POTENTIALLY_CONFLICTED_VAR,
     SKOLEM_OP_DECISION_LVL,
     SKOLEM_OP_DECISION,

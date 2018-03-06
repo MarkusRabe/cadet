@@ -12,19 +12,18 @@
 Options* default_options() {
     Options* o = malloc(sizeof(Options));
 
-    o->easy_debugging_mode_c2 = true;
+    o->easy_debugging = false;
 
     // Computational enginges
     o->cegar = false;
     o->cegar_only = false;
     o->use_qbf_engine_also_for_propositional_problems = false;
     o->functional_synthesis = false;
-    o->casesplits = true;
+    o->casesplits = false;
     o->casesplits_cubes = false;
 
     // Examples domain
     o->examples_max_num = 0; // 0 corresponds to not doing examples at all
-    o->initial_examples = 0;
 
     // Aiger interpretations
     o->aiger_controllable_inputs = "pi_"; // "controllable_";
@@ -124,7 +123,7 @@ char* options_get_help() {
     "\n",
     debug_verbosity,
     o->reinforcement_learning,
-    o->easy_debugging_mode_c2,
+    o->easy_debugging,
     o->cegar,
     o->cegar_only,
     o->casesplits,

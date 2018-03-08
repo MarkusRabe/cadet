@@ -120,10 +120,6 @@ Lit c2_case_split_pick_literal(C2* c2) {
             float combined_quality = combined_factor * (float) (propagations_pos * propagations_neg + propagations_pos + propagations_neg + 1);
             if (combined_quality > max_total) {
                 lit = (propagations_pos > propagations_neg ? 1 : - 1) * (Lit) v->var_id;
-                if (genrand_int31() % 30 == 0) {
-                    V1("Randomly flipped case split literal.\n");
-                    lit = -lit;
-                }
                 max_total = combined_quality;
                 cost_factor_of_max = cost_factor;
             }

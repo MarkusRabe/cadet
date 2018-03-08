@@ -180,7 +180,7 @@ bool c2_make_universal_assumption_unless_vacuous(C2* c2, Lit lit) {
     
     if (skolem_is_conflicted(c2->skolem)) { // actual conflict
         assert(c2->skolem->decision_lvl == c2->restart_base_decision_lvl); // otherwise we need to go into conflict analysis
-        V1("Case split lead to immediate conflict.\n");
+        V1("Case split lead to immediate conflict. Formula UNSAT\n");
         c2->state = C2_SKOLEM_CONFLICT;
     }
     return is_vacuous;

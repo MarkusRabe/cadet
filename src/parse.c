@@ -207,11 +207,7 @@ QCNF* create_qcnf_from_qdimacs(Options* options, FILE* file, char* header, int l
             qcnf_new_var(qcnf, false, dependency_scope_id, dep_var_id);
         }
     }
-    
-    if (qcnf_is_propositional(qcnf)) {
-        V0("Propositional problem. Consider using a SAT solver.\n");
-    }
-    
+
     if (debug_verbosity >= VERBOSITY_ALL) {
         V4("Detected the following quantifier hierarchy:\n");
         qcnf_print_qdimacs_quantifiers(qcnf, stdout);

@@ -25,7 +25,7 @@ typedef struct C2 C2;
 typedef enum {
     C2_READY,
     C2_SKOLEM_CONFLICT,
-    C2_UNIVERSAL_ASSIGNMENT_CONFLICT, // assignment in the satsolver of the skolem domain is a refuting assignment
+    C2_UNSAT, // assignment in the satsolver of the skolem domain is a refuting assignment
     C2_EXAMPLES_CONFLICT,
     C2_ABORT_RL, // allows RL code to terminate current computation
     C2_SAT,

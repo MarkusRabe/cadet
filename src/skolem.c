@@ -142,6 +142,7 @@ void skolem_update_state(Skolem* s, SKOLEM_STATE state) {
 
 void skolem_new_clause(Skolem* s, Clause* c) {
     abortif(c == NULL, "Clause pointer is NULL in skolem_new_clause.\n");
+    assert(skolem_get_unique_consequence(s, c) == 0);
     
     if (skolem_clause_satisfied(s, c)) {
         return;
@@ -159,20 +160,31 @@ void skolem_new_clause(Skolem* s, Clause* c) {
         }
     }
     if (fully_deterministic) {
-        LOG_WARNING("Added fully consistent clause.\n");
-        for (unsigned i = 0; i < c->size; i++) {
-            satsolver_assume(s->skolem, skolem_get_satsolver_lit(s, - c->occs[i]));
-        }
-        sat_res res = satsolver_sat(s->skolem);
-        if (res == SATSOLVER_RESULT_SAT) {
-            V1("Clause %u makes formula unsatisfiable.\n", c->clause_idx);
-            Lit lastlit = c->occs[c->size - 1];
-            skolem_set_unique_consequence(s, c, lastlit);
-            skolem_update_state(s, SKOLEM_STATE_SKOLEM_CONFLICT);
-            s->conflict_var_id = lit_to_var(lastlit);
-            stack_push_op(s->stack, SKOLEM_OP_SKOLEM_CONFLICT, NULL);
+        if (s->options->functional_synthesis) {
+            assert(s->decision_lvl == 0);
+            V1("Functional synthesis detected a deterministic clause of length %u over dlvl0.\n", c->size);
+            for (unsigned i = 0; i < c->size; i++) {
+                satsolver_add(s->skolem, skolem_get_satsolver_lit(s, c->occs[i]));
+            }
+            satsolver_clause_finished(s->skolem);
         } else {
-            LOG_WARNING("Deterministic clause is consistent.\n");
+            V1("Added deterministic clause.\n");
+            for (unsigned i = 0; i < c->size; i++) {
+                satsolver_assume(s->skolem, skolem_get_satsolver_lit(s, - c->occs[i]));
+            }
+            sat_res res = satsolver_sat(s->skolem);
+            if (res == SATSOLVER_RESULT_SAT) {
+                V1("Clause %u makes formula unsatisfiable.\n", c->clause_idx);
+                Lit lastlit = c->occs[c->size - 1];
+                skolem_set_unique_consequence(s, c, lastlit);
+                skolem_update_state(s, SKOLEM_STATE_SKOLEM_CONFLICT);
+                s->conflict_var_id = lit_to_var(lastlit);
+                stack_push_op(s->stack, SKOLEM_OP_SKOLEM_CONFLICT, NULL);
+            } else {
+                V1("Deterministic clause that was added is consistent.");
+                // learnt clauses should not be fully deterministic unless they refute the instance:
+                assert(c->original);
+            }
         }
     } else {
         skolem_check_for_unique_consequence(s, c);
@@ -965,7 +977,7 @@ unsigned skolem_global_conflict_check(Skolem* s, unsigned var_id) {
     double time_stamp_end = get_seconds();
     
     if (result == SATSOLVER_SATISFIABLE) {
-        V3("Conflict! For variable %u\n", var_id);
+        V3("Conflict for variable %u\n", var_id);
         statistic_add_value(s->statistics.global_conflict_checks_sat, time_stamp_end - time_stamp_start);
         
         skolem_bump_conflict_potential(s, var_id);
@@ -1361,7 +1373,7 @@ void skolem_propagate_constants_over_clause(Skolem* s, Clause* c) {
         for (unsigned i = 0; i < c->size; i++) {
             unsigned var_id = lit_to_var(c->occs[i]);
             unsigned dlvl = skolem_get_dlvl_for_constant(s, var_id);
-            if (dlvl >= max_dlvl) {
+            if (qcnf_is_existential(s->qcnf, var_id) && dlvl >= max_dlvl) {
                 max_dlvl = dlvl;
                 max_dlvl_var = var_id;
             }

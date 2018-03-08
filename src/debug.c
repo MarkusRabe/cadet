@@ -51,7 +51,7 @@ void debug_fuzz_for_incompleteness(C2* c2, unsigned num_trials) {
         
         sat_res res = satsolver_sat(c2->skolem->skolem);
         
-        if (res != SATSOLVER_SATISFIABLE) {
+        if (res != SATSOLVER_SAT) {
             printf("Fuzzing detected lack of totality for this assignment:\n");
             for (unsigned i = 0; i < vector_count(universals); i++) {
                 Var* v = vector_get(universals, i);

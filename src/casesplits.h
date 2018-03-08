@@ -45,7 +45,6 @@ struct Case {
 struct Casesplits {
     QCNF* qcnf;
     Skolem* skolem;
-    Options* options;
     
     // dlvl0 interface
     int_vector* interface_vars;
@@ -65,7 +64,7 @@ struct Casesplits {
 /* Initializes a cegar object, including the SAT solver using
  * the current determinicity information in c2->skolem.
  */
-Casesplits* casesplits_init(QCNF*, Options*);
+Casesplits* casesplits_init(QCNF*);
 bool casesplits_is_initialized(Casesplits*);
 void casesplits_free(Casesplits*);
 

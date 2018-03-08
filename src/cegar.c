@@ -92,7 +92,7 @@ void cegar_one_round_for_conflicting_assignment(C2* c2) {
     }
 #endif
     
-    if (satsolver_sat(cs->exists_solver) == SATSOLVER_RESULT_SAT) {
+    if (satsolver_sat(cs->exists_solver) == SATSOLVER_SAT) {
         int_vector_reset(cs->additional_assignment);
         
         int_vector* cube = int_vector_init();

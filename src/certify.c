@@ -29,26 +29,21 @@ void cert_write_aiger(aiger* a, Options* o) {
     }
 }
 
-void c2_print_qdimacs_output(QCNF* qcnf, void* domain, int (*get_value)(void* domain, Lit lit)) {
+void c2_print_qdimacs_output(int_vector* refuting_assignment) {
     printf("V"); // using printf, since everything else will otherwise be prefixed with a "c " when log_qdimacs_compliant is activated
-    for (unsigned i = 1; i < var_vector_count(qcnf->vars); i++) {
-        Var* v = var_vector_get(qcnf->vars, i);
-        if (v && v->var_id != 0 && v->is_universal) {
-            if (get_value(domain, (Lit) v->var_id) != 0) {
-                printf(" %d", get_value(domain, (Lit) v->var_id) * (Lit) v->var_id);
-            }
-        }
+    for (unsigned i = 0; i < int_vector_count(refuting_assignment); i++) {
+        printf(" %d", int_vector_get(refuting_assignment, i));
     }
     printf("\n");
 }
 
-bool cert_check_UNSAT(QCNF* qcnf, void* domain, int (*get_value)(void* domain, Lit lit)) {
-    
+bool cert_check_UNSAT(C2* c2) {
     SATSolver* checker = satsolver_init();
-    satsolver_set_max_var(checker, (int) var_vector_count(qcnf->vars));
+    satsolver_set_max_var(checker, (int) var_vector_count(c2->qcnf->vars));
     
-    for (unsigned i = 0; i < vector_count(qcnf->clauses); i++) {
-        Clause* c = vector_get(qcnf->clauses, i);
+    // TODO: better read clauses from original file
+    for (unsigned i = 0; i < vector_count(c2->qcnf->clauses); i++) {
+        Clause* c = vector_get(c2->qcnf->clauses, i);
         if (c && c->original) {
             for (unsigned j = 0; j < c->size; j++) {
                 satsolver_add(checker, c->occs[j]);
@@ -56,25 +51,13 @@ bool cert_check_UNSAT(QCNF* qcnf, void* domain, int (*get_value)(void* domain, L
             satsolver_clause_finished(checker);
         }
     }
-    
-    for (unsigned i = 0; i < var_vector_count(qcnf->vars); i++) {
-        Var* v = var_vector_get(qcnf->vars, i);
-        abortif(!v, "What!?");
-        if (v->var_id != 0 && v->is_universal && v->original) {
-            int val = get_value(domain, (Lit) v->var_id);
-            abortif(val < -1 || val > 1, "Inconsistent value");
-            if (val == 0) {
-                val = 1;
-            }
-            satsolver_assume(checker, val * (Lit) v->var_id);
-        }
+    int_vector* refuting_assignment = c2_refuting_assignment(c2);
+    for (unsigned i = 0; i < int_vector_count(refuting_assignment); i++) {
+        satsolver_assume(checker, int_vector_get(refuting_assignment, i));
     }
-    
     sat_res res = satsolver_sat(checker);
-    
     satsolver_free(checker);
-    
-    return res == SATSOLVER_UNSATISFIABLE;
+    return res == SATSOLVER_UNSAT;
 }
 
 aiger* cert_setup_AIG(QCNF* qcnf, Options* o) {

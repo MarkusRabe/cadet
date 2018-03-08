@@ -106,6 +106,10 @@ bool qcnf_is_universal(QCNF* qcnf, unsigned var_id) {
     Var* v = var_vector_get(qcnf->vars, var_id);
     return v->is_universal;
 }
+bool qcnf_is_original(QCNF* qcnf, unsigned var_id) {
+    Var* v = var_vector_get(qcnf->vars, var_id);
+    return v->original;
+}
 
 vector* qcnf_get_occs_of_lit(QCNF* qcnf, Lit lit) {
     Var* v = var_vector_get(qcnf->vars, lit_to_var(lit));

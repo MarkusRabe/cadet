@@ -19,11 +19,6 @@
 #include "picosat.h"
 #include "map.h"
 
-// Sanity check, make sure the return values are correct
-#if (PICOSAT_SATISFIABLE != SATSOLVER_SATISFIABLE) || (PICOSAT_UNSATISFIABLE != SATSOLVER_UNSATISFIABLE) || (PICOSAT_UNKNOWN != SATSOLVER_UNKNOWN)
-#error "Return values of SAT solver and the generic SAT solver interface mismatch"
-#endif
-
 #define PICOSAT_DECISION_LIMIT -1
 
 struct SATSolver {
@@ -141,11 +136,11 @@ sat_res satsolver_state(SATSolver* solver) {
     
     switch (picosat_res(solver->ps)) {
         case PICOSAT_SATISFIABLE:
-            return SATSOLVER_RESULT_SAT;
+            return SATSOLVER_SAT;
         case PICOSAT_UNSATISFIABLE:
-            return SATSOLVER_RESULT_UNSAT;
+            return SATSOLVER_UNSAT;
         case PICOSAT_UNKNOWN:
-            return SATSOLVER_RESULT_UNKNOWN;
+            return SATSOLVER_UNKNOWN;
         default:
             abort();
     }

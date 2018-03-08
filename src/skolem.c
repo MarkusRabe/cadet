@@ -57,9 +57,7 @@ Skolem* skolem_init(QCNF* qcnf, Options* o) {
     
     s->clauses_to_check = worklist_init(qcnf_compare_clauses_by_size);
     
-    if (s->options->functional_synthesis) {
-        s->decision_indicator_satlits = int_vector_init();
-    }
+    s->decision_indicator_satlits = int_vector_init();
     s->decisions = int_vector_init();
     s->determinization_order = int_vector_init();
     s->universals_assumptions = int_vector_init();
@@ -173,7 +171,7 @@ void skolem_new_clause(Skolem* s, Clause* c) {
                 satsolver_assume(s->skolem, skolem_get_satsolver_lit(s, - c->occs[i]));
             }
             sat_res res = satsolver_sat(s->skolem);
-            if (res == SATSOLVER_RESULT_SAT) {
+            if (res == SATSOLVER_SAT) {
                 V1("Clause %u makes formula unsatisfiable.\n", c->clause_idx);
                 Lit lastlit = c->occs[c->size - 1];
                 skolem_set_unique_consequence(s, c, lastlit);
@@ -451,12 +449,12 @@ bool skolem_check_for_local_determinicity(Skolem* s, Var* v) {
     int result = satsolver_sat(sat);
     satsolver_free(sat);
     
-    if (result == SATSOLVER_SATISFIABLE) {
+    if (result == SATSOLVER_SAT) {
         V3("not deterministic\n");
     } else {
         V3("deterministic\n");
     }
-    return result != SATSOLVER_SATISFIABLE;
+    return result != SATSOLVER_SAT;
 }
 
 // Check if literal is blocking for all clauses where it is a unique consequence. See blocked clause elimination.
@@ -567,7 +565,7 @@ bool skolem_fix_lit_for_unique_antecedents(Skolem* s, Lit lit, bool define_both_
 //                            satsolver_assume(s->skolem, l);
 //                        }
 //                    }
-//                    if (satsolver_sat(s->skolem) != SATSOLVER_SATISFIABLE) {
+//                    if (satsolver_sat(s->skolem) != SATSOLVER_SAT) {
 //                        add_clause = false;
 //                    }
 //                }
@@ -657,12 +655,12 @@ bool skolem_is_locally_conflicted(Skolem* s, unsigned var_id) {
     //    }
     sat_res result = satsolver_sat(sat);
     satsolver_free(sat);
-    if (result == SATSOLVER_SATISFIABLE) {
+    if (result == SATSOLVER_SAT) {
         V3(" locally conflicted\n");
     } else {
         V3(" not (locally) conflicted\n");
     }
-    return result == SATSOLVER_SATISFIABLE;
+    return result == SATSOLVER_SAT;
 }
 
 void skolem_propagate_determinicity(Skolem* s, unsigned var_id) {
@@ -976,7 +974,7 @@ unsigned skolem_global_conflict_check(Skolem* s, unsigned var_id) {
     sat_res result = satsolver_sat(s->skolem);
     double time_stamp_end = get_seconds();
     
-    if (result == SATSOLVER_SATISFIABLE) {
+    if (result == SATSOLVER_SAT) {
         V3("Conflict for variable %u\n", var_id);
         statistic_add_value(s->statistics.global_conflict_checks_sat, time_stamp_end - time_stamp_start);
         
@@ -1193,7 +1191,7 @@ void skolem_print_debug_info(Skolem* s) {
 }
 
 void skolem_print_deterministic_vars(Skolem* s) {
-    LOG_PRINTF("  Deterministic vars:");
+    LOG_PRINTF("  Deterministic existentials:");
     for (unsigned i = 0; i < var_vector_count(s->qcnf->vars); i++) {
         if (qcnf_var_exists(s->qcnf, i) && qcnf_is_existential(s->qcnf, i) && skolem_is_deterministic(s, i)) {
             LOG_PRINTF(" %u", i);
@@ -1533,11 +1531,11 @@ void skolem_propagate(Skolem* s) {
 bool skolem_is_universal_assumption_vacuous(Skolem* s, Lit lit) {
     assert(lit);
     satsolver_assume(s->skolem, skolem_get_satsolver_lit(s, lit));
-    return satsolver_sat(s->skolem) != SATSOLVER_SATISFIABLE;
+    return satsolver_sat(s->skolem) != SATSOLVER_SAT;
 }
 
 bool skolem_check_if_domain_is_empty(Skolem* s) {
-    if (s->state != SKOLEM_STATE_EMPTY_DOMAIN && satsolver_sat(s->skolem) == SATSOLVER_UNSATISFIABLE) {
+    if (s->state != SKOLEM_STATE_EMPTY_DOMAIN && satsolver_sat(s->skolem) == SATSOLVER_UNSAT) {
         skolem_update_state(s, SKOLEM_STATE_EMPTY_DOMAIN);
     }
     return s->state == SKOLEM_STATE_EMPTY_DOMAIN;

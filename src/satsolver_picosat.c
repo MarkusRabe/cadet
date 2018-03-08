@@ -10,7 +10,7 @@
 #include "map.h"
 
 // Sanity check, make sure the return values are correct
-#if (PICOSAT_SATISFIABLE != SATSOLVER_SATISFIABLE) || (PICOSAT_UNSATISFIABLE != SATSOLVER_UNSATISFIABLE) || (PICOSAT_UNKNOWN != SATSOLVER_UNKNOWN)
+#if (PICOSAT_SATISFIABLE != SATSOLVER_SAT) || (PICOSAT_UNSATISFIABLE != SATSOLVER_UNSAT) || (PICOSAT_UNKNOWN != SATSOLVER_UNKNOWN)
 #error "Return values of SAT solver and the generic SAT solver interface mismatch"
 #endif
 

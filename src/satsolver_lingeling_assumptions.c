@@ -23,7 +23,7 @@
 #include <stdlib.h>
 
 // Sanity check, make sure the return values are correct
-#if (LGL_SATISFIABLE != SATSOLVER_SATISFIABLE) || (LGL_UNSATISFIABLE != SATSOLVER_UNSATISFIABLE) || (LGL_UNKNOWN != SATSOLVER_UNKNOWN)
+#if (LGL_SATISFIABLE != SATSOLVER_SAT) || (LGL_UNSATISFIABLE != SATSOLVER_UNSAT) || (LGL_UNKNOWN != SATSOLVER_UNKNOWN)
     #error "Return values of SAT solver and the generic SAT solver interface mismatch"
 #endif
 

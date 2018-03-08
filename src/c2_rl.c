@@ -223,10 +223,17 @@ cadet_res c2_rl_run_c2(Options* o) {
         
         LOG_PRINTF("\n");
         FILE* file = open_possibly_zipped_file(file_name);
-        cadet_res res = c2_solve_qdimacs(file,o);
+        C2* solver = c2_from_file(file, o);
+        cadet_res res = c2_sat(solver);
         
         if (res == CADET_RESULT_SAT || res == CADET_RESULT_UNSAT) {
             rl_add_reward(float_vector_count(rl->rewards) - 1, 1.0);
+        }
+        
+        if (res == CADET_RESULT_UNSAT) {
+            int_vector* refutation = c2_refuting_assignment(solver);
+            // TODO: check which learnt clauses were important
+            NOT_IMPLEMENTED();
         }
         
         for (unsigned i = 0; i < float_vector_count(rl->rewards); i++) {

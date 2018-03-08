@@ -27,7 +27,7 @@ int skolem_get_value_for_conflict_analysis(void* domain, Lit lit) {
     if (s->state == SKOLEM_STATE_CONSTANTS_CONLICT) {
         return skolem_get_constant_value(s, lit);
     } else {
-        assert(satsolver_state(s->skolem) == SATSOLVER_RESULT_SAT);
+        assert(satsolver_state(s->skolem) == SATSOLVER_SAT);
         int res = satsolver_deref(s->skolem, satlit);
         assert(res >= -1 && res <= 1);
         return res;

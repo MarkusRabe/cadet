@@ -11,36 +11,30 @@
 
 #include <math.h>
 
-Casesplits* casesplits_init(QCNF* qcnf, Options* options) {
-    Casesplits* d = malloc(sizeof(Casesplits));
-    d->qcnf = qcnf;
-    d->skolem = NULL;
-    d->options = options;
-    d->solved_cases = vector_init();
+Casesplits* casesplits_init(QCNF* qcnf) {
+    Casesplits* cs = malloc(sizeof(Casesplits));
+    cs->qcnf = qcnf;
+    cs->skolem = NULL;
+    cs->solved_cases = vector_init();
     
-    d->interface_vars = NULL;
-    d->interface_activities = float_vector_init();
-    d->original_satlits = map_init();
+    cs->interface_vars = NULL;
+    cs->interface_activities = float_vector_init();
+    cs->original_satlits = map_init();
     
     // CEGAR
-    d->exists_solver = NULL; // no initialized yet; see domain_update_interface
-    d->additional_assignment = int_vector_init();
-    d->is_used_in_lemma = int_vector_init();
+    cs->exists_solver = satsolver_init(); // no initialized yet; see domain_update_interface
+    cs->additional_assignment = int_vector_init();
+    cs->is_used_in_lemma = int_vector_init();
     // CEGAR statistics
-    d->cegar_stats.successful_minimizations = 0;
-    d->cegar_stats.additional_assignments_num = 0;
-    d->cegar_stats.successful_minimizations_by_additional_assignments = 0;
-    d->cegar_stats.recent_average_cube_size = 0;
-    d->cegar_magic.max_cegar_iterations_per_learnt_clause = 50;
-    d->cegar_magic.cegar_effectiveness_threshold = 17;
-    d->cegar_magic.universal_activity_decay = (float) 0.95;
+    cs->cegar_stats.successful_minimizations = 0;
+    cs->cegar_stats.additional_assignments_num = 0;
+    cs->cegar_stats.successful_minimizations_by_additional_assignments = 0;
+    cs->cegar_stats.recent_average_cube_size = 0;
+    cs->cegar_magic.max_cegar_iterations_per_learnt_clause = 50;
+    cs->cegar_magic.cegar_effectiveness_threshold = 17;
+    cs->cegar_magic.universal_activity_decay = (float) 0.95;
     
-    // initialize vector of bits saying we need this variable in the blocking clause
-    for (unsigned i = 0; i < var_vector_count(qcnf->vars); i++) {
-        int_vector_add(d->is_used_in_lemma, 1);
-    }
-    
-    return d;
+    return cs;
 }
 
 bool casesplits_is_initialized(Casesplits* cs) {
@@ -81,6 +75,13 @@ void cegar_remember_original_satlit(Casesplits* cs, unsigned var_id) {
 }
 
 void casesplits_update_interface(Casesplits* cs, Skolem* skolem) {
+    
+    // initialize vector of bits saying we need this variable in the blocking clause
+    int_vector_reset(cs->is_used_in_lemma);
+    for (unsigned i = 0; i < var_vector_count(cs->qcnf->vars); i++) {
+        int_vector_add(cs->is_used_in_lemma, 1);
+    }
+    
     assert(cs->skolem == NULL || cs->skolem == skolem);
     cs->skolem = skolem;
     
@@ -202,7 +203,7 @@ void skolem_is_assignment_possible(Skolem* s, int_vector* ass) {
         satsolver_assume(s->skolem, satlit);
     }
     sat_res res = satsolver_sat(s->skolem);
-    if (res == SATSOLVER_RESULT_UNSAT) {
+    if (res == SATSOLVER_UNSAT) {
         V1("Illegally excluded assignment.\n");
         abort();
     }
@@ -228,7 +229,7 @@ void skolem_print_assignment(Skolem* s) {
 
 void casesplits_encode_last_case(Casesplits* cs) {
     Case* c = vector_get(cs->solved_cases, vector_count(cs->solved_cases) - 1);
-    if (c->type == 0 || (c->type == 1 && cs->options->casesplits_cubes)) { // cube case
+    if (c->type == 0 || (c->type == 1 && cs->skolem->options->casesplits_cubes)) { // cube case
         for (unsigned i = 0; i < int_vector_count(c->universal_assumptions); i++) {
             Lit lit = int_vector_get(c->universal_assumptions, i);
             assert(skolem_is_deterministic(cs->skolem, lit_to_var(lit)));
@@ -241,7 +242,7 @@ void casesplits_encode_last_case(Casesplits* cs) {
         satsolver_clause_finished_for_context(cs->skolem->skolem, 0);
     } else { // function case
         assert(c->type == 1);
-        Skolem* encoding_skolem = skolem_init(c->qcnf, cs->options);
+        Skolem* encoding_skolem = skolem_init(c->qcnf, cs->skolem->options);
         encoding_skolem->record_conflicts = true;
         satsolver_free(encoding_skolem->skolem);
         encoding_skolem->skolem = cs->skolem->skolem;
@@ -285,7 +286,7 @@ void casesplits_encode_last_case(Casesplits* cs) {
         V1("\n");
 
         sat_res res = satsolver_sat(cs->skolem->skolem);
-        if (res != SATSOLVER_RESULT_UNSAT) {
+        if (res != SATSOLVER_UNSAT) {
             V1("Violating assignment is: ");
             for (unsigned i = 0; i < var_vector_count(c->qcnf->vars); i++) {
                 if (qcnf_var_exists(c->qcnf, i) && qcnf_is_universal(c->qcnf, i)) {
@@ -322,7 +323,7 @@ void casesplits_encode_case_into_satsolver(Skolem* s, Case* c, SATSolver* sat) {
 void casesplits_record_cegar_cube(Casesplits* cs, int_vector* cube, int_vector* partial_assignment) {
     Case* c = case_init();
     assert(cube);
-    assert(!cs->options->certify_SAT || partial_assignment);
+    assert(!cs->skolem->options->certify_SAT || partial_assignment);
     c->type = 0;
     c->universal_assumptions = cube;
     c->decisions = partial_assignment;

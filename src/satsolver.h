@@ -1,10 +1,6 @@
 #ifndef SATSOLVER_H
 #define SATSOLVER_H
 
-#define SATSOLVER_SATISFIABLE 10
-#define SATSOLVER_UNSATISFIABLE 20
-#define SATSOLVER_UNKNOWN 0
-
 #define SOLVER_PICOSAT_PUSH_POP 1
 #define SOLVER_PICOSAT_ASSUMPTIONS 2
 #define SOLVER_MINISAT 3
@@ -29,10 +25,10 @@
 struct SATSolver;
 typedef struct SATSolver SATSolver;
 
-typedef enum {
-    SATSOLVER_RESULT_UNKNOWN = SATSOLVER_UNKNOWN,
-    SATSOLVER_RESULT_SAT     = SATSOLVER_SATISFIABLE,
-    SATSOLVER_RESULT_UNSAT   = SATSOLVER_UNSATISFIABLE
+typedef enum { // codes as used in the SAT competitions
+    SATSOLVER_UNKNOWN = 0,
+    SATSOLVER_SAT     = 10,
+    SATSOLVER_UNSAT   = 20
 } sat_res;
 
 SATSolver* satsolver_init();

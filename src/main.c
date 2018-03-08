@@ -1,6 +1,5 @@
 
 #include "log.h"
-#include "parse.h"
 #include "certify.h"
 #include "options.h"
 #include "util.h"

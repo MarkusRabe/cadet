@@ -108,7 +108,6 @@
 		28675A241DDAA9D000951212 /* options.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = options.c; path = src/options.c; sourceTree = "<group>"; };
 		28675A251DDAA9D000951212 /* options.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = options.h; path = src/options.h; sourceTree = "<group>"; };
 		28675A261DDAA9D000951212 /* parse.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = parse.c; path = src/parse.c; sourceTree = "<group>"; };
-		28675A271DDAA9D000951212 /* parse.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = parse.h; path = src/parse.h; sourceTree = "<group>"; };
 		28675A281DDAA9D000951212 /* partial_assignment.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = partial_assignment.c; path = src/partial_assignment.c; sourceTree = "<group>"; };
 		28675A291DDAA9D000951212 /* partial_assignment.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = partial_assignment.h; path = src/partial_assignment.h; sourceTree = "<group>"; };
 		28675A2A1DDAA9D000951212 /* picosat.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = picosat.c; path = src/picosat.c; sourceTree = "<group>"; };
@@ -322,7 +321,6 @@
 				28675A171DDAA9D000951212 /* debug.c */,
 				28675A251DDAA9D000951212 /* options.h */,
 				28675A241DDAA9D000951212 /* options.c */,
-				28675A271DDAA9D000951212 /* parse.h */,
 				28675A261DDAA9D000951212 /* parse.c */,
 				28675A681DDAAA5600951212 /* cadet2 */,
 				28F2769D1E6FFC2700B471CB /* qipasir */,

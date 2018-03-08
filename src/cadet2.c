@@ -7,7 +7,6 @@
 //
 
 #include "cadet2.h"
-#include "parse.h"
 #include "log.h"
 #include "util.h"
 #include "conflict_analysis.h"
@@ -25,24 +24,39 @@
 #include <stdint.h>
 #include <sys/time.h>
 
-C2* c2_init_qcnf(QCNF* qcnf, Options* options) {
 
+C2* c2_init(Options* options) {
     C2* c2 = malloc(sizeof(C2));
-
-    c2->qcnf = qcnf;
+    c2->qcnf = qcnf_init();
     c2->options = options;
+    
+    // DOMAINS
+    c2->cs = casesplits_init(c2->qcnf);
+    c2->skolem = skolem_init(c2->qcnf, c2->options);
+    if (skolem_is_conflicted(c2->skolem)) {
+        c2->state = C2_UNSAT;
+    }
+    c2->examples = examples_init(c2->qcnf, c2->options->examples_max_num);
+    assert(!examples_is_conflicted(c2->examples));
+    
+    // Conflict analysis
+    c2->ca = conflcit_analysis_init(c2);
+    
+    // Clause minimization
+    c2->minimization_pa = partial_assignment_init(c2->qcnf);
+    
 
     c2->state = C2_READY;
     c2->restarts = 0;
     c2->major_restarts = 0;
     c2->restarts_since_last_major = 0;
+    c2->decisions_since_last_conflict = 0;
     c2->restart_base_decision_lvl = 0;
     c2->activity_factor = (float) 1.0;
     
     c2->current_conflict = NULL;
 
     // Statistics
-    c2->decisions_since_last_conflict = 0;
     c2->statistics.conflicts = 0;
     c2->statistics.added_clauses = 0;
     c2->statistics.decisions = 0;
@@ -77,31 +91,10 @@ C2* c2_init_qcnf(QCNF* qcnf, Options* options) {
     c2->magic.notoriousity_threshold_factor = (float) 5.0; // > 0.0 ??
     c2->magic.skolem_success_recent_average_initialization = (float) 1.0;
     c2->skolem_success_recent_average = c2->magic.skolem_success_recent_average_initialization;
-//    c2->case_split_depth_penalty = C2_CASE_SPLIT_DEPTH_PENALTY_QUADRATIC;
-    c2->case_split_depth_penalty = C2_CASE_SPLIT_DEPTH_PENALTY_LINEAR;
+    c2->case_split_depth_penalty = C2_CASE_SPLIT_DEPTH_PENALTY_LINEAR; // C2_CASE_SPLIT_DEPTH_PENALTY_QUADRATIC
     c2->conflicts_between_case_splits_countdown = 1;
     c2->magic.case_split_linear_depth_penalty_factor = options->easy_debugging ? 1 : 5;
-
     
-    c2->cs = casesplits_init(qcnf, options);
-    // DOMAINS
-    c2->skolem = skolem_init(c2->qcnf, options);
-    if (skolem_is_conflicted(c2->skolem)) {
-        c2->state = C2_UNSAT;
-    }
-    
-    c2->examples = examples_init(qcnf, options->examples_max_num);
-    c2->ca = conflcit_analysis_init(c2);
-    
-    // Clause minimization
-    c2->minimization_pa = partial_assignment_init(qcnf);
-    
-    return c2;
-}
-
-C2* c2_init(Options* options) {
-    QCNF* qcnf = qcnf_init();
-    C2* c2 = c2_init_qcnf(qcnf,options);
     return c2;
 }
 
@@ -398,7 +391,7 @@ void c2_run(C2* c2, unsigned remaining_conflicts) {
             }
             Clause* learnt_clause = qcnf_close_clause(c2->qcnf);
             if (learnt_clause == NULL) {
-                abortif(satsolver_sat(c2->skolem->skolem) == SATSOLVER_RESULT_SAT, "Conflict clause could not be created. Conflict counter: %zu", c2->statistics.conflicts);
+                abortif(satsolver_sat(c2->skolem->skolem) == SATSOLVER_SAT, "Conflict clause could not be created. Conflict counter: %zu", c2->statistics.conflicts);
                 int_vector_free(c2->current_conflict);
                 c2->current_conflict = NULL;
                 c2->state = C2_CLOSE_CASE;
@@ -449,7 +442,7 @@ void c2_run(C2* c2, unsigned remaining_conflicts) {
                         if (c2->cs->cegar_stats.recent_average_cube_size
                             <= c2->cs->cegar_magic.cegar_effectiveness_threshold) {
                             V4("One more round of CEGAR\n");
-                            if (satsolver_sat(c2->skolem->skolem) == SATSOLVER_UNSATISFIABLE) { // makes another SAT call
+                            if (satsolver_sat(c2->skolem->skolem) == SATSOLVER_UNSAT) { // makes another SAT call
                                 break; // simply continue; cannot conclude SAT, because check relied on assumptions in global conflict check
                             }
                         } else { // enough CEGAR
@@ -581,7 +574,7 @@ cadet_res c2_result(C2* c2) {
             assert(skolem_has_empty_domain(c2->skolem));
             return CADET_RESULT_SAT;
         case C2_UNSAT:
-            assert(satsolver_state(c2->skolem->skolem) == SATSOLVER_RESULT_SAT || c2->skolem->state == SKOLEM_STATE_CONSTANTS_CONLICT);
+            assert(satsolver_state(c2->skolem->skolem) == SATSOLVER_SAT || c2->skolem->state == SKOLEM_STATE_CONSTANTS_CONLICT);
             assert(! skolem_has_empty_domain(c2->skolem));
             return CADET_RESULT_UNSAT;
         case C2_READY:
@@ -606,18 +599,20 @@ cadet_res c2_check_propositional(QCNF* qcnf, Options* o) {
         }
     }
     sat_res res = satsolver_sat(checker);
-    assert(res == SATSOLVER_RESULT_SAT || res == SATSOLVER_RESULT_UNSAT);
-    if (o->certify_SAT && res == SATSOLVER_RESULT_SAT) {
+    assert(res == SATSOLVER_SAT || res == SATSOLVER_UNSAT);
+    if (o->certify_SAT && res == SATSOLVER_SAT) {
         cert_propositional_AIG_certificate_SAT(qcnf, o, checker, satsolver_deref_generic);
     }
-    if (res == SATSOLVER_UNSATISFIABLE) {
-        c2_print_qdimacs_output(qcnf, checker, satsolver_deref_generic);
+    if (res == SATSOLVER_UNSAT) {
+        int_vector* refuting_assignment = int_vector_init();
+        // empty assignment
+        c2_print_qdimacs_output(refuting_assignment);
         if (o->certify_UNSAT) {
             NOT_IMPLEMENTED();
         }
     }
     satsolver_free(checker);
-    return res == SATSOLVER_RESULT_SAT ? CADET_RESULT_SAT : CADET_RESULT_UNSAT;
+    return res == SATSOLVER_SAT ? CADET_RESULT_SAT : CADET_RESULT_UNSAT;
 }
 
 
@@ -633,7 +628,7 @@ void c2_replenish_skolem_satsolver(C2* c2) {
     c2->skolem = skolem_init(c2->qcnf, c2->options);
     
     Casesplits* old_cs = c2->cs;
-    c2->cs = casesplits_init(c2->qcnf, c2->options);
+    c2->cs = casesplits_init(c2->qcnf);
     
     c2_initial_propagation(c2); // (re-)establishes dlvl 0
     abortif(c2->state != C2_READY, "Conflicted after replenishing.");
@@ -741,7 +736,7 @@ cadet_res c2_sat(C2* c2) {
             V1("Restart %zu\n", c2->restarts);
             c2->restarts += 1;
             c2_restart_heuristics(c2);
-            c2_simplify(c2);
+            if (c2->options->minimize_conflicts) {c2_simplify(c2);}
         }
         
         if (c2->options->cegar_soft_conflict_limit && c2->statistics.conflicts > 1000 && ! c2->options->cegar) {
@@ -753,31 +748,50 @@ return_result:
     return c2_result(c2);
 }
 
+int_vector* c2_refuting_assignment(C2* c2) {
+    abortif(c2->state != C2_UNSAT, "Must be in UNSAT state.");
+    int_vector* a = int_vector_init();
+    
+    if (satsolver_state(c2->cs->exists_solver) == SATSOLVER_UNSAT) {
+        for (unsigned i = 0; i < var_vector_count(c2->qcnf->vars); i++) {
+            if (qcnf_var_exists(c2->qcnf, i) && qcnf_is_universal(c2->qcnf, i) && qcnf_is_original(c2->qcnf, i)) {
+                int val = cegar_get_val(c2->skolem, (int) i);
+                int_vector_add(a, val * (Lit) i);
+            }
+        }
+    } else {
+        for (unsigned i = 0; i < var_vector_count(c2->qcnf->vars); i++) {
+            if (qcnf_var_exists(c2->qcnf, i) && qcnf_is_universal(c2->qcnf, i) && qcnf_is_original(c2->qcnf, i)) {
+                int val = skolem_get_value_for_conflict_analysis(c2->skolem, (Lit) i);
+                if (val != 0) {int_vector_add(a, val * (Lit) i);}
+            }
+        }
+    }
+    return a;
+}
+
 /**
  * c2_solve_qdimacs is the traditional entry point to C2. It reads the qdimacs, then solves, then prints and checks the result after calling c2_sat.
  */
 cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
-    QCNF* qcnf = create_qcnf_from_file(f, options);
+    C2* c2 = c2_from_file(f, options);
     if (f != stdin) {fclose(f);}
-    abortif(!qcnf,"Failed to create QCNF.");
 
-    V1("Maximal variable index: %u\n", var_vector_count(qcnf->vars));
-    V1("Number of clauses: %u\n", vector_count(qcnf->clauses));
-    V1("Number of scopes: %u\n", vector_count(qcnf->scopes));
+    V1("Maximal variable index: %u\n", var_vector_count(c2->qcnf->vars));
+    V1("Number of clauses: %u\n", vector_count(c2->qcnf->clauses));
+    V1("Number of scopes: %u\n", vector_count(c2->qcnf->scopes));
 
-    if (qcnf_is_propositional(qcnf) && ! options->use_qbf_engine_also_for_propositional_problems) {
+    if (qcnf_is_propositional(c2->qcnf) && ! options->use_qbf_engine_also_for_propositional_problems) {
         LOG_WARNING("Propositional problem; using SAT solver.\n");
-        return c2_check_propositional(qcnf, options);
+        return c2_check_propositional(c2->qcnf, options);
     }
     
     if (options->plaisted_greenbaum_completion) {
-        qcnf_plaisted_greenbaum_completion(qcnf);
+        qcnf_plaisted_greenbaum_completion(c2->qcnf);
     }
     if (options->qbce) {
-        qcnf_blocked_clause_detection(qcnf);
+        qcnf_blocked_clause_detection(c2->qcnf);
     }
-    
-    C2* c2 = c2_init_qcnf(qcnf, options);
 
     cadet_res res = c2_sat(c2);
     if (debug_verbosity >= VERBOSITY_LOW) {
@@ -809,9 +823,8 @@ cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
             }
             
             V1("  UNSAT via Skolem conflict.\n");
-            c2_print_qdimacs_output(c2->qcnf, c2->skolem, skolem_get_value_for_conflict_analysis);
-            abortif(c2->options->certify_internally_UNSAT
-                    && ! cert_check_UNSAT(c2->qcnf, c2->skolem, skolem_get_value_for_conflict_analysis) ,
+            c2_print_qdimacs_output(c2_refuting_assignment(c2));
+            abortif(c2->options->certify_internally_UNSAT && ! cert_check_UNSAT(c2),
                     "Check failed! UNSAT result could not be certified.");
             V1("Result verified.\n");
 

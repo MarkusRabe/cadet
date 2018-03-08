@@ -134,6 +134,7 @@ bool qcnf_var_exists(QCNF*, unsigned var_id);
 Var* qcnf_fresh_var(QCNF*, unsigned scope_id);
 bool qcnf_is_existential(QCNF* qcnf, unsigned var_id);
 bool qcnf_is_universal(QCNF* qcnf, unsigned var_id);
+bool qcnf_is_original(QCNF* qcnf, unsigned var_id);
 vector* qcnf_get_occs_of_lit(QCNF* qcnf, Lit lit);
 
 void qcnf_add_lit(QCNF*, int lit);

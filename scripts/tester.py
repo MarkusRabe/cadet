@@ -532,9 +532,9 @@ if __name__ == "__main__":
     if ARGS.test:
         print('Test mode')
         ARGS.all = False
-        ARGS.timeout = 3
+        ARGS.timeout = 5
         ARGS.csv = False
-        ARGS.threads = 2
+        ARGS.threads = 4
         ARGS.instances = None
         # ARGS.certify = False
         categories = ['test_files']

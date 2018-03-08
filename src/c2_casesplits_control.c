@@ -73,7 +73,7 @@ unsigned c2_case_split_probe(C2* c2, Lit lit) {
             c2->statistics.failed_literals_conflicts++;
             case_split_decision_metric = UINT_MAX; //ensure the variable is chosen
         } else {
-            V2("Number of propagations when assigning %d: %zu\n", lit, c2->skolem->statistics.propagations - case_split_decision_metric);
+            V3("Number of propagations when assigning %d: %zu\n", lit, c2->skolem->statistics.propagations - case_split_decision_metric);
             case_split_decision_metric = c2->skolem->statistics.propagations - case_split_decision_metric;
         }
 //    }

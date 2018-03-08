@@ -352,7 +352,7 @@ void c2_propagate(C2* c2) {
     skolem_propagate(c2->skolem);
     if (skolem_is_conflicted(c2->skolem)) {
         c2_rl_conflict(c2->options, c2->skolem->conflict_var_id);
-        assert(c2->state == C2_READY);
+        assert(c2->state == C2_READY || c2->state == C2_SKOLEM_CONFLICT);
         c2->state = C2_SKOLEM_CONFLICT;
         c2->current_conflict = analyze_assignment_conflict(c2,
                                            c2->skolem->conflict_var_id,
@@ -387,7 +387,7 @@ void c2_run(C2* c2, unsigned remaining_conflicts) {
     
     while (remaining_conflicts > 0) {
         V4("\nEntering main loop at dlvl %u.\n", c2->skolem->decision_lvl);
-        assert(c2->state == C2_READY);
+        assert(c2->state == C2_READY || c2->state == C2_SKOLEM_CONFLICT || c2->state == C2_EXAMPLES_CONFLICT);
         assert(c2->skolem->decision_lvl >= c2->restart_base_decision_lvl);
         assert(c2->skolem->stack->push_count == c2->skolem->decision_lvl);
 
@@ -515,6 +515,9 @@ void c2_run(C2* c2, unsigned remaining_conflicts) {
 
             // try case splits
             bool progress_through_case_split = c2_casesplits_assume_single_lit(c2);
+            if (c2->state == C2_SKOLEM_CONFLICT) {
+                continue;
+            }
             if (c2->state != C2_READY) {
                 return;
             }
@@ -749,24 +752,18 @@ cadet_res c2_sat(C2* c2) {
     while (c2->state == C2_READY) { // This loop controls the restarts
         
         c2_run(c2, c2->next_restart);
-        
+        assert(!c2_is_in_conflcit(c2) || c2->state == C2_UNIVERSAL_ASSIGNMENT_CONFLICT);
         if (c2->state == C2_CLOSE_CASE) { //} skolem_is_complete(c2->skolem) && (c2->options->casesplits || c2->options->certify_SAT)) {
             bool must_be_SAT = int_vector_count(c2->skolem->universals_assumptions) == 0; // just for safety
             c2_close_case(c2);
             assert(! must_be_SAT || c2->state == C2_SAT);
         }
-        if (c2->state == C2_SKOLEM_CONFLICT || c2->state == C2_EXAMPLES_CONFLICT) {
+        if (c2->state == C2_READY) {
             c2_backtrack_to_decision_lvl(c2, c2->restart_base_decision_lvl);
-            if (c2->state == C2_SKOLEM_CONFLICT) {
-                // didn't go away through backtracking; must be permanent
-                c2->state = C2_UNIVERSAL_ASSIGNMENT_CONFLICT;
-            }
-            if (c2->state == C2_READY) {
-                V1("Restart %zu\n", c2->restarts);
-                c2->restarts += 1;
-                c2_restart_heuristics(c2);
-                c2_simplify(c2);
-            }
+            V1("Restart %zu\n", c2->restarts);
+            c2->restarts += 1;
+            c2_restart_heuristics(c2);
+            c2_simplify(c2);
         }
         
         if (c2->options->cegar_soft_conflict_limit && c2->statistics.conflicts > 1000 && ! c2->options->cegar) {

@@ -40,13 +40,13 @@ void c2_delete_learnt_clauses_greater_than(C2* c2, unsigned max_size) {
 }
 
 void c2_simplify(C2* c2) {
-    if (c2->options->minimize_conflicts && c2->state == C2_READY) {
+    if (c2->options->minimize_conflicts) {
         for (int i = (int) vector_count(c2->qcnf->clauses) - 1; i >= 0; i--) {
             Clause* c = vector_get(c2->qcnf->clauses, (unsigned) i);
             if (! c || skolem_get_unique_consequence(c2->skolem, c) != 0) {
                 continue;
             }
-            if (c->original || genrand_int31() % 100 == 0) {
+            if (c->original || genrand_int31() % 100 == 0 || c2->state != C2_READY) {
                 break;
             }
             

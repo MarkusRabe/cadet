@@ -1220,7 +1220,7 @@ void skolem_update_clause_worklist(Skolem* s, Lit lit) {
 void skolem_make_universal_assumption(Skolem* s, Lit lit) { // 
     assert(skolem_is_deterministic(s, lit_to_var(lit)));
     int_vector_add(s->universals_assumptions, lit);
-    V2("Added universal assumption %d. New case split depth is %u\n", lit, int_vector_count(s->universals_assumptions));
+    V3("Added universal assumption %d. New case split depth is %u\n", lit, int_vector_count(s->universals_assumptions));
     stack_push_op(s->stack, SKOLEM_OP_UNIVERSAL_ASSUMPTION, NULL);
     
     unsigned var_id = lit_to_var(lit);

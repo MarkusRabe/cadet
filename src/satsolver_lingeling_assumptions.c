@@ -270,6 +270,11 @@ int satsolver_deref(SATSolver* solver, int lit) {
     return res;
 }
 
+// Same as satsolver_deref, but with void * instead of SATSolver *
+int satsolver_deref_generic(void* solver, int lit) {
+    return satsolver_deref((SATSolver*) solver, lit);
+}
+
 int satsolver_deref_partial(SATSolver* solver, int lit) {
     abort(); // not implemented
 }

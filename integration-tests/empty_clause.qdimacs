@@ -1,0 +1,18 @@
+c 2018-03-05 19:26:12 by qbfdd.py,v 1.2.2
+c qbfdd.py /Users/markus/work/cadet/dev/integration-tests/6061_SAT.qdimacs /Users/markus/work/cadet/dev/cadet --debugging --cegar -m ddmin -g b -S
+c 
+c mode: ddmin
+c rounds: 2
+c test runs: 7433
+c time elapsed: 69.55s
+c total: clauses  : -539 (99.26%)
+c        variables: -154 (97.47%)
+c        literals : -1551 (99.74%)
+c 
+p cnf 4 4
+a 4 0
+e 1 2 3 0
+-4 0
+-1 0
+-3 0
+-2 0

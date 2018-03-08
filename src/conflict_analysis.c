@@ -252,13 +252,6 @@ int_vector* analyze_assignment_conflict(C2* c2,
         V3("NULL\n");
     }
     
-#ifdef DEBUG
-    if (conflicted_var != 0) {
-        Var* v_help = var_vector_get(c2->qcnf->vars, conflicted_var);
-        assert(qcnf_is_existential(c2->qcnf, v_help->var_id));
-    }
-#endif
-    
     conflict_analysis* ca = c2->ca;
     
     assert(conflict_analysis_is_fresh(ca));

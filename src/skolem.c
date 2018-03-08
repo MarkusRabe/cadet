@@ -1231,6 +1231,8 @@ void skolem_update_clause_worklist(Skolem* s, Lit lit) {
 // Different from satsolver assumptions. Assumes a constant for a variable that is already deterministic
 void skolem_make_universal_assumption(Skolem* s, Lit lit) { // 
     assert(skolem_is_deterministic(s, lit_to_var(lit)));
+    // assert(satsolver_sat(s->skolem) == SATSOLVER_RESULT_SAT); // changes sat solver state depending on compilation with debug symbols ...
+    
     int_vector_add(s->universals_assumptions, lit);
     V3("Added universal assumption %d. New case split depth is %u\n", lit, int_vector_count(s->universals_assumptions));
     stack_push_op(s->stack, SKOLEM_OP_UNIVERSAL_ASSUMPTION, NULL);
@@ -1294,12 +1296,10 @@ void skolem_assign_constant_value(Skolem* s, Lit lit, union Dependencies propaga
     
     if (potentially_conflicted) {
         V2("Variable %u is assigned a constant but is locally conflicted in the skolem domain.\n", var_id);
-        
         if ( ! skolem_is_deterministic(s, lit_to_var(lit))) {
             // We know the variable is deterministic now; it is in fact constant. But we have to add the opposite side of the clauses to be able to do the conflict check
             skolem_fix_lit_for_unique_antecedents(s, (lit > 0 ? -1 : 1) * (Lit) var_id, false, FUAM_ONLY_LEGALS);
         }
-        
         if (lit > 0) {
             skolem_update_pos_lit(s, var_id, s->satlit_true);
         } else {
@@ -1373,11 +1373,12 @@ void skolem_propagate_constants_over_clause(Skolem* s, Clause* c) {
         for (unsigned i = 0; i < c->size; i++) {
             unsigned var_id = lit_to_var(c->occs[i]);
             unsigned dlvl = skolem_get_dlvl_for_constant(s, var_id);
-            if (qcnf_is_existential(s->qcnf, var_id) && dlvl >= max_dlvl) {
+            if (dlvl >= max_dlvl) {
                 max_dlvl = dlvl;
                 max_dlvl_var = var_id;
             }
         }
+
         abortif(max_dlvl_var == 0, "No variable in clause found.");
         s->conflict_var_id = max_dlvl_var; // lit_to_var(c->occs[c->size - 1]);
         skolem_update_state(s, SKOLEM_STATE_CONSTANTS_CONLICT);

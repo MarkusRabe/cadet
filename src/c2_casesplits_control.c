@@ -183,6 +183,7 @@ bool c2_make_universal_assumption_unless_vacuous(C2* c2, Lit lit) {
         V1("Case split lead to immediate conflict. Formula UNSAT\n");
         c2->state = C2_SKOLEM_CONFLICT;
     }
+//        abortif(satsolver_sat(c2->skolem->skolem) != SATSOLVER_RESULT_SAT, "Did not detect that domain is empty.");
     return is_vacuous;
 }
 

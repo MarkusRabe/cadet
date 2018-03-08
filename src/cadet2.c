@@ -387,7 +387,7 @@ void c2_run(C2* c2, unsigned remaining_conflicts) {
         assert(c2->state == C2_READY || c2->state == C2_SKOLEM_CONFLICT || c2->state == C2_EXAMPLES_CONFLICT);
         assert(c2->skolem->decision_lvl >= c2->restart_base_decision_lvl);
         assert(c2->skolem->stack->push_count == c2->skolem->decision_lvl);
-
+        
         c2_propagate(c2);
         
         if (c2_is_in_conflcit(c2)) {
@@ -397,7 +397,13 @@ void c2_run(C2* c2, unsigned remaining_conflicts) {
                 qcnf_add_lit(c2->qcnf, - lit);
             }
             Clause* learnt_clause = qcnf_close_clause(c2->qcnf);
-            abortif(learnt_clause == NULL, "Conflict clause could not be created. Conflict counter: %zu", c2->statistics.conflicts);
+            if (learnt_clause == NULL) {
+                abortif(satsolver_sat(c2->skolem->skolem) == SATSOLVER_RESULT_SAT, "Conflict clause could not be created. Conflict counter: %zu", c2->statistics.conflicts);
+                int_vector_free(c2->current_conflict);
+                c2->current_conflict = NULL;
+                c2->state = C2_CLOSE_CASE;
+                return;
+            }
             learnt_clause->original = false;
             c2->statistics.learnt_clauses_total_length += learnt_clause->size;
             

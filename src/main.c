@@ -122,7 +122,7 @@ int main(int argc, const char* argv[]) {
                     } else if (strcmp(argv[i], "--aiger_negated") == 0) {
                         options->aiger_negated_encoding = true;
                     } else if (strcmp(argv[i], "--debugging") == 0) {
-                        options->easy_debugging = true;
+                        options->easy_debugging = !options->easy_debugging;
                     } else if (strcmp(argv[i], "--aiger_controllable_inputs") == 0) {
                         if (i + 1 >= argc) {
                             LOG_ERROR("Missing string for argument --aiger_ci\n");
@@ -134,10 +134,15 @@ int main(int argc, const char* argv[]) {
                     } else if (strcmp(argv[i], "--case_splits") == 0) {
                         options->casesplits = ! options->casesplits;
                     } else if (strcmp(argv[i], "--functional-synthesis") == 0) {
+                        assert(!options->functional_synthesis);
                         options->functional_synthesis = true;
                         if (options->cegar) {
                             V0("Functional synthesis currently incompatible with CEGAR. Deactivating CEGAR.\n");
                             options->cegar = false;
+                        }
+                        if (options->casesplits) {
+                            V0("Functional synthesis currently incompatible with case splits. Deactivating case splits.\n");
+                            options->casesplits = false;
                         }
                     } else if (strcmp(argv[i], "--minimize") == 0) {
                         options->minimize_conflicts = ! options->minimize_conflicts;

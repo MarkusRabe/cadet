@@ -231,7 +231,7 @@ void skolem_print_assignment(Skolem* s) {
     V1("\n");
 }
 
-static void skolem_record_conflicts(Skolem* s, int_vector* decision_sequence) {
+void casesplits_record_conflicts(Skolem* s, int_vector* decision_sequence) {
     s->record_conflicts = true;
     skolem_propagate(s); // initial propagation
     for (unsigned i = 0; i < int_vector_count(decision_sequence); i++) {
@@ -299,7 +299,7 @@ void casesplits_encode_last_case(Casesplits* cs) {
         
         // Encode the disjunction over the potentially conflicted variables.
         // This excludes all solutions for which this Skolem function works
-        skolem_record_conflicts(cs->skolem, c->decisions);
+        casesplits_record_conflicts(cs->skolem, c->decisions);
         int_vector* necessary_assumptions = casesplits_test_assumptions(cs, c->universal_assumptions);
         assert(necessary_assumptions != NULL);
         for (unsigned i = 0; i < int_vector_count(c->universal_assumptions); i++) {

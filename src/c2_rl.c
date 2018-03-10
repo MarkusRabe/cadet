@@ -249,15 +249,13 @@ cadet_res c2_rl_run_c2(Options* o) {
                 if (c && !c->original && c->consistent_with_originals) {
                     // this is a learnt clause!
                     unsigned universal = qcnf_fresh_universal(solver->qcnf);
-                    map_add(lc_vars, c->clause_idx, (void*)(size_t) universal);
+                    map_add(lc_vars, (int) c->clause_idx, (void*)(size_t) universal);
                 }
             }
             // Step 2: Replay skolem domain to build the SAT formula
             Skolem* replay = skolem_init(solver->qcnf, o);
-            replay->record_conflicts = true;
-            
-            
-            
+            casesplits_record_conflicts(replay, solver->skolem->determinization_order);
+//            int_vector* necessary_assumptions = casesplits_test_assumptions(cs, universal_assumptions);
             NOT_IMPLEMENTED();
         }
         

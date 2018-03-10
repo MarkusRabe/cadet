@@ -78,6 +78,9 @@ void casesplits_record_cegar_cube(Casesplits*, int_vector* cube, int_vector* par
 void casesplits_encode_case_into_satsolver(Skolem*, Case* c, SATSolver* sat);
 void casesplits_print_statistics(Casesplits*);
 
+void casesplits_record_conflicts(Skolem* s, int_vector* decision_sequence);
+int_vector* casesplits_test_assumptions(Casesplits* cs, int_vector* universal_assumptions);
+
 // Interface
 void casesplits_update_interface(Casesplits*,Skolem*);
 float casesplits_get_interface_activity(Casesplits*, unsigned var_id);

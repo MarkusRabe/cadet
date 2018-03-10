@@ -519,7 +519,7 @@ if __name__ == "__main__":
                         help='Override CPU load check.')
                         
     instances_file = open('integration-tests/instances.txt', 'r').read()
-    all_categories = re.findall(r'\[([A-Za-z0-9_]+)\]', instances_file)
+    all_categories = re.findall(r'\[([A-Za-z0-9_-]+)\]', instances_file)
     for cat in all_categories:
         parser.add_argument('--{}'.format(cat), dest=cat, action='store_true', help='Run the {} formulas'.format(cat))
     

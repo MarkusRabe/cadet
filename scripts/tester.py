@@ -97,18 +97,14 @@ def print_result(name,config,expected,result,return_value,seconds,memory):
 def print_stats():
     global failed
     print('\nStatistics:')
-    i = 0
-    for name in testcases:
-        if name not in testcase_result:
-            continue
-        i += 1
-        result, return_value = testcase_result[name]
+    for x in testcase_result:
+        testcase_name, config, expected, result, return_value = testcase_result[x]
         seconds=None
         memory=None
-        if name in benchmark_results:
-            seconds, memory = compute_average(benchmark_results[name])
-        print_result(name,result,return_value,seconds,memory)
-    print('Printed {} results in total'.format(i))
+        if x in benchmark_results:
+            seconds, memory = compute_average(benchmark_results[x])
+        print_result(testcase_name,config,expected,result,return_value,seconds,memory)
+    print('Printed {} results in total'.format(len(testcase_result)))
     
     log_progress(green( 'SUCCESS: ') + "{}\n".format(SUCCESSES))
     log_progress(red(   'FAILED:  ') + "{}\n".format(FAILEDS))
@@ -192,23 +188,23 @@ def run_testcases(threads, runs=1):
     
     for i in range(len(to_run)):
         try:
-            testcase, code, seconds, memory, return_value = result_queue.get(block=True)
-            if testcase not in testcase_result:
-                testcase_result[testcase] = (code, return_value)
+            testcase, config, expected, result, return_value, seconds, memory = result_queue.get(block=True)
+            if testcase + ' ' + config not in testcase_result:
+                testcase_result[testcase + ' ' + config] = (testcase, config, expected, result, return_value)
             if seconds is not None:
                 if not testcase in benchmark_results:
                     benchmark_results[testcase] = []
                 benchmark_results[testcase].append((seconds, memory))
-            if code == TEST_FAILED:
+            if result == TEST_FAILED:
                 global FAILEDS
                 FAILEDS += 1
-            elif code == TEST_SUCCESS:
+            elif result == TEST_SUCCESS:
                 global SUCCESSES
                 SUCCESSES += 1
-            elif code == TEST_TIMEOUT:
+            elif result == TEST_TIMEOUT:
                 global TIMEOUTS
                 TIMEOUTS += 1
-            elif code == TEST_UNKNOWN:
+            elif result == TEST_UNKNOWN:
                 global UNKNOWNS
                 UNKNOWNS += 1
             else:
@@ -345,7 +341,7 @@ def run_testcase(testcase_input):
         print('OUTPUT: ' + output)
         sys.stdout.flush()
     
-    code = None
+    result = None
     seconds = None
     memory = None
     
@@ -353,17 +349,17 @@ def run_testcase(testcase_input):
         seconds, memory = get_benchmark_result(testcase, error)
         
     if return_value == TIMEOUT:
-        code = TEST_TIMEOUT
+        result = TEST_TIMEOUT
     elif return_value == UNKNOWN:
-        code = TEST_UNKNOWN
+        result = TEST_UNKNOWN
     elif return_value in [SATISFIABLE,UNSATISFIABLE] and (return_value == expected or expected == UNKNOWN):
-        code = TEST_SUCCESS
+        result = TEST_SUCCESS
     else:
-        code = TEST_FAILED
+        result = TEST_FAILED
             
-    print_result(testcase, config, expected,code,return_value,seconds,memory)
+    print_result(testcase, config, expected, result, return_value, seconds,memory)
     
-    if code == TEST_FAILED:
+    if result == TEST_FAILED:
         log_fail(testcase, output + error)
     elif ARGS.statistics:
         print('\nOutput for command ' + command_string + '\n' + output)
@@ -400,8 +396,7 @@ def run_testcase(testcase_input):
             print('Certified!')
             
         call('rm ' + cert_file + ' ' + cert_file2, ARGS.timeout)
-        
-    return testcase, code, seconds, memory, return_value
+    return testcase, config, expected, result, return_value, seconds, memory
 
 def getTestCases():
     

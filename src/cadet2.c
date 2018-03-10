@@ -685,7 +685,7 @@ void c2_restart_heuristics(C2* c2) {
         V1("Stepping out of case split.\n"); // Needed to simplify replenishing
         c2_backtrack_casesplit(c2);
 //#if (USE_SOLVER == SOLVER_PICOSAT_ASSUMPTIONS)
-        c2_replenish_skolem_satsolver(c2);
+//        c2_replenish_skolem_satsolver(c2);
 //#endif
     }
 }

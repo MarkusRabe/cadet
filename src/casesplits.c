@@ -249,6 +249,34 @@ static void skolem_record_conflicts(Skolem* s, int_vector* decision_sequence) {
     skolem_encode_global_conflict_check(s);
 }
 
+int_vector* casesplits_test_assumptions(Casesplits* cs, int_vector* universal_assumptions) {
+    V1("Universal assumption is: ");
+    for (unsigned i = 0; i < int_vector_count(universal_assumptions); i++) {
+        Lit lit = int_vector_get(universal_assumptions, i);
+        assert(skolem_is_deterministic(cs->skolem, lit_to_var(lit)));
+        int satlit = (int) (long) map_get(cs->original_satlits, lit);
+        assert(satlit != - cs->skolem->satlit_true);
+        satsolver_assume(cs->skolem->skolem, satlit);
+        V1(" %d (%d)", lit, satlit);
+    }
+    V1("\n");
+    
+    sat_res res = satsolver_sat(cs->skolem->skolem);
+    if (res == SATSOLVER_UNSAT) {
+        int_vector* failed_as = int_vector_init();
+        for (unsigned i = 0; i < int_vector_count(universal_assumptions); i++) {
+            Lit lit = int_vector_get(universal_assumptions, i);
+            int satlit = (int) (long) map_get(cs->original_satlits, lit);
+            if (! satsolver_failed_assumption(cs->skolem->skolem, satlit)) {
+                int_vector_add(failed_as, lit);
+            }
+        }
+        return failed_as;
+    } else {
+        return NULL;
+    }
+}
+
 void casesplits_encode_last_case(Casesplits* cs) {
     Case* c = vector_get(cs->closed_cases, vector_count(cs->closed_cases) - 1);
     if (c->type == 0 || (c->type == 1 && cs->skolem->options->casesplits_cubes)) { // cube case
@@ -271,61 +299,32 @@ void casesplits_encode_last_case(Casesplits* cs) {
         
         stack_push(cs->skolem->stack);
         
-        skolem_record_conflicts(cs->skolem, c->decisions); // this encodes the disjunction over the potentially conflicted variables.
-        
-        
-#ifdef DEBUG // test if the function is correct
+        // Encode the disjunction over the potentially conflicted variables.
+        // This excludes all solutions for which this Skolem function works
+        skolem_record_conflicts(cs->skolem, c->decisions);
+        int_vector* necessary_assumptions = casesplits_test_assumptions(cs, c->universal_assumptions);
+        assert(necessary_assumptions != NULL);
+        for (unsigned i = 0; i < int_vector_count(necessary_assumptions); i++) {
+            unsigned var = lit_to_var(int_vector_get(necessary_assumptions, i));
+            casesplits_decay_interface_activity(cs, var);
+            casesplits_decay_interface_activity(cs, var);
+            casesplits_decay_interface_activity(cs, var);
+            casesplits_decay_interface_activity(cs, var);
+            casesplits_decay_interface_activity(cs, var);
+        }
+        unsigned generalizations = int_vector_count(c->universal_assumptions) - int_vector_count(necessary_assumptions);
+        cs->case_generalizations += generalizations;
+        if (generalizations > 0) {
+            V1("Generalized assumptions! Removed %d of %d assignments\n",
+               generalizations,
+               int_vector_count(c->universal_assumptions));
+        }
+#ifdef DEBUG
         for (unsigned i = 0; i < var_vector_count(c->qcnf->vars); i++) {
             abortif(qcnf_var_exists(c->qcnf, i) && ! skolem_is_deterministic(cs->skolem, i), "A variable remained deterministic after casesplit replay.");
         }
-        V1("Universal assumption is: ");
-        for (unsigned i = 0; i < int_vector_count(c->universal_assumptions); i++) {
-            Lit lit = int_vector_get(c->universal_assumptions, i);
-            assert(skolem_is_deterministic(cs->skolem, lit_to_var(lit)));
-            int satlit = (int) (long) map_get(cs->original_satlits, lit);
-            assert(satlit != - cs->skolem->satlit_true);
-            satsolver_assume(cs->skolem->skolem, satlit);
-            V1(" %d (%d)", lit, satlit);
-        }
-        V1("\n");
-
-        sat_res res = satsolver_sat(cs->skolem->skolem);
-        if (res != SATSOLVER_UNSAT) {
-//            V1("Violating assignment is: ");
-//            for (unsigned i = 0; i < var_vector_count(c->qcnf->vars); i++) {
-//                if (qcnf_var_exists(c->qcnf, i) && qcnf_is_universal(c->qcnf, i)) {
-//                    int satlit = (int) (long) map_get(cs->original_satlits, (Lit) i);
-////                    int satlit = skolem_get_satsolver_lit(cs->skolem, (Lit) i);
-//                    int val = satsolver_deref(cs->skolem->skolem, satlit);
-//                    V1(" %d (%d)", val * (Lit) i, satlit);
-//                }
-//            }
-//            V1("\n");
-            abort();
-        } else {
-            unsigned generalizations = 0;
-            for (unsigned i = 0; i < int_vector_count(c->universal_assumptions); i++) {
-                Lit lit = int_vector_get(c->universal_assumptions, i);
-                int satlit = (int) (long) map_get(cs->original_satlits, lit);
-                if (! satsolver_failed_assumption(cs->skolem->skolem, satlit)) {
-                    cs->case_generalizations += 1;
-                    generalizations += 1;
-//                    if (int_vector_contains(cs->interface_vars, lit_to_var(lit))) {
-//                        casesplits_decay_interface_activity(cs, lit_to_var(lit));
-//                        casesplits_decay_interface_activity(cs, lit_to_var(lit));
-//                        casesplits_decay_interface_activity(cs, lit_to_var(lit));
-//                        casesplits_decay_interface_activity(cs, lit_to_var(lit));
-//                        casesplits_decay_interface_activity(cs, lit_to_var(lit));
-//                    }
-                }
-            }
-            if (generalizations > 0) {
-                V1("Generalized to %d of %d assumptions!\n",
-                   int_vector_count(c->universal_assumptions) - generalizations,
-                   int_vector_count(c->universal_assumptions));
-            }
-        }
 #endif
+        
         stack_pop(cs->skolem->stack, cs->skolem);
     }
 }

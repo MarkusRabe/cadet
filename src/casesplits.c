@@ -15,7 +15,7 @@ Casesplits* casesplits_init(QCNF* qcnf) {
     Casesplits* cs = malloc(sizeof(Casesplits));
     cs->qcnf = qcnf;
     cs->skolem = NULL;
-    cs->solved_cases = vector_init();
+    cs->closed_cases = vector_init();
     
     cs->interface_vars = NULL;
     cs->interface_activities = float_vector_init();
@@ -168,10 +168,10 @@ void casesplits_free(Casesplits* d) {
     if (d->interface_activities) {float_vector_free(d->interface_activities);}
     if (d->original_satlits) {map_free(d->original_satlits);}
     int_vector_free(d->is_used_in_lemma);
-    for (unsigned i = 0; i < vector_count(d->solved_cases); i++) {
-        case_free((Case*) vector_get(d->solved_cases, i));
+    for (unsigned i = 0; i < vector_count(d->closed_cases); i++) {
+        case_free((Case*) vector_get(d->closed_cases, i));
     }
-    vector_free(d->solved_cases);
+    vector_free(d->closed_cases);
 }
 
 
@@ -228,7 +228,7 @@ void skolem_print_assignment(Skolem* s) {
 }
 
 void casesplits_encode_last_case(Casesplits* cs) {
-    Case* c = vector_get(cs->solved_cases, vector_count(cs->solved_cases) - 1);
+    Case* c = vector_get(cs->closed_cases, vector_count(cs->closed_cases) - 1);
     if (c->type == 0 || (c->type == 1 && cs->skolem->options->casesplits_cubes)) { // cube case
         for (unsigned i = 0; i < int_vector_count(c->universal_assumptions); i++) {
             Lit lit = int_vector_get(c->universal_assumptions, i);
@@ -313,7 +313,7 @@ void casesplits_completed_case_split(Casesplits* cs, int_vector* universal_assum
     c->universal_assumptions = universal_assumptions;
     c->decisions = decisions;
     c->qcnf = clauses;
-    vector_add(cs->solved_cases, c);
+    vector_add(cs->closed_cases, c);
 }
 
 void casesplits_encode_case_into_satsolver(Skolem* s, Case* c, SATSolver* sat) {
@@ -328,7 +328,7 @@ void casesplits_record_cegar_cube(Casesplits* cs, int_vector* cube, int_vector* 
     c->type = 0;
     c->universal_assumptions = cube;
     c->decisions = partial_assignment;
-    vector_add(cs->solved_cases, c);
+    vector_add(cs->closed_cases, c);
     // TODO: Instead of adding a clause to the SATsolver only, we should add a clause to the actual QCNF to enable propagation among the universals. But universal reduction might collapse these clauses to empty clauses ... not good.
     V2("Completed cube (with length %u) ", int_vector_count(cube));
     for (unsigned i = 0; i < int_vector_count(cube); i++) {
@@ -380,8 +380,8 @@ void casesplits_record_case(Casesplits* cs) {
 }
 
 void casesplits_steal_cases(Casesplits* new_cs, Casesplits* old_cs) {
-    for (unsigned i = 0; i < vector_count(old_cs->solved_cases); i++) {
-        Case* c = (Case*) vector_get(old_cs->solved_cases, i);
+    for (unsigned i = 0; i < vector_count(old_cs->closed_cases); i++) {
+        Case* c = (Case*) vector_get(old_cs->closed_cases, i);
         if (c->type == 0) {
             casesplits_record_cegar_cube(new_cs, c->universal_assumptions, c->decisions);
             // We passed these objects on to the new casesplits object, so make sure these
@@ -402,14 +402,25 @@ void casesplits_steal_cases(Casesplits* new_cs, Casesplits* old_cs) {
     casesplits_encode_last_case(new_cs);
 }
 
-void casesplits_print_statistics(Casesplits* d) {
-    if (d && casesplits_is_initialized(d)) {
+void casesplits_print_statistics(Casesplits* cs) {
+    if (cs && casesplits_is_initialized(cs)) {
         V0("Domain statistics:\n");
-        V0("  Interface size: %u\n", int_vector_count(d->interface_vars));
-        V0("  Number of explored cases: %u\n", vector_count(d->solved_cases));
+        V0("  Interface size: %u\n", int_vector_count(cs->interface_vars));
+        unsigned cegar_cases = 0;
+        unsigned case_splits = 0;
+        for (unsigned i = 0; i < vector_count(cs->closed_cases); i++) {
+            Case* c = vector_get(cs->closed_cases, i);
+            if (c->type == 0) {
+                cegar_cases += 1;
+            } else {
+                case_splits += 1;
+            }
+        }
+        V0("  Number of case splits: %u\n", case_splits);
+        V0("  Number of cegar cases: %u\n", cegar_cases);
         V0("CEGAR statistics:\n");
-        V0("  Successful minimizations: %u\n", d->cegar_stats.successful_minimizations);
-        V0("  Additional assignments: %u\n", d->cegar_stats.additional_assignments_num);
-        V0("  Additional assignments helped: %u\n", d->cegar_stats.successful_minimizations_by_additional_assignments);
+        V0("  Successful minimizations: %u\n", cs->cegar_stats.successful_minimizations);
+        V0("  Additional assignments: %u\n", cs->cegar_stats.additional_assignments_num);
+        V0("  Additional assignments helped: %u\n", cs->cegar_stats.successful_minimizations_by_additional_assignments);
     }
 }

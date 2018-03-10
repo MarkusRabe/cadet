@@ -635,7 +635,7 @@ void c2_replenish_skolem_satsolver(C2* c2) {
     
     casesplits_update_interface(c2->cs, c2->skolem);
     
-    assert(vector_count(old_cs->solved_cases) == 0 || c2->options->cegar || c2->options->casesplits);
+    assert(vector_count(old_cs->closed_cases) == 0 || c2->options->cegar || c2->options->casesplits);
     
     // Copy the cubes that we have solved already.
     casesplits_steal_cases(c2->cs, old_cs);

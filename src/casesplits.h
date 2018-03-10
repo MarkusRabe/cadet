@@ -51,7 +51,7 @@ struct Casesplits {
     float_vector* interface_activities; // contains the frequencies of the interface variabes as floats
     map* original_satlits;
     
-    vector* solved_cases; // over struct Case*
+    vector* closed_cases; // over struct Case*
     
     // CEGAR
     SATSolver* exists_solver; // using original names, no redirect as in the skolem solver

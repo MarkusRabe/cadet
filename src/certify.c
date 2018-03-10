@@ -238,8 +238,8 @@ void cert_AIG_certificate(C2* c2) {
         }
     }
     
-    for (unsigned i = 0; i < vector_count(c2->cs->solved_cases); i++) {
-        Case* c = vector_get(c2->cs->solved_cases, i);
+    for (unsigned i = 0; i < vector_count(c2->cs->closed_cases); i++) {
+        Case* c = vector_get(c2->cs->closed_cases, i);
         abortif(c->type != 0, "Certification of unknown case type.");
         if (c->universal_assumptions) {
             assert(c->decisions);

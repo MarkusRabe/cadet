@@ -508,7 +508,7 @@ if __name__ == "__main__":
     # parser.add_argument('--config', dest='configs', action='store', default='',
                         # help='provide a list of configurations in which to run each file')
     parser.add_argument('--config', metavar='C', type=str, nargs='*', 
-                        help='provide a list of command line configurations to run the tool in')
+                        help='provide a list of command line configurations to run the tool in; to avoid interpreting them as options for this tester script, try e.g. " --cegar" instead')
     parser.add_argument('--bloqqer', dest='use_bloqqer', action='store_true', 
                         help='Use bloqqer to preprocess the formulas.')
     parser.add_argument('--preprocessor', dest='preprocessor', action='store', default=None, 

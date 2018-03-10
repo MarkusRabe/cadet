@@ -301,7 +301,7 @@ void casesplits_encode_last_case(Casesplits* cs) {
         // This excludes all solutions for which this Skolem function works
         casesplits_record_conflicts(cs->skolem, c->decisions);
         int_vector* necessary_assumptions = casesplits_test_assumptions(cs, c->universal_assumptions);
-        assert(necessary_assumptions != NULL);
+        abortif(necessary_assumptions == NULL, "Case split was not successfully closed");
         for (unsigned i = 0; i < int_vector_count(c->universal_assumptions); i++) {
             Lit lit = int_vector_get(c->universal_assumptions, i);
             unsigned var_id = lit_to_var(lit);
@@ -422,8 +422,8 @@ void casesplits_steal_cases(Casesplits* new_cs, Casesplits* old_cs) {
             c->decisions = NULL;
             c->qcnf = NULL;
         }
+        casesplits_encode_last_case(new_cs);
     }
-    casesplits_encode_last_case(new_cs);
 }
 
 void casesplits_print_statistics(Casesplits* cs) {

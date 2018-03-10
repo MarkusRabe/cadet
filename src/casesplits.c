@@ -250,16 +250,14 @@ static void skolem_record_conflicts(Skolem* s, int_vector* decision_sequence) {
 }
 
 int_vector* casesplits_test_assumptions(Casesplits* cs, int_vector* universal_assumptions) {
-    V1("Universal assumption is: ");
+    V1("Testing assumption of closed case\n");
     for (unsigned i = 0; i < int_vector_count(universal_assumptions); i++) {
         Lit lit = int_vector_get(universal_assumptions, i);
         assert(skolem_is_deterministic(cs->skolem, lit_to_var(lit)));
         int satlit = (int) (long) map_get(cs->original_satlits, lit);
         assert(satlit != - cs->skolem->satlit_true);
         satsolver_assume(cs->skolem->skolem, satlit);
-        V1(" %d (%d)", lit, satlit);
     }
-    V1("\n");
     
     sat_res res = satsolver_sat(cs->skolem->skolem);
     if (res == SATSOLVER_UNSAT) {
@@ -267,7 +265,7 @@ int_vector* casesplits_test_assumptions(Casesplits* cs, int_vector* universal_as
         for (unsigned i = 0; i < int_vector_count(universal_assumptions); i++) {
             Lit lit = int_vector_get(universal_assumptions, i);
             int satlit = (int) (long) map_get(cs->original_satlits, lit);
-            if (! satsolver_failed_assumption(cs->skolem->skolem, satlit)) {
+            if (satsolver_failed_assumption(cs->skolem->skolem, satlit)) {
                 int_vector_add(failed_as, lit);
             }
         }
@@ -304,15 +302,19 @@ void casesplits_encode_last_case(Casesplits* cs) {
         skolem_record_conflicts(cs->skolem, c->decisions);
         int_vector* necessary_assumptions = casesplits_test_assumptions(cs, c->universal_assumptions);
         assert(necessary_assumptions != NULL);
-        for (unsigned i = 0; i < int_vector_count(necessary_assumptions); i++) {
-            unsigned var = lit_to_var(int_vector_get(necessary_assumptions, i));
-            casesplits_decay_interface_activity(cs, var);
-            casesplits_decay_interface_activity(cs, var);
-            casesplits_decay_interface_activity(cs, var);
-            casesplits_decay_interface_activity(cs, var);
-            casesplits_decay_interface_activity(cs, var);
+        for (unsigned i = 0; i < int_vector_count(c->universal_assumptions); i++) {
+            Lit lit = int_vector_get(c->universal_assumptions, i);
+            unsigned var_id = lit_to_var(lit);
+            if (int_vector_contains(necessary_assumptions, lit) && casesplits_get_interface_activity(cs, var_id) > 0.0 ) {
+                casesplits_decay_interface_activity(cs, var_id);
+                casesplits_decay_interface_activity(cs, var_id);
+                casesplits_decay_interface_activity(cs, var_id);
+                casesplits_decay_interface_activity(cs, var_id);
+                casesplits_decay_interface_activity(cs, var_id);
+            }
         }
         unsigned generalizations = int_vector_count(c->universal_assumptions) - int_vector_count(necessary_assumptions);
+        int_vector_free(necessary_assumptions);
         cs->case_generalizations += generalizations;
         if (generalizations > 0) {
             V1("Generalized assumptions! Removed %d of %d assignments\n",

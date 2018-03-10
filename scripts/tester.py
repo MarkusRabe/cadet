@@ -97,11 +97,7 @@ def print_result(name,config,expected,result,return_value,seconds,memory):
 def print_stats():
     global failed
     print('\nStatistics:')
-    for x, (testcase_name, config, expected, result, return_value) in sorted(testcase_result.iteritems(), key=lambda (k,v): (v,k)):
-        seconds=None
-        memory=None
-        if x in benchmark_results:
-            seconds, memory = compute_average(benchmark_results[x])
+    for x, (testcase_name, config, expected, result, return_value, seconds, memory) in sorted(testcase_result.iteritems(), key=lambda (k,v): (v,k)):
         print_result(testcase_name,config,expected,result,return_value,seconds,memory)
     print('Printed {} results in total'.format(len(testcase_result)))
     
@@ -189,7 +185,7 @@ def run_testcases(threads, runs=1):
         try:
             testcase, config, expected, result, return_value, seconds, memory = result_queue.get(block=True)
             if testcase + ' ' + config not in testcase_result:
-                testcase_result[testcase + ' ' + config] = (testcase, config, expected, result, return_value)
+                testcase_result[testcase + ' ' + config] = (testcase, config, expected, result, return_value, seconds, memory)
             if seconds is not None:
                 if not testcase in benchmark_results:
                     benchmark_results[testcase] = []
@@ -356,7 +352,7 @@ def run_testcase(testcase_input):
     else:
         result = TEST_FAILED
             
-    print_result(testcase, config, expected, result, return_value, seconds,memory)
+    print_result(testcase, config, expected, result, return_value, seconds, memory)
     
     if result == TEST_FAILED:
         log_fail(testcase, output + error)

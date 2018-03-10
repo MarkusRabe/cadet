@@ -58,8 +58,8 @@ unsigned c2_case_split_probe(C2* c2, Lit lit) {
 
     debug_verbosity -= 1;
     
-    size_t case_split_decision_metric = c2->skolem->statistics.propagations;
-    
+//    size_t case_split_decision_metric = c2->skolem->statistics.propagations;
+    size_t case_split_decision_metric = int_vector_count(c2->skolem->determinization_order);
     skolem_push(c2->skolem);
     skolem_make_universal_assumption(c2->skolem, lit);
     
@@ -78,7 +78,7 @@ unsigned c2_case_split_probe(C2* c2, Lit lit) {
             case_split_decision_metric = UINT_MAX; //ensure the variable is chosen
         } else {
             V2("Number of propagations when assigning %d: %zu\n", lit, c2->skolem->statistics.propagations - case_split_decision_metric);
-            case_split_decision_metric = c2->skolem->statistics.propagations - case_split_decision_metric;
+            case_split_decision_metric = int_vector_count(c2->skolem->determinization_order) - case_split_decision_metric;
         }
 //    }
 

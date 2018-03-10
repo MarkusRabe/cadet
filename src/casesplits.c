@@ -25,6 +25,7 @@ Casesplits* casesplits_init(QCNF* qcnf) {
     cs->exists_solver = satsolver_init(); // no initialized yet; see domain_update_interface
     cs->additional_assignment = int_vector_init();
     cs->is_used_in_lemma = int_vector_init();
+    
     // CEGAR statistics
     cs->cegar_stats.successful_minimizations = 0;
     cs->cegar_stats.additional_assignments_num = 0;
@@ -33,6 +34,9 @@ Casesplits* casesplits_init(QCNF* qcnf) {
     cs->cegar_magic.max_cegar_iterations_per_learnt_clause = 50;
     cs->cegar_magic.cegar_effectiveness_threshold = 17;
     cs->cegar_magic.universal_activity_decay = (float) 0.95;
+    
+    // Case statistics
+    cs->case_generalizations = 0;
     
     return cs;
 }
@@ -227,6 +231,24 @@ void skolem_print_assignment(Skolem* s) {
     V1("\n");
 }
 
+static void skolem_record_conflicts(Skolem* s, int_vector* decision_sequence) {
+    s->record_conflicts = true;
+    skolem_propagate(s); // initial propagation
+    for (unsigned i = 0; i < int_vector_count(decision_sequence); i++) {
+        Lit decision_lit = int_vector_get(decision_sequence, i);
+        if (skolem_is_deterministic(s, lit_to_var(decision_lit))) {
+            V2("Discovered during replay that decision %d is not needed.\n", decision_lit);
+        } else {
+            skolem_decision(s, decision_lit);
+            skolem_propagate(s);
+            assert(!skolem_is_conflicted(s)); // as we are in conflict recording mode
+        }
+    }
+    V2("max satlit %d\n", satsolver_get_max_var(s->skolem));
+    s->record_conflicts = false;
+    skolem_encode_global_conflict_check(s);
+}
+
 void casesplits_encode_last_case(Casesplits* cs) {
     Case* c = vector_get(cs->closed_cases, vector_count(cs->closed_cases) - 1);
     if (c->type == 0 || (c->type == 1 && cs->skolem->options->casesplits_cubes)) { // cube case
@@ -246,27 +268,11 @@ void casesplits_encode_last_case(Casesplits* cs) {
         assert(!skolem_is_conflicted(cs->skolem));
         assert(!cs->skolem->record_conflicts);
         
+        
         stack_push(cs->skolem->stack);
-        cs->skolem->record_conflicts = true;
-//        Skolem* encoding_skolem = skolem_init(c->qcnf, cs->skolem->options);
-//        encoding_skolem->record_conflicts = true;
-//        satsolver_free(encoding_skolem->skolem);
-//        encoding_skolem->skolem = cs->skolem->skolem;
-//
-//        skolem_propagate(encoding_skolem); // initial propagation
-//
-        for (unsigned i = 0; i < int_vector_count(c->decisions); i++) {
-            Lit decision_lit = int_vector_get(c->decisions, i);
-            if (skolem_is_deterministic(cs->skolem, lit_to_var(decision_lit))) {
-                V2("Discovered during replay that decision %d is not needed.\n", decision_lit);
-            } else {
-                skolem_decision(cs->skolem, decision_lit);
-                skolem_propagate(cs->skolem);
-                assert(!skolem_is_conflicted(cs->skolem));
-            }
-        }
-        V2("max satlit %d\n", satsolver_get_max_var(cs->skolem->skolem));
-        skolem_encode_global_conflict_check(cs->skolem); // this encodes the disjunction over the potentially conflicted variables.
+        
+        skolem_record_conflicts(cs->skolem, c->decisions); // this encodes the disjunction over the potentially conflicted variables.
+        
         
 #ifdef DEBUG // test if the function is correct
         for (unsigned i = 0; i < var_vector_count(c->qcnf->vars); i++) {
@@ -275,9 +281,8 @@ void casesplits_encode_last_case(Casesplits* cs) {
         V1("Universal assumption is: ");
         for (unsigned i = 0; i < int_vector_count(c->universal_assumptions); i++) {
             Lit lit = int_vector_get(c->universal_assumptions, i);
-            assert(skolem_is_deterministic(cs->skolem, lit_to_var(lit))); // may be violated as soon as we allow universal assumption on dlvl>0
+            assert(skolem_is_deterministic(cs->skolem, lit_to_var(lit)));
             int satlit = (int) (long) map_get(cs->original_satlits, lit);
-//            int satlit = skolem_get_satsolver_lit(cs->skolem, lit);
             assert(satlit != - cs->skolem->satlit_true);
             satsolver_assume(cs->skolem->skolem, satlit);
             V1(" %d (%d)", lit, satlit);
@@ -286,23 +291,41 @@ void casesplits_encode_last_case(Casesplits* cs) {
 
         sat_res res = satsolver_sat(cs->skolem->skolem);
         if (res != SATSOLVER_UNSAT) {
-            V1("Violating assignment is: ");
-            for (unsigned i = 0; i < var_vector_count(c->qcnf->vars); i++) {
-                if (qcnf_var_exists(c->qcnf, i) && qcnf_is_universal(c->qcnf, i)) {
-                    int satlit = (int) (long) map_get(cs->original_satlits, (Lit) i);
-//                    int satlit = skolem_get_satsolver_lit(cs->skolem, (Lit) i);
-                    int val = satsolver_deref(cs->skolem->skolem, satlit);
-                    V1(" %d (%d)", val * (Lit) i, satlit);
+//            V1("Violating assignment is: ");
+//            for (unsigned i = 0; i < var_vector_count(c->qcnf->vars); i++) {
+//                if (qcnf_var_exists(c->qcnf, i) && qcnf_is_universal(c->qcnf, i)) {
+//                    int satlit = (int) (long) map_get(cs->original_satlits, (Lit) i);
+////                    int satlit = skolem_get_satsolver_lit(cs->skolem, (Lit) i);
+//                    int val = satsolver_deref(cs->skolem->skolem, satlit);
+//                    V1(" %d (%d)", val * (Lit) i, satlit);
+//                }
+//            }
+//            V1("\n");
+            abort();
+        } else {
+            unsigned generalizations = 0;
+            for (unsigned i = 0; i < int_vector_count(c->universal_assumptions); i++) {
+                Lit lit = int_vector_get(c->universal_assumptions, i);
+                int satlit = (int) (long) map_get(cs->original_satlits, lit);
+                if (! satsolver_failed_assumption(cs->skolem->skolem, satlit)) {
+                    cs->case_generalizations += 1;
+                    generalizations += 1;
+//                    if (int_vector_contains(cs->interface_vars, lit_to_var(lit))) {
+//                        casesplits_decay_interface_activity(cs, lit_to_var(lit));
+//                        casesplits_decay_interface_activity(cs, lit_to_var(lit));
+//                        casesplits_decay_interface_activity(cs, lit_to_var(lit));
+//                        casesplits_decay_interface_activity(cs, lit_to_var(lit));
+//                        casesplits_decay_interface_activity(cs, lit_to_var(lit));
+//                    }
                 }
             }
-            V1("\n");
-            abort();
+            if (generalizations > 0) {
+                V1("Generalized to %d of %d assumptions!\n",
+                   int_vector_count(c->universal_assumptions) - generalizations,
+                   int_vector_count(c->universal_assumptions));
+            }
         }
 #endif
-        
-//        encoding_skolem->skolem = NULL; // don't want to free the main sat solver
-//        skolem_free(encoding_skolem);
-        cs->skolem->record_conflicts = false;
         stack_pop(cs->skolem->stack, cs->skolem);
     }
 }
@@ -417,8 +440,9 @@ void casesplits_print_statistics(Casesplits* cs) {
             }
         }
         V0("  Number of case splits: %u\n", case_splits);
-        V0("  Number of cegar cases: %u\n", cegar_cases);
+        V0("  Successful minimizations: %u\n", cs->case_generalizations);
         V0("CEGAR statistics:\n");
+        V0("  Number of cegar cases: %u\n", cegar_cases);
         V0("  Successful minimizations: %u\n", cs->cegar_stats.successful_minimizations);
         V0("  Additional assignments: %u\n", cs->cegar_stats.additional_assignments_num);
         V0("  Additional assignments helped: %u\n", cs->cegar_stats.successful_minimizations_by_additional_assignments);

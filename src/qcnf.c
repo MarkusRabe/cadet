@@ -483,10 +483,9 @@ Clause* qcnf_new_clause(QCNF* qcnf, int_vector* literals) {
     return c;
 }
 
-Var* qcnf_fresh_var(QCNF* qcnf, unsigned scope_id) {
-    Var* v = qcnf_new_var(qcnf, false, scope_id, var_vector_count(qcnf->vars));
-    assert(!v->is_universal);
-    return v;
+unsigned qcnf_fresh_universal(QCNF* qcnf) {
+    Var* v = qcnf_new_var(qcnf, true, 1, var_vector_count(qcnf->vars));
+    return v->var_id;
 }
 
 void qcnf_add_lit(QCNF* qcnf, int lit) {

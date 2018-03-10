@@ -131,7 +131,7 @@ bool qcnf_antecedent_subsubsumed(QCNF*, Clause* c1, Clause* c2, unsigned var_id)
 // Variables
 Var* qcnf_new_var(QCNF*, bool is_universal, unsigned scope_id, unsigned var_id);
 bool qcnf_var_exists(QCNF*, unsigned var_id);
-Var* qcnf_fresh_var(QCNF*, unsigned scope_id);
+unsigned qcnf_fresh_universal(QCNF*);
 bool qcnf_is_existential(QCNF* qcnf, unsigned var_id);
 bool qcnf_is_universal(QCNF* qcnf, unsigned var_id);
 bool qcnf_is_original(QCNF* qcnf, unsigned var_id);

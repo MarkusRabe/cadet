@@ -59,6 +59,9 @@ struct Casesplits {
     int_vector* additional_assignment;
     struct Cegar_Statistics cegar_stats;
     struct Cegar_Magic_Values cegar_magic;
+    
+    // Statistics
+    unsigned case_generalizations;
 };
 
 /* Initializes a cegar object, including the SAT solver using

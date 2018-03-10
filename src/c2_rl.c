@@ -231,10 +231,36 @@ cadet_res c2_rl_run_c2(Options* o) {
         }
         
         if (res == CADET_RESULT_UNSAT) {
-            int_vector* refutation = c2_refuting_assignment(solver);
-            // TODO: check which learnt clauses were important
+            // Determine which parts of the formula/decisions were important to figure out the counterexample.
+            // Could predict the UNSAT core (but there could be multiple ... have to compute a covering of all possible UNSAT cores?)
+            // Could predict the refuting assignment ... but there may be many! We would need to check if the networks prediction was correct.
+            
+//            int_vector* refutation = c2_refuting_assignment(solver);
             NOT_IMPLEMENTED();
         }
+        if (res == CADET_RESULT_SAT) {
+            // Determine which learnt clauses were needed for the solution
+            
+            // Step 1: Add one fresh universal variable per learnt clause
+            
+            map* lc_vars = map_init(); // mapping learnt clauses idx to unviersal variables
+            for (unsigned i = 0; i < vector_count(solver->qcnf->clauses); i++) {
+                Clause* c = vector_get(solver->qcnf->clauses, i);
+                if (c && !c->original && c->consistent_with_originals) {
+                    // this is a learnt clause!
+                    unsigned universal = qcnf_fresh_universal(solver->qcnf);
+                    map_add(lc_vars, c->clause_idx, (void*)(size_t) universal);
+                }
+            }
+            // Step 2: Replay skolem domain to build the SAT formula
+            Skolem* replay = skolem_init(solver->qcnf, o);
+            replay->record_conflicts = true;
+            
+            
+            
+            NOT_IMPLEMENTED();
+        }
+        
         
         for (unsigned i = 0; i < float_vector_count(rl->rewards); i++) {
             float seconds_since_last_decision = float_vector_get(rl->runtimes, i);

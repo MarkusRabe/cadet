@@ -390,18 +390,21 @@ void c2_run(C2* c2, unsigned remaining_conflicts) {
                 qcnf_add_lit(c2->qcnf, - lit);
             }
             Clause* learnt_clause = qcnf_close_clause(c2->qcnf);
+            learnt_clause->original = false;
+            int_vector_free(c2->current_conflict);
+            c2->current_conflict = NULL;
             if (learnt_clause == NULL) {
                 abortif(satsolver_sat(c2->skolem->skolem) == SATSOLVER_SAT, "Conflict clause could not be created. Conflict counter: %zu", c2->statistics.conflicts);
-                int_vector_free(c2->current_conflict);
-                c2->current_conflict = NULL;
                 c2->state = C2_CLOSE_CASE;
                 return;
             }
-            learnt_clause->original = false;
+            V3("Learnt clause %u\n", learnt_clause->clause_idx);
             c2->statistics.learnt_clauses_total_length += learnt_clause->size;
             
-            int_vector_free(c2->current_conflict);
-            c2->current_conflict = NULL;
+            if (c2->options->minimize_learnt_clauses) {
+                c2_minimize_clause(c2, learnt_clause);
+                abortif(c2->state == C2_UNSAT, "Conflict clause minimization shouldn't bring us in UNSAT state.");
+            }
             
             c2_print_variable_states(c2);
 

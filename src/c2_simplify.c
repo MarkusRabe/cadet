@@ -50,7 +50,11 @@ void c2_simplify(C2* c2) {
             break;
         }
         
+        skolem_forget_clause(c2->skolem, c);
         c2_minimize_clause(c2, c);
+        // Clause can be deleted by clause minimization
+        c = vector_get(c2->qcnf->clauses, (unsigned) i);
+        if (c) {c2_new_clause(c2, c);}
         
         if (skolem_is_conflicted(c2->skolem)) {
             c2->state = C2_UNSAT;

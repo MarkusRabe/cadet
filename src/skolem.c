@@ -366,6 +366,7 @@ Lit skolem_get_unique_consequence(Skolem* s, Clause* c) {
     if (int_vector_count(s->unique_consequence) > c->clause_idx) {
         return int_vector_get(s->unique_consequence, c->clause_idx);
     } else {
+        assert(vector_count(s->qcnf->clauses) > c->clause_idx);
         return 0;
     }
 }

@@ -31,6 +31,9 @@ void c2_validate_unique_consequences(C2* c2) {
             skolem_check_for_unique_consequence(c2->skolem, c);
             abortif(skolem_has_unique_consequence(c2->skolem, c), "Unique consequence messed up for clause %d.", c->clause_idx);
         }
+        if (!c) {
+            abortif(!c && int_vector_get(c2->skolem->unique_consequence, i), "Deleted clause still has a unique consequence.");
+        }
     }
 }
 

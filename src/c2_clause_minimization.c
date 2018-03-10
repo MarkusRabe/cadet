@@ -32,26 +32,25 @@ void c2_remove_literals_from_clause(QCNF* qcnf, Clause* c, int_vector* literals)
  * TODO: Can probably rewrite this; remove requirement that clause must be unregistered and reregistered; use SAT solver and extract unsat core.
  */
 unsigned c2_minimize_clause(C2* c2, Clause* c) {
-    assert(c == vector_get(c2->qcnf->clauses, c->clause_idx)); // must be registered
-    statistics_start_timer(c2->statistics.minimization_stats);
-    
-    if (c->size == 0) {
-        return false;
-    }
-    
-    unsigned removed_total = 0;
-    unsigned initial_size = c->size;
-    
     assert(skolem_get_unique_consequence(c2->skolem, c) == 0);
     assert(c2->minimization_pa->stack->push_count == 0);
     assert(c2->minimization_pa->decision_lvl == 0);
-    int_vector* to_remove = int_vector_init();
     
+    statistics_start_timer(c2->statistics.minimization_stats);
+    
+    if (c->size == 0) {
+        return 0;
+    }
+    
+    assert(vector_get(c2->qcnf->clauses, c->clause_idx) == c); // must be registered
+    qcnf_unregister_clause(c2->qcnf, c);
+    
+    unsigned removed_total = 0;
+    unsigned initial_size = c->size;
+    int_vector* to_remove = int_vector_init();
     // Create random permutation of indices of the clause
     int_vector* permutation = int_vector_init();
     
-    skolem_forget_clause(c2->skolem, c);
-    qcnf_unregister_clause(c2->qcnf, c);
     
     // iterate the minimization a couple of times
     unsigned max_iterations = 1;
@@ -105,10 +104,10 @@ unsigned c2_minimize_clause(C2* c2, Clause* c) {
             V2("Conflict clause minimization removed %u of %u literals.\n", removed_total, initial_size);
             c->simplified = 1;
         }
-        c2_new_clause(c2, c);
     } else {
         V1("Clause minimization led to a duplicate.\n");
         assert(removed_total > 0);
+        skolem_forget_clause(c2->skolem, c);
         qcnf_delete_clause(c2->qcnf, c);
         c = NULL;
     }

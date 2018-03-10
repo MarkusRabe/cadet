@@ -314,13 +314,16 @@ void casesplits_encode_last_case(Casesplits* cs) {
             }
         }
         unsigned generalizations = int_vector_count(c->universal_assumptions) - int_vector_count(necessary_assumptions);
-        int_vector_free(necessary_assumptions);
         cs->case_generalizations += generalizations;
         if (generalizations > 0) {
             V1("Generalized assumptions! Removed %d of %d assignments\n",
                generalizations,
                int_vector_count(c->universal_assumptions));
         }
+        
+        int_vector_free(c->universal_assumptions);
+        c->universal_assumptions = necessary_assumptions;
+        
 #ifdef DEBUG
         for (unsigned i = 0; i < var_vector_count(c->qcnf->vars); i++) {
             abortif(qcnf_var_exists(c->qcnf, i) && ! skolem_is_deterministic(cs->skolem, i), "A variable remained deterministic after casesplit replay.");

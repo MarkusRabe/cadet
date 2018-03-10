@@ -25,6 +25,10 @@
 struct SATSolver;
 typedef struct SATSolver SATSolver;
 
+#define SATSOLVER_UNKNOWN_CONST 0
+#define SATSOLVER_SAT_CONST 10
+#define SATSOLVER_UNSAT_CONST 20
+
 typedef enum { // codes as used in the SAT competitions
     SATSOLVER_UNKNOWN = 0,
     SATSOLVER_SAT     = 10,

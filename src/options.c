@@ -42,7 +42,7 @@ Options* default_options() {
     o->qbce = false;
     o->miniscoping = false;
     o->find_smallest_reason = true;
-    o->minimize_conflicts = true;
+    o->minimize_learnt_clauses = true;
     o->delete_clauses_on_restarts = false;
     o->pure_literals = true;
     o->enhanced_pure_literals = false;
@@ -130,7 +130,7 @@ char* options_get_help() {
     o->functional_synthesis,
     o->use_qbf_engine_also_for_propositional_problems,
     o->miniscoping,
-    o->minimize_conflicts,
+    o->minimize_learnt_clauses,
     o->pure_literals,
 //    o->enhanced_pure_literals,
 //    o->qbce,

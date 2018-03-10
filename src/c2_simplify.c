@@ -40,6 +40,7 @@ void c2_delete_learnt_clauses_greater_than(C2* c2, unsigned max_size) {
 }
 
 void c2_simplify(C2* c2) {
+    assert(c2->restart_base_decision_lvl == c2->skolem->decision_lvl); // because conflicts we may find are treated as UNSAT
     for (int i = (int) vector_count(c2->qcnf->clauses) - 1; i >= 0; i--) {
         Clause* c = vector_get(c2->qcnf->clauses, (unsigned) i);
         if (! c || skolem_get_unique_consequence(c2->skolem, c) != 0) {
@@ -49,11 +50,12 @@ void c2_simplify(C2* c2) {
             break;
         }
         
-        unsigned removed_literals = c2_minimize_clause(c2, c);
-        if (removed_literals) {
-            c2_new_clause(c2, c);
-        }
+        c2_minimize_clause(c2, c);
         
+        if (skolem_is_conflicted(c2->skolem)) {
+            c2->state = C2_UNSAT;
+            break;
+        }
         // TODO: check if minimized clause subsumes other clauses
         //            if (removed_literals) {
         //                subsumes something else?

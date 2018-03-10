@@ -237,7 +237,7 @@ void casesplits_record_conflicts(Skolem* s, int_vector* decision_sequence) {
     for (unsigned i = 0; i < int_vector_count(decision_sequence); i++) {
         Lit decision_lit = int_vector_get(decision_sequence, i);
         if (skolem_is_deterministic(s, lit_to_var(decision_lit))) {
-            V2("Discovered during replay that decision %d is not needed.\n", decision_lit);
+            V3("Discovered during replay that decision %d is not needed.\n", decision_lit);
         } else {
             skolem_decision(s, decision_lit);
             skolem_propagate(s);

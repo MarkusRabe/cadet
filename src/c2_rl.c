@@ -255,6 +255,7 @@ cadet_res c2_rl_run_c2(Options* o) {
             // Step 2: Replay skolem domain to build the SAT formula
             Skolem* replay = skolem_init(solver->qcnf, o);
             casesplits_record_conflicts(replay, solver->skolem->determinization_order);
+            
 //            int_vector* necessary_assumptions = casesplits_test_assumptions(cs, universal_assumptions);
             NOT_IMPLEMENTED();
         }

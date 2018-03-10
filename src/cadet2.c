@@ -400,10 +400,6 @@ void c2_run(C2* c2, unsigned remaining_conflicts) {
             learnt_clause->original = false;
             c2->statistics.learnt_clauses_total_length += learnt_clause->size;
             
-            if (c2->options->minimize_conflicts) {
-                c2_minimize_clause(c2, learnt_clause);
-            }
-            
             int_vector_free(c2->current_conflict);
             c2->current_conflict = NULL;
             
@@ -736,7 +732,7 @@ cadet_res c2_sat(C2* c2) {
             V1("Restart %zu\n", c2->restarts);
             c2->restarts += 1;
             c2_restart_heuristics(c2);
-            if (c2->options->minimize_conflicts) {c2_simplify(c2);}
+            if (c2->options->minimize_learnt_clauses) {c2_simplify(c2);}
         }
         
         if (c2->options->cegar_soft_conflict_limit && c2->statistics.conflicts > 1000 && ! c2->options->cegar) {

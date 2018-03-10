@@ -47,7 +47,9 @@ struct Clause {
     unsigned int consistent_with_originals : 1;   // learnt clauses
     unsigned int blocked                   : 1;   // for blocked clause elimination
     unsigned int universal_clause          : 1;   // contains only universals
-    unsigned int size                      : 28;
+    unsigned int is_cube                   : 1;   // A clause that intentionally excludes universal assignments
+    unsigned int simplified                : 1;   // Indicates the clause has been simplified
+    unsigned int size                      : 26;
     
     Lit occs[1]; // to avoid flexible array member and make code compatible with newer C standards
 };
@@ -184,7 +186,7 @@ void qcnf_undo_op(void* qcnf,char,void*);
 
 
 
-void qcnf_register_clause(QCNF*, Clause*);
+bool qcnf_register_clause(QCNF*, Clause*);
 void qcnf_unregister_clause(QCNF*, Clause*);
 bool qcnf_remove_literal(QCNF*, Clause*, Lit);
 void qcnf_delete_clause(QCNF*, Clause*);

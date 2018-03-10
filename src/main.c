@@ -145,7 +145,7 @@ int main(int argc, const char* argv[]) {
                             options->casesplits = false;
                         }
                     } else if (strcmp(argv[i], "--minimize") == 0) {
-                        options->minimize_conflicts = ! options->minimize_conflicts;
+                        options->minimize_learnt_clauses = ! options->minimize_learnt_clauses;
                     } else if (strcmp(argv[i], "--miniscoping") == 0) {
                         options->miniscoping = ! options->miniscoping;
                     } else if (strcmp(argv[i], "--miniscoping_info") == 0) {

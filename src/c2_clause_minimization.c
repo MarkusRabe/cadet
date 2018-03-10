@@ -50,6 +50,7 @@ unsigned c2_minimize_clause(C2* c2, Clause* c) {
     // Create random permutation of indices of the clause
     int_vector* permutation = int_vector_init();
     
+    skolem_forget_clause(c2->skolem, c);
     qcnf_unregister_clause(c2->qcnf, c);
     
     // iterate the minimization a couple of times
@@ -99,9 +100,18 @@ unsigned c2_minimize_clause(C2* c2, Clause* c) {
             break;
         }
     }
-    V2("Conflict clause minimization removed %u of %u literals.\n", removed_total, initial_size);
-    
-    qcnf_register_clause(c2->qcnf, c);
+    if (qcnf_register_clause(c2->qcnf, c)) {
+        if (removed_total) {
+            V2("Conflict clause minimization removed %u of %u literals.\n", removed_total, initial_size);
+            c->simplified = 1;
+        }
+        c2_new_clause(c2, c);
+    } else {
+        V1("Clause minimization led to a duplicate.\n");
+        assert(removed_total > 0);
+        qcnf_delete_clause(c2->qcnf, c);
+        c = NULL;
+    }
     
     int_vector_free(permutation);
     int_vector_free(to_remove);

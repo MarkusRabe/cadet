@@ -55,7 +55,7 @@ typedef struct {
     bool qbce;
     bool miniscoping;
     bool find_smallest_reason;
-    bool minimize_conflicts;
+    bool minimize_learnt_clauses;
     bool preprocess;
     bool delete_clauses_on_restarts;
     bool pure_literals;

@@ -434,6 +434,8 @@ Clause* qcnf_new_clause(QCNF* qcnf, int_vector* literals) {
     c->consistent_with_originals = true;
     c->blocked = false;
     c->universal_clause = true;
+    c->is_cube = false;
+    c->simplified = false;
     c->size = int_vector_count(literals);
     
     for (unsigned i = 0; i < c->size; i++) {
@@ -443,14 +445,14 @@ Clause* qcnf_new_clause(QCNF* qcnf, int_vector* literals) {
         unsigned var_id = lit_to_var(lit);
         
         if (! qcnf_var_exists(qcnf,var_id)) {
-            V1("Warning: Variable %d is not bound.\n", var_id);
+            LOG_WARNING("Warning: Variable %d is not bound. This may be a 3QBF.\n", var_id);
             qcnf_new_var(qcnf, false, qcnf_get_empty_scope(qcnf), var_id);
         }
         V4("clause %u, lit is %d\n", c->clause_idx, lit);
     }
     
+    // Sort literals in variable ... sorry for the awkward use of global variables to simulate partial function evaluation
     abortif(static_qcnf_variable_for_sorting != NULL, "Memory curruption or concurrent usage of static variable static_qcnf_variable_for_sorting.");
-    
     static_qcnf_variable_for_sorting = qcnf; // sorry for this hack; need to reference qcnf from within the sorting procedure
     qsort(c->occs,
           c->size,
@@ -458,24 +460,12 @@ Clause* qcnf_new_clause(QCNF* qcnf, int_vector* literals) {
           qcnf_compare_occurrence_by_qtype_then_scope_size_then_var_id__static_qcnf);
     static_qcnf_variable_for_sorting = NULL;
     
-    qcnf_register_clause(qcnf, c);
-    
-    ///// Clause is done /////
-    
-    if (qcnf_is_duplicate(qcnf,c)) {
-        V3("Warning: detected duplicate clause. ");
-        if (debug_verbosity >= 3) {
-            qcnf_print_clause(c, stdout);
-        }
+    if (!qcnf_register_clause(qcnf, c)) {
         qcnf_delete_clause(qcnf, c);
-        return NULL;
+        c = NULL;
     }
     
-    if (c != NULL) { // to avoid too many operations in the undo-chain
-        stack_push_op(qcnf->stack, QCNF_OP_NEW_CLAUSE, c);
-    }
-    
-    if (debug_verbosity >= VERBOSITY_ALL) {
+    if (c && debug_verbosity >= VERBOSITY_ALL) {
         V4("New clause: ");
         qcnf_print_clause(c, stdout);
     }
@@ -504,7 +494,15 @@ void qcnf_free_clause(Clause* c) {
 }
 
 
-void qcnf_register_clause(QCNF* qcnf, Clause* c) {
+bool qcnf_register_clause(QCNF* qcnf, Clause* c) {
+    if (qcnf_is_duplicate(qcnf,c)) {
+        V2("Warning: detected duplicate clause.\n");
+        if (debug_verbosity >= 3) {
+            qcnf_print_clause(c, stdout);
+        }
+        return false;
+    }
+    
     // Update the occurrence lists
     for (int i = 0; i < c->size; i++) {
         vector_add(qcnf_get_occs_of_lit(qcnf, c->occs[i]), c);
@@ -517,6 +515,9 @@ void qcnf_register_clause(QCNF* qcnf, Clause* c) {
         V1("CNF contains a universal clause (clause id %u).\n", c->clause_idx);
         int_vector_add(qcnf->universal_clauses, (int) c->clause_idx);
     }
+    
+    stack_push_op(qcnf->stack, QCNF_OP_NEW_CLAUSE, c);
+    return true;
 }
 
 void qcnf_unregister_clause(QCNF* qcnf, Clause* c) {
@@ -583,6 +584,9 @@ void qcnf_undo_op(void* parent, char type, void* obj) {
             Clause* c = (Clause*) obj;
             if (!c->consistent_with_originals) { // protects learned clauses
                 qcnf_delete_clause(qcnf, c);
+            }
+            if (c->universal_clause) {
+                int_vector_remove(qcnf->universal_clauses, (int) c->clause_idx);
             }
             break;
         case QCNF_OP_NEW_VAR:

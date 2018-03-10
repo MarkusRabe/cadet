@@ -319,7 +319,23 @@ void c2_close_case(C2* c2) {
     if (c2_is_in_conflcit(c2)) {
         return;
     }
-    if (completed_casesplit) {casesplits_encode_last_case(c2->cs);}
+    if (completed_casesplit) {
+        casesplits_encode_last_case(c2->cs);
+        // now turn last case split into a clause
+        Case* last_case = vector_get(c2->cs->closed_cases, vector_count(c2->cs->closed_cases) - 1);
+        for (unsigned i = 0; i < int_vector_count(last_case->universal_assumptions); i++) {
+            qcnf_add_lit(c2->qcnf, - int_vector_get(last_case->universal_assumptions, i));
+        }
+        Clause* c = qcnf_close_clause(c2->qcnf);
+        abortif(!c, "Case split clause could not be created");
+        c->original = 0;
+        c->consistent_with_originals = 0;
+        c->is_cube = 1;
+        c2_new_clause(c2, c);
+        assert(!skolem_is_conflicted(c2->skolem));
+        assert(!c2_is_in_conflcit(c2));
+    }
+    
     assert(c2->skolem->stack->push_count == c2->skolem->decision_lvl);
     if (skolem_check_if_domain_is_empty(c2->skolem)) {
         assert(!c2_is_in_conflcit(c2));

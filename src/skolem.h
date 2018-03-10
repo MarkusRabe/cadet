@@ -95,7 +95,7 @@ struct Skolem {
      * if they are not deterministic, they are added to pure_var_queue to later check 
      * if they are pure.
      */
-    worklist* clauses_to_check; // stores Clause*
+    int_vector* clauses_to_check; // stores idxs of clauses to check for constant propagation
     pqueue* determinicity_queue; // contains unsigned var_id
     pqueue* pure_var_queue; // contains unsigned var_id
     
@@ -129,15 +129,16 @@ bool skolem_is_relevant_clause(void* domain, Clause* c, Lit lit);
 
 // INTERACTION WITH CADET2
 void skolem_new_clause(Skolem*, Clause*);
+void skolem_forget_clause(Skolem*, Clause*);
 void skolem_new_variable(Skolem*, unsigned var_id);
 void skolem_assign_constant_value(Skolem*,Lit,union Dependencies, Clause* reason); // reason may be NULL
 bool skolem_is_universal_assumption_vacuous(Skolem*, Lit);
-bool skolem_check_if_domain_is_empty(Skolem* s);
+bool skolem_check_if_domain_is_empty(Skolem*);
 void skolem_make_universal_assumption(Skolem*,Lit);
 int skolem_get_constant_value(Skolem*, Lit);
-bool skolem_lit_satisfied(Skolem* s, Lit lit);
-bool skolem_clause_satisfied(Skolem* s, Clause* c);
-double skolem_size_of_active_set(Skolem* s);
+bool skolem_lit_satisfied(Skolem*, Lit);
+bool skolem_clause_satisfied(Skolem*, Clause*);
+double skolem_size_of_active_set(Skolem*);
 
 bool skolem_can_propagate(Skolem*);
 void skolem_propagate(Skolem*);
@@ -147,6 +148,7 @@ void skolem_push(Skolem*);
 void skolem_pop(Skolem*);
 
 void skolem_increase_decision_lvl(Skolem*);
+
 
 unsigned skolem_global_conflict_check(Skolem*, unsigned var_id);
 void skolem_encode_global_conflict_check(Skolem* s);

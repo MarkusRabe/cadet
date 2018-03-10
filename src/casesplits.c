@@ -242,43 +242,42 @@ void casesplits_encode_last_case(Casesplits* cs) {
         satsolver_clause_finished_for_context(cs->skolem->skolem, 0);
     } else { // function case
         assert(c->type == 1);
-        Skolem* encoding_skolem = skolem_init(c->qcnf, cs->skolem->options);
-        encoding_skolem->record_conflicts = true;
-        satsolver_free(encoding_skolem->skolem);
-        encoding_skolem->skolem = cs->skolem->skolem;
+        assert(cs->skolem->decision_lvl == 0);
+        assert(!skolem_is_conflicted(cs->skolem));
+        assert(!cs->skolem->record_conflicts);
         
-        skolem_propagate(encoding_skolem); // initial propagation
-        
+        stack_push(cs->skolem->stack);
+        cs->skolem->record_conflicts = true;
+//        Skolem* encoding_skolem = skolem_init(c->qcnf, cs->skolem->options);
+//        encoding_skolem->record_conflicts = true;
+//        satsolver_free(encoding_skolem->skolem);
+//        encoding_skolem->skolem = cs->skolem->skolem;
+//
+//        skolem_propagate(encoding_skolem); // initial propagation
+//
         for (unsigned i = 0; i < int_vector_count(c->decisions); i++) {
             Lit decision_lit = int_vector_get(c->decisions, i);
-            if (skolem_is_deterministic(encoding_skolem, lit_to_var(decision_lit))) {
+            if (skolem_is_deterministic(cs->skolem, lit_to_var(decision_lit))) {
                 V2("Discovered during replay that decision %d is not needed.\n", decision_lit);
             } else {
-                skolem_decision(encoding_skolem, decision_lit);
-                skolem_propagate(encoding_skolem);
-                assert(!skolem_is_conflicted(encoding_skolem));
+                skolem_decision(cs->skolem, decision_lit);
+                skolem_propagate(cs->skolem);
+                assert(!skolem_is_conflicted(cs->skolem));
             }
         }
-        
         V2("max satlit %d\n", satsolver_get_max_var(cs->skolem->skolem));
-        
-        skolem_encode_global_conflict_check(encoding_skolem); // this encodes the disjunction over the potentially conflicted variables.
-        
-//        int_vector* ass = int_vector_init();
-//        int_vector_add(ass, 2);
-//        int_vector_add(ass, -5);
-//        skolem_is_assignment_possible(cs->skolem, ass);
-//        int_vector_free(ass);
+        skolem_encode_global_conflict_check(cs->skolem); // this encodes the disjunction over the potentially conflicted variables.
         
 #ifdef DEBUG // test if the function is correct
         for (unsigned i = 0; i < var_vector_count(c->qcnf->vars); i++) {
-            abortif(qcnf_var_exists(c->qcnf, i) && ! skolem_is_deterministic(encoding_skolem, i), "A variable remained deterministic after casesplit replay.");
+            abortif(qcnf_var_exists(c->qcnf, i) && ! skolem_is_deterministic(cs->skolem, i), "A variable remained deterministic after casesplit replay.");
         }
         V1("Universal assumption is: ");
         for (unsigned i = 0; i < int_vector_count(c->universal_assumptions); i++) {
             Lit lit = int_vector_get(c->universal_assumptions, i);
             assert(skolem_is_deterministic(cs->skolem, lit_to_var(lit))); // may be violated as soon as we allow universal assumption on dlvl>0
-            int satlit = skolem_get_satsolver_lit(cs->skolem, lit);
+            int satlit = (int) (long) map_get(cs->original_satlits, lit);
+//            int satlit = skolem_get_satsolver_lit(cs->skolem, lit);
             assert(satlit != - cs->skolem->satlit_true);
             satsolver_assume(cs->skolem->skolem, satlit);
             V1(" %d (%d)", lit, satlit);
@@ -290,10 +289,10 @@ void casesplits_encode_last_case(Casesplits* cs) {
             V1("Violating assignment is: ");
             for (unsigned i = 0; i < var_vector_count(c->qcnf->vars); i++) {
                 if (qcnf_var_exists(c->qcnf, i) && qcnf_is_universal(c->qcnf, i)) {
-                    int satlit = skolem_get_satsolver_lit(encoding_skolem, (Lit) i);
-                    int orig_satlit = skolem_get_satsolver_lit(cs->skolem, (Lit) i);
-                    int val = satsolver_deref(cs->skolem->skolem, orig_satlit);
-                    V1(" %d (%d,%d)", val * (Lit) i, satlit, orig_satlit);
+                    int satlit = (int) (long) map_get(cs->original_satlits, (Lit) i);
+//                    int satlit = skolem_get_satsolver_lit(cs->skolem, (Lit) i);
+                    int val = satsolver_deref(cs->skolem->skolem, satlit);
+                    V1(" %d (%d)", val * (Lit) i, satlit);
                 }
             }
             V1("\n");
@@ -301,8 +300,10 @@ void casesplits_encode_last_case(Casesplits* cs) {
         }
 #endif
         
-        encoding_skolem->skolem = NULL; // don't want to free the main sat solver
-        skolem_free(encoding_skolem);
+//        encoding_skolem->skolem = NULL; // don't want to free the main sat solver
+//        skolem_free(encoding_skolem);
+        cs->skolem->record_conflicts = false;
+        stack_pop(cs->skolem->stack, cs->skolem);
     }
 }
 

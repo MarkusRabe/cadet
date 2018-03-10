@@ -42,6 +42,8 @@ void c2_backtrack_casesplit(C2* c2) {
     skolem_propagate(c2->skolem);
     if (skolem_is_conflicted(c2->skolem)) {
         LOG_WARNING("Conflicted after backtracking case split.");
+        assert(c2->state == C2_READY);
+        c2->state = C2_UNSAT;
     }
     
     c2->next_restart = c2->magic.initial_restart;
@@ -54,8 +56,10 @@ unsigned c2_case_split_probe(C2* c2, Lit lit) {
     assert(!skolem_can_propagate(c2->skolem));
     statistics_start_timer(c2->statistics.failed_literals_stats);
 
+    debug_verbosity -= 1;
+    
     size_t case_split_decision_metric = c2->skolem->statistics.propagations;
-
+    
     skolem_push(c2->skolem);
     skolem_make_universal_assumption(c2->skolem, lit);
     
@@ -69,11 +73,11 @@ unsigned c2_case_split_probe(C2* c2, Lit lit) {
         c2->skolem->ignore_universal_conflicts = false;
         
         if (skolem_is_conflicted(c2->skolem)) {
-            V1("Skolem conflict with assumed constant %d: %d\n", lit, c2->skolem->conflict_var_id);
+            V2("Skolem conflict with assumed constant %d: %d\n", lit, c2->skolem->conflict_var_id);
             c2->statistics.failed_literals_conflicts++;
             case_split_decision_metric = UINT_MAX; //ensure the variable is chosen
         } else {
-            V3("Number of propagations when assigning %d: %zu\n", lit, c2->skolem->statistics.propagations - case_split_decision_metric);
+            V2("Number of propagations when assigning %d: %zu\n", lit, c2->skolem->statistics.propagations - case_split_decision_metric);
             case_split_decision_metric = c2->skolem->statistics.propagations - case_split_decision_metric;
         }
 //    }
@@ -81,6 +85,8 @@ unsigned c2_case_split_probe(C2* c2, Lit lit) {
     skolem_pop(c2->skolem);
     statistics_stop_and_record_timer(c2->statistics.failed_literals_stats);
 
+    debug_verbosity += 1;
+    
     return (unsigned) case_split_decision_metric;
 }
 
@@ -310,11 +316,13 @@ void c2_close_case(C2* c2) {
     c2_backtrack_to_decision_lvl(c2, c2->restart_base_decision_lvl);
     assert(c2->skolem->decision_lvl == c2->restart_base_decision_lvl);
     c2_backtrack_casesplit(c2);
-    assert(c2->skolem->decision_lvl == 0);
+    if (c2_is_in_conflcit(c2)) {
+        return;
+    }
     if (completed_casesplit) {casesplits_encode_last_case(c2->cs);}
     assert(c2->skolem->stack->push_count == c2->skolem->decision_lvl);
-    
     if (skolem_check_if_domain_is_empty(c2->skolem)) {
+        assert(!c2_is_in_conflcit(c2));
         c2->state = C2_SAT;
     }
 }

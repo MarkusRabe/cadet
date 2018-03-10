@@ -150,12 +150,22 @@ void skolem_new_clause(Skolem* s, Clause* c) {
     unsigned non_constants = 0;
     for (int i = c->size - 1; i >= 0; i--) { // iterating backwards as existentials are in the back of the clause
         int lit = c->occs[i];
+        unsigned var_id = lit_to_var(lit);
         if (! skolem_is_deterministic(s, lit_to_var(lit))) {
             fully_deterministic = false;
         }
         if (skolem_get_constant_value(s, lit) == 0) {
             non_constants += 1;
         }
+        // to make sure we don't miss pure variables
+        unsigned pos_count = vector_count(qcnf_get_occs_of_lit(s->qcnf,   (Lit) var_id));
+        unsigned neg_count = vector_count(qcnf_get_occs_of_lit(s->qcnf, - (Lit) var_id));
+        if (pos_count == 0 || neg_count == 0) {
+            pqueue_push(s->pure_var_queue,
+                        (int) (pos_count + neg_count),
+                        (void*) (size_t) var_id);
+        }
+        
     }
     if (fully_deterministic) {
         if (s->options->functional_synthesis) {
@@ -1219,13 +1229,6 @@ int skolem_get_constant_value(Skolem* s, Lit lit) {
     return val;
 }
 
-void skolem_update_clause_worklist(Skolem* s, Lit lit) {
-    vector* opp_occs = qcnf_get_occs_of_lit(s->qcnf, - lit);
-    for (unsigned i = 0; i < vector_count(opp_occs); i++) {
-        worklist_push(s->clauses_to_check, vector_get(opp_occs, i));
-    }
-}
-
 // Different from satsolver assumptions. Assumes a constant for a variable that is already deterministic
 void skolem_make_universal_assumption(Skolem* s, Lit lit) { // 
     assert(skolem_is_deterministic(s, lit_to_var(lit)));
@@ -1326,7 +1329,30 @@ void skolem_assign_constant_value(Skolem* s, Lit lit, union Dependencies propaga
     
     c2_rl_update_constant_value(s->options, var_id, skolem_get_constant_value(s, (Lit) var_id));
     
-    skolem_update_clause_worklist(s, lit);
+    // Queue potentially new constants
+    vector* opp_occs = qcnf_get_occs_of_lit(s->qcnf, - lit);
+    for (unsigned i = 0; i < vector_count(opp_occs); i++) {
+        Clause* c = (Clause*) vector_get(opp_occs, i);
+        worklist_push(s->clauses_to_check, c);
+    }
+    
+    // Queue potentially new pure variables
+    vector* this_occs = qcnf_get_occs_of_lit(s->qcnf, lit);
+    for (unsigned i = 0; i < vector_count(this_occs); i++) {
+        Clause* c = (Clause*) vector_get(this_occs, i);
+        for (unsigned j = 0; j < c->size; j++) {
+            Lit occ = c->occs[j];
+            unsigned occ_var = lit_to_var(occ);
+            if (! skolem_is_deterministic(s, occ_var)) { // includes -lit
+                unsigned pos_num = vector_count(qcnf_get_occs_of_lit(s->qcnf,   occ));
+                unsigned neg_num = vector_count(qcnf_get_occs_of_lit(s->qcnf, - occ));
+                pqueue_push(s->pure_var_queue,
+                            (int)(pos_num + neg_num),
+                            (void*) (size_t) occ_var);
+            }
+        }
+    }
+    
     if ( ! was_deterministic_already) {
         skolem_check_occs_for_unique_consequences(s,   (Lit) var_id);
         skolem_check_occs_for_unique_consequences(s, - (Lit) var_id);

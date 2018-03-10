@@ -2,6 +2,7 @@
 
 import sys, os, re, argparse, random, signal, multiprocessing, Queue, threading
 import numpy as np
+import itertools
 
 from reporting import log, log_progress, cyan, red, green, yellow
 from command import call
@@ -97,7 +98,12 @@ def print_result(name,config,expected,result,return_value,seconds,memory):
 def print_stats():
     global failed
     print('\nStatistics:')
-    for x, (testcase_name, config, expected, result, return_value, seconds, memory) in sorted(testcase_result.iteritems(), key=lambda (k,v): (v,k)):
+    
+    for name in testcases:
+        if name not in testcase_result:
+            continue
+    # for x, (testcase_name, config, expected, result, return_value, seconds, memory) in sorted(testcase_result.iteritems(), key=lambda (k,v): (v,k)):
+        testcase_name, config, expected, result, return_value, seconds, memory = testcase_result[name]
         print_result(testcase_name,config,expected,result,return_value,seconds,memory)
     print('Printed {} results in total'.format(len(testcase_result)))
     

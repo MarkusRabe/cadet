@@ -97,8 +97,7 @@ def print_result(name,config,expected,result,return_value,seconds,memory):
 def print_stats():
     global failed
     print('\nStatistics:')
-    for x in testcase_result:
-        testcase_name, config, expected, result, return_value = testcase_result[x]
+    for x, (testcase_name, config, expected, result, return_value) in sorted(testcase_result.iteritems(), key=lambda (k,v): (v,k)):
         seconds=None
         memory=None
         if x in benchmark_results:

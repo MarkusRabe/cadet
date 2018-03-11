@@ -301,17 +301,11 @@ void casesplits_encode_last_case(Casesplits* cs) {
         casesplits_record_conflicts(cs->skolem, c->decisions);
         int_vector* necessary_assumptions = casesplits_test_assumptions(cs, c->universal_assumptions);
         abortif(necessary_assumptions == NULL, "Case split was not successfully closed");
-//        for (unsigned i = 0; i < int_vector_count(c->universal_assumptions); i++) {
-//            Lit lit = int_vector_get(c->universal_assumptions, i);
-//            unsigned var_id = lit_to_var(lit);
-//            if (int_vector_contains(necessary_assumptions, lit) && casesplits_get_interface_activity(cs, var_id) > 0.0 ) {
-//                casesplits_decay_interface_activity(cs, var_id);
-//                casesplits_decay_interface_activity(cs, var_id);
-//                casesplits_decay_interface_activity(cs, var_id);
-//                casesplits_decay_interface_activity(cs, var_id);
-//                casesplits_decay_interface_activity(cs, var_id);
-//            }
-//        }
+        for (unsigned i = 0; i < int_vector_count(necessary_assumptions); i++) {
+            Lit lit = int_vector_get(necessary_assumptions, i);
+            satsolver_add(cs->skolem->skolem, -lit);
+        }
+        satsolver_clause_finished(cs->skolem->skolem);
         unsigned generalizations = int_vector_count(c->universal_assumptions) - int_vector_count(necessary_assumptions);
         cs->case_generalizations += generalizations;
         if (generalizations > 0) {

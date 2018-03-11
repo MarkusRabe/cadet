@@ -483,7 +483,7 @@ def get_benchmark_result(testcase, time_output):
     return float(seconds), float(memory) / 1024.0
 
 if __name__ == "__main__":
-    
+    print('')
     parser = argparse.ArgumentParser()
     parser.add_argument('-v', '--verbose', dest='verbose', action='store_true',
                         help='Additional debug output for the tester tool')

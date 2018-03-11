@@ -39,7 +39,7 @@ SAT
 ```
 
 This indicates that the formula is satsifiable (i.e. true, as we consider only closed formulas).
-To prove formulas true CADET constructs a function assigning a value to y for every assignment to x1 and x2 (a _Skolem function_). For many applications, such as circuit repair, safety games, and [strategy extraction for LTL synthesis](https://www.react.uni-saarland.de/publications/FFT17.html) we are interested in the function that CADET computed as it represents the solution of the encoded problem. With the command line argument `-c <filename>` CADET outputs this function as an [AIGER](fmv.jku.at/aiger/) circuit: 
+To prove formulas true CADET constructs a function assigning a value to y for every assignment to x1 and x2 (a _Skolem function_). For many applications, such as circuit repair, safety games, and [strategy extraction for LTL synthesis](https://www.react.uni-saarland.de/publications/FFRT17.html) we are interested in the function that CADET computed as it represents the solution of the encoded problem. With the command line argument `-c <filename>` CADET outputs this function as an [AIGER](fmv.jku.at/aiger/) circuit: 
 
 ```bash
 $ ./cadet -c result.aig formula.qdimacs

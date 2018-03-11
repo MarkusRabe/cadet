@@ -122,8 +122,9 @@ Note that QBFcert standard is only compatible with the ASCII format of the AIGER
 
 ## Publications
 
-[Incremental Determinization](https://www.eecs.berkeley.edu/~rabe/IncrementalDeterminizationSAT2016.pdf). Markus Rabe and Sanjit Seshia. SAT, 2016. 
-[Encodings of Bounded Synthesis](https://www.react.uni-saarland.de/publications/FFRT17.html) 
+[Incremental Determinization](https://www.eecs.berkeley.edu/~rabe/IncrementalDeterminizationSAT2016.pdf). Rabe and Seshia. SAT, 2016. 
+
+[Encodings of Bounded Synthesis](https://www.react.uni-saarland.de/publications/FFRT17.html) Faymonville, Finkbeiner, Rabe, Tentrup. TACAS, 2017.
 
 ## Acknowledgements
 

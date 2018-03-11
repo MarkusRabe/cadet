@@ -4,7 +4,7 @@ CADET is a solver for _quantified Boolean formulas_ with a forall-exists quantif
 
 ## Example
 
-Here we discuss how to encode the formula ∀ x1 x2 ∃ y. y = x1 & x2 and how to interpret CADET's results. 
+Here we discuss how to encode the formula ∀ x1 x2:  ∃ y:  y = (x1 & x2) and how to interpret CADET's results. 
 
 Natively, CADET reads the [QDIMACS](http://www.qbflib.org/qdimacs.html) format (and will soon also support [QAIGER](https://github.com/ltentrup/QAIGER)). 
 The example formula looks as follows in QDIMACS:
@@ -27,18 +27,23 @@ It is easy to check that the three constraints (clauses) together require y to b
 
 CADET will solve this file easily:
 
-> $ ./cadet formula.qdimacs
-> Processing file "formula.qdimacs".
-> CADET v2.3
-> SAT
+```bash
+$ ./cadet formula.qdimacs
+```
+
+Output:
+```bash
+Processing file "formula.qdimacs".
+CADET v2.3
+SAT
+```
 
 This indicates that the formula is satsifiable (i.e. true, as we consider only closed formulas).
 Internally CADET constructs a function assigning a value to y for every assignment to x1 and x2. For many applications (circuit repair, safety games, LTL synthesis, ...) we are interested in the function that CADET computed, as it can represent a circuit or strategy. With the command line argument `-c <filename>` CADET outputs this function as an AIGER circuit: 
 
-> $ ./cadet -c result.aig formula.qdimacs
-> Processing file "formula.qdimacs".
-> CADET v2.3
-> SAT
+```bash
+$ ./cadet -c result.aig formula.qdimacs
+```
 
 The result is written to the file `result.aig`, which is typically a bit bloated and it is intended to be minimized after generation. For example, you can use the following command to minimize circuits with [ABC](https://people.eecs.berkeley.edu/~alanmi/abc/):
 

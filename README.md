@@ -27,9 +27,7 @@ It is easy to check that the three constraints (clauses) together require y to b
 
 CADET will solve this file easily:
 
-```bash
-$ ./cadet formula.qdimacs
-```
+> $ ./cadet formula.qdimacs
 
 Output:
 ```bash

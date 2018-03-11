@@ -250,9 +250,8 @@ void c2_rl_necessary_learnt_clauses(C2 *solver, Options *o) {
     }
     for (unsigned i = 0; i < vector_count(solver->qcnf->clauses); i++) {
         Clause* c = (Clause*) vector_get(solver->qcnf->clauses, i);
-        if (c) {
+        if (c && !c->is_cube) {
             assert(c->clause_idx == i);
-            assert(!c->is_cube);
 //            assert(!c->minimized); // other clauses may contribute to the SAT proof indirectly by helping to minimize clauses
             Clause* new = NULL;
             for (unsigned j = 0; j < c->size; j++) {
@@ -275,7 +274,6 @@ void c2_rl_necessary_learnt_clauses(C2 *solver, Options *o) {
             new->minimized = c->minimized;
         }
     }
-    assert(int_vector_count(qcnf_copy->universal_clauses) == int_vector_count(solver->qcnf->universal_clauses));
     
     // Step 2: Replay skolem domain to build the SAT formula
     Skolem* replay = skolem_init(qcnf_copy, o);

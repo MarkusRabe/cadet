@@ -42,7 +42,7 @@ void c2_backtrack_casesplit(C2* c2) {
     skolem_propagate(c2->skolem);
     if (skolem_is_conflicted(c2->skolem)) {
         LOG_WARNING("Conflicted after backtracking case split.");
-        assert(c2->state == C2_READY);
+        assert(c2->state == C2_READY || c2->state == C2_UNSAT);
         c2->state = C2_UNSAT;
     }
     
@@ -324,7 +324,9 @@ void c2_close_case(C2* c2) {
         // now turn last case split into a clause .. DEACTIVATED due to mysterious drop in performance
         Case* last_case = vector_get(c2->cs->closed_cases, vector_count(c2->cs->closed_cases) - 1);
         for (unsigned i = 0; i < int_vector_count(last_case->universal_assumptions); i++) {
-            qcnf_add_lit(c2->qcnf, - int_vector_get(last_case->universal_assumptions, i));
+            Lit lit = int_vector_get(last_case->universal_assumptions, i);
+            assert(skolem_is_deterministic(c2->skolem, lit_to_var(lit)));
+            qcnf_add_lit(c2->qcnf, - lit);
         }
         Clause* c = qcnf_close_clause(c2->qcnf);
         abortif(!c, "Case split clause could not be created");

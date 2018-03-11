@@ -91,7 +91,7 @@ C2* c2_init(Options* options) {
     c2->skolem_success_recent_average = c2->magic.skolem_success_recent_average_initialization;
     c2->case_split_depth_penalty = C2_CASE_SPLIT_DEPTH_PENALTY_LINEAR; // C2_CASE_SPLIT_DEPTH_PENALTY_QUADRATIC
     c2->conflicts_between_case_splits_countdown = 1;
-    c2->magic.case_split_linear_depth_penalty_factor = options->easy_debugging ? 1 : 1;
+    c2->magic.case_split_linear_depth_penalty_factor = options->easy_debugging ? 1 : 5;
     
     return c2;
 }

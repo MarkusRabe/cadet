@@ -10,20 +10,20 @@ Here we discuss how to encode the formula ∀ x1 x2:  ∃ y:  y = (x1 & x2) and 
 Natively, CADET reads the [QDIMACS](http://www.qbflib.org/qdimacs.html) format (and will soon also support [QAIGER](https://github.com/ltentrup/QAIGER)). The example formula looks as follows in QDIMACS:
 
 ```qdimacs
-c This QDIMACS file encodes the formula     lines starting with c are a comment
+c This QDIMACS file encodes the formula     
 c forall x1, x2 exists y. y <-> x1 & x2.
 c x1 is represented by number 1
 c x2 is represented by number 2
 c y  is represented by number 3
-p cnf 3 3                                   header introducing 3 variables and 3 clauses
-a 1 2 0                                     Introduces the universal variables 1 and 2
-e 3 0                                       Introduces the existential varible 3
-1 -3 0                                      A constraint stating 1 is true or 3 is false
-2 -3 0                                      2 is true or 3 is false
--1 -2 3 0                                   1 is false, 2 is false, or 3 is true
+p cnf 3 3                                   
+a 1 2 0                                     
+e 3 0                                       
+1 -3 0                                      
+2 -3 0                                      
+-1 -2 3 0                                   
 ```
 
-It is easy to check that the three constraints (clauses) together require y to be the conjunction of x1 and x2: Simply interpret the clauses as implications -x1 -> -y, -x2 -> -y, and (x1 & x2) -> y.
+Lines starting with `c` are comments. The _header_ is the line starting with `p cnf` followed by two numbers indicating the number of variables and the number of clauses. The lines starting with `a` and `e` are quantifiers introducing universally quantified variables 1 and 2, and the existentially quantified variable 3. The remaining three lines each state one constraint (a clause). The last line, for example states that 1 must be false or 2 must be false or 3 must be true. It is easy to check that the three constraints (clauses) together require y to be the conjunction of x1 and x2: Simply interpret the clauses as implications -x1 -> -y, -x2 -> -y, and (x1 & x2) -> y.
 
 CADET will solve this file easily:
 

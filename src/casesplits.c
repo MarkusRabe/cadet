@@ -303,7 +303,8 @@ void casesplits_encode_last_case(Casesplits* cs) {
         abortif(necessary_assumptions == NULL, "Case split was not successfully closed");
         for (unsigned i = 0; i < int_vector_count(necessary_assumptions); i++) {
             Lit lit = int_vector_get(necessary_assumptions, i);
-            satsolver_add(cs->skolem->skolem, -lit);
+            int satlit = (int) (long) map_get(cs->original_satlits, - lit);
+            satsolver_add(cs->skolem->skolem, satlit);
         }
         satsolver_clause_finished(cs->skolem->skolem);
         unsigned generalizations = int_vector_count(c->universal_assumptions) - int_vector_count(necessary_assumptions);

@@ -86,15 +86,19 @@ One of the test cases will timeout as part of the testsuite and a number of test
 
 The most common use case for the solver is to solve formulas specified as a [QDIMACS](http://www.qbflib.org/qdimacs.html) file. 
 
-> ./cadet file.qdimacs
+```bash
+$ ./cadet file.qdimacs
+```
 
 You can also pipe QDIMACS into the solver:
 
-> cat file.qdimacs | ./cadet
+```
+$ cat file.qdimacs | ./cadet
+```
 
 #### Input Formats
 
-CADET reads files in both [QDIMACS](http://www.qbflib.org/qdimacs.html) and [AIGER](http://fmv.jku.at/papers/BiereHeljankoWieringa-FMV-TR-11-2.pdf) format. Files can be zipped with gzip, but must then end with the file extension gz or gzip. Details on the interpretation of AIGER files as 2QBF can be found in the [user guide](https://github.com/MarkusRabe/cadet/blob/master/doc/user_guide.pdf).
+CADET reads files in both [QDIMACS](http://www.qbflib.org/qdimacs.html) and [AIGER](http://fmv.jku.at/papers/BiereHeljankoWieringa-FMV-TR-11-2.pdf) format. Files can be zipped with gzip, but must then end with the file extension gz or gzip. Details on the interpretation of AIGER files as 2QBF can be found in the [user guide](https://github.com/MarkusRabe/cadet/blob/master/docs/user_guide.pdf). Note that the current AIGER input is being phased out in favor of the [QAIGER](https://github.com/ltentrup/QAIGER) format, a new standard being developed in the QBF community. 
 
 ## Proofs
 
@@ -119,6 +123,7 @@ Note that QBFcert standard is only compatible with the ASCII format of the AIGER
 ## Publications
 
 [Incremental Determinization](https://www.eecs.berkeley.edu/~rabe/IncrementalDeterminizationSAT2016.pdf). Markus Rabe and Sanjit Seshia. SAT, 2016. 
+[Encodings of Bounded Synthesis](https://www.react.uni-saarland.de/publications/FFRT17.html) 
 
 ## Acknowledgements
 

@@ -92,7 +92,7 @@ One of the test cases will timeout as part of the testsuite and a number of test
 
 The most common use case for the solver is to solve formulas specified as a [QDIMACS](http://www.qbflib.org/qdimacs.html) file. 
 
-```bash
+```
 $ ./cadet file.qdimacs
 ```
 

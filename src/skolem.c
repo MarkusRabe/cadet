@@ -168,6 +168,9 @@ void skolem_new_clause(Skolem* s, Clause* c) {
         
     }
     if (fully_deterministic) {
+        if (c->is_cube) {
+            int_vector_add(s->clauses_to_check, (int) c->clause_idx);
+        }
         if (s->options->functional_synthesis) {
             assert(s->decision_lvl == 0);
             V1("Functional synthesis detected a deterministic clause of length %u over dlvl0.\n", c->size);

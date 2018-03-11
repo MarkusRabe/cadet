@@ -27,7 +27,7 @@ It is easy to check that the three constraints (clauses) together require y to b
 
 CADET will solve this file easily:
 
-```
+```bash
 $ ./cadet formula.qdimacs
 ```
 
@@ -41,13 +41,13 @@ SAT
 This indicates that the formula is satsifiable (i.e. true, as we consider only closed formulas).
 To prove formulas true CADET constructs a function assigning a value to y for every assignment to x1 and x2 (a _Skolem function_). For many applications, such as circuit repair, safety games, and [strategy extraction for LTL synthesis](https://www.react.uni-saarland.de/publications/FFRT17.html) we are interested in the function that CADET computed as it represents the solution of the encoded problem. With the command line argument `-c <filename>` CADET outputs this function as an [AIGER](fmv.jku.at/aiger/) circuit: 
 
-```
+```bash
 $ ./cadet -c result.aig formula.qdimacs
 ```
 
 The result is written to the file `result.aig`, which is typically a bit bloated and it is intended to be minimized after generation. For example, you can use the following command to minimize circuits with [ABC](https://people.eecs.berkeley.edu/~alanmi/abc/):
 
-```
+```bash
 $ abc -c "read result.aig; dc2; write result.aig"
 ```
 
@@ -75,13 +75,13 @@ CADET can be built from source with both clang and gcc. You can find pre-built b
 
 To compile the solver type:
 
-```
+```bash
 $ ./configure && make
 ```
 
 To make sure the solver works correctly execute the test suite:
 
-```
+```bash
 $ make test
 ```
 
@@ -92,13 +92,13 @@ One of the test cases will timeout as part of the testsuite and a number of test
 
 The most common use case for the solver is to solve formulas specified as a [QDIMACS](http://www.qbflib.org/qdimacs.html) file. 
 
-```
+```bash
 $ ./cadet file.qdimacs
 ```
 
 You can also pipe QDIMACS into the solver:
 
-```
+```bash
 $ cat file.qdimacs | ./cadet
 ```
 
@@ -114,7 +114,7 @@ Certificates for UNSAT results are written to stdout according to the [QDIMACS](
 
 With the command line option `-c [file]` CADET writes the SAT certificate for true 2QBF. You can either specify a file name to which the certificate should be written (ending in `.aag` or `.aig`) or you can specify `sdtout` to let CADET print the certificate on the terminal. For example, type:
 
-```
+```bash
 $ ./cadet -c certificate.aag file.qdimacs
 ```
 

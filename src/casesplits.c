@@ -301,17 +301,17 @@ void casesplits_encode_last_case(Casesplits* cs) {
         casesplits_record_conflicts(cs->skolem, c->decisions);
         int_vector* necessary_assumptions = casesplits_test_assumptions(cs, c->universal_assumptions);
         abortif(necessary_assumptions == NULL, "Case split was not successfully closed");
-        for (unsigned i = 0; i < int_vector_count(c->universal_assumptions); i++) {
-            Lit lit = int_vector_get(c->universal_assumptions, i);
-            unsigned var_id = lit_to_var(lit);
-            if (int_vector_contains(necessary_assumptions, lit) && casesplits_get_interface_activity(cs, var_id) > 0.0 ) {
-                casesplits_decay_interface_activity(cs, var_id);
-                casesplits_decay_interface_activity(cs, var_id);
-                casesplits_decay_interface_activity(cs, var_id);
-                casesplits_decay_interface_activity(cs, var_id);
-                casesplits_decay_interface_activity(cs, var_id);
-            }
-        }
+//        for (unsigned i = 0; i < int_vector_count(c->universal_assumptions); i++) {
+//            Lit lit = int_vector_get(c->universal_assumptions, i);
+//            unsigned var_id = lit_to_var(lit);
+//            if (int_vector_contains(necessary_assumptions, lit) && casesplits_get_interface_activity(cs, var_id) > 0.0 ) {
+//                casesplits_decay_interface_activity(cs, var_id);
+//                casesplits_decay_interface_activity(cs, var_id);
+//                casesplits_decay_interface_activity(cs, var_id);
+//                casesplits_decay_interface_activity(cs, var_id);
+//                casesplits_decay_interface_activity(cs, var_id);
+//            }
+//        }
         unsigned generalizations = int_vector_count(c->universal_assumptions) - int_vector_count(necessary_assumptions);
         cs->case_generalizations += generalizations;
         if (generalizations > 0) {
@@ -322,6 +322,7 @@ void casesplits_encode_last_case(Casesplits* cs) {
         
         int_vector_free(c->universal_assumptions);
         c->universal_assumptions = necessary_assumptions;
+        casesplits_close_heuristics(cs, c->universal_assumptions);
         
 #ifdef DEBUG
         for (unsigned i = 0; i < var_vector_count(c->qcnf->vars); i++) {
@@ -377,8 +378,6 @@ void casesplits_record_cegar_cube(Casesplits* cs, int_vector* cube, int_vector* 
 }
 
 void casesplits_record_case(Casesplits* cs) {
-    casesplits_close_heuristics(cs, cs->skolem->universals_assumptions);
-    
     int_vector* determinizations_with_polarity = int_vector_init();
     for (unsigned i = 0; i < int_vector_count(cs->skolem->determinization_order); i++) {
         unsigned var_id = (unsigned) int_vector_get(cs->skolem->determinization_order, i);

@@ -105,7 +105,7 @@ char* options_get_help() {
     "\t--functional-synthesis\tFunctional synthesis (default %d)\n"
     "\t--sat_by_qbf\t\tUse QBF engine also for propositional problems\n\t\t\t\t(default %d)\n"
     "\t--miniscoping \t\tEnables miniscoping (default %d)\n"
-    "\t--minimize_conflicts \tConflict minimization (default %d) \n"
+    "\t--minimize \t\tConflict minimization (default %d) \n"
     "\t--pure_literals\t\tUse pure literal detection (default %d)\n"
 //    "\t--enhanced_pure_literals\tUse enhanced pure literal detection (default %d)\n"
 //    "\t--qbce\t\t\tBlocked clause elimination (default %d)\n"

@@ -9,6 +9,7 @@
 #include "cadet2.h"
 #include "log.h"
 #include "statistics.h"
+#include "c2_rl.h"
 
 #include <stdio.h>
 #include <assert.h>
@@ -102,7 +103,8 @@ unsigned c2_minimize_clause(C2* c2, Clause* c) {
     if (qcnf_register_clause(c2->qcnf, c)) {
         if (removed_total) {
             V2("Conflict clause minimization removed %u of %u literals.\n", removed_total, initial_size);
-            c->simplified = 1;
+            c->minimized = 1;
+            c2_rl_new_clause(c2->options, c);
         }
     } else {
         V1("Clause minimization led to a duplicate.\n");

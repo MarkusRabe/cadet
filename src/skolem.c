@@ -194,7 +194,7 @@ void skolem_new_clause(Skolem* s, Clause* c) {
                     qcnf_print_clause(c, stdout);
                 }
                 // learnt clauses should not be fully deterministic unless they refute the instance:
-                assert(c->original || c->is_cube || c->simplified);
+                assert(c->original || c->is_cube || c->minimized);
             }
         }
     } else {

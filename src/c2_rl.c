@@ -205,11 +205,128 @@ void c2_rl_print_rewards() {
     LOG_PRINTF("\n");
 }
 
+
+int_vector* c2_rl_test_assumptions(Skolem* s, int_vector* universal_assumptions) {
+    V1("Testing assumption of closed case\n");
+    for (unsigned i = 0; i < int_vector_count(universal_assumptions); i++) {
+        Lit lit = int_vector_get(universal_assumptions, i);
+        assert(qcnf_is_universal(s->qcnf, lit_to_var(lit)));
+        assert(skolem_is_deterministic(s, lit_to_var(lit)));
+        int satlit = skolem_get_satsolver_lit(s, lit);
+        assert(satlit != - s->satlit_true);
+        assert(satlit != s->satlit_true);
+        satsolver_assume(s->skolem, satlit);
+    }
+    
+    sat_res res = satsolver_sat(s->skolem);
+    if (res == SATSOLVER_UNSAT) {
+        int_vector* failed_as = int_vector_init();
+        for (unsigned i = 0; i < int_vector_count(universal_assumptions); i++) {
+            Lit lit = int_vector_get(universal_assumptions, i);
+            int satlit = skolem_get_satsolver_lit(s, lit);
+            if (satsolver_failed_assumption(s->skolem, satlit)) {
+                int_vector_add(failed_as, lit);
+            }
+        }
+        return failed_as;
+    } else {
+        return NULL;
+    }
+}
+
+char *debug_file_name;
+
+void c2_rl_necessary_learnt_clauses(C2 *solver, Options *o) {
+    assert(c2_result(solver) == CADET_RESULT_SAT);
+    map* lc_vars = map_init(); // mapping universal variable IDs to learnt clause idxs
+    int_vector* universal_assumptions = int_vector_init();
+    
+    QCNF* qcnf_copy = qcnf_init();
+    for (unsigned i = 0; i < var_vector_count(solver->qcnf->vars); i++) {
+        if (qcnf_var_exists(solver->qcnf, i)) {
+            Var* v = var_vector_get(solver->qcnf->vars, i);
+            qcnf_new_var(qcnf_copy, v->is_universal, v->scope_id, v->var_id);
+        }
+    }
+    for (unsigned i = 0; i < vector_count(solver->qcnf->clauses); i++) {
+        Clause* c = (Clause*) vector_get(solver->qcnf->clauses, i);
+        if (c) {
+            assert(c->clause_idx == i);
+            assert(!c->is_cube);
+//            assert(!c->minimized); // other clauses may contribute to the SAT proof indirectly by helping to minimize clauses
+            Clause* new = NULL;
+            for (unsigned j = 0; j < c->size; j++) {
+                qcnf_add_lit(qcnf_copy, c->occs[j]);
+            }
+            if (!c->original && c->consistent_with_originals) {
+                // this is a learnt clause!
+                unsigned universal = qcnf_fresh_universal(qcnf_copy);
+                qcnf_add_lit(qcnf_copy, - (Lit) universal);
+                new = qcnf_close_clause(qcnf_copy);
+                map_add(lc_vars, (int) universal, (void*)(size_t) new->clause_idx); // clause_idxs of new and c may differ
+                int_vector_add(universal_assumptions, (int) universal);
+            } else {
+                new = qcnf_close_clause(qcnf_copy);
+            }
+            new->original = c->original;
+            new->blocked = c->blocked;
+            new->consistent_with_originals = c->consistent_with_originals;
+            new->is_cube = c->is_cube;
+            new->minimized = c->minimized;
+        }
+    }
+    assert(int_vector_count(qcnf_copy->universal_clauses) == int_vector_count(solver->qcnf->universal_clauses));
+    
+    // Step 2: Replay skolem domain to build the SAT formula
+    Skolem* replay = skolem_init(qcnf_copy, o);
+
+    Case* last_case = vector_get(solver->cs->closed_cases, vector_count(solver->cs->closed_cases) - 1);
+    casesplits_record_conflicts(replay, last_case->decisions);
+    int_vector* necessary_assumptions = c2_rl_test_assumptions(replay, universal_assumptions);
+    abortif(!necessary_assumptions, "Formula was not solved correctly in RL mode. Generation of early rewards failed.");
+    V1("%d out of %d learnt clauses were necessary.\n",
+       int_vector_count(necessary_assumptions),
+       int_vector_count(universal_assumptions));
+    for (unsigned i = 0; i < int_vector_count(necessary_assumptions); i++) {
+        Lit lit = int_vector_get(necessary_assumptions, i);
+        assert(lit > 0);
+        unsigned var_id = lit_to_var(lit);
+        unsigned clause_idx = (unsigned) map_get(lc_vars, (int) var_id);
+        Clause* c = vector_get(qcnf_copy->clauses, clause_idx);
+        assert(c && ! c->original && c->consistent_with_originals);
+        if (debug_verbosity >= 1) {
+            V1("  ");
+            qcnf_print_clause(c, stdout);
+        }
+    }
+//    
+//#ifdef DEBUG
+//    FILE* file = open_possibly_zipped_file("/Users/markus/work/cadet/dev/integration-tests/116_SAT.qdimacs");
+//    C2* new_solver = c2_from_file(file, o);
+//    
+//    for (unsigned i = 0; i < int_vector_count(necessary_assumptions); i++) {
+//        Lit lit = int_vector_get(necessary_assumptions, i);
+//        assert(lit > 0);
+//        unsigned var_id = lit_to_var(lit);
+//        unsigned clause_idx = (unsigned) map_get(lc_vars, (int) var_id);
+//        Clause* c = vector_get(qcnf_copy->clauses, clause_idx);
+//        assert(c && ! c->original && c->consistent_with_originals);
+//        for (unsigned j = 0; j < c->size; j++) {
+//            if (lit_to_var(c->occs[j]) != var_id) {
+//                c2_add_lit(new_solver, c->occs[j]);
+//            }
+//        }
+//        c2_add_lit(new_solver, 0);
+//    }
+//    casesplits_record_conflicts(new_solver->skolem, solver->skolem->determinization_order);
+//    abortif(satsolver_sat(new_solver->skolem->skolem) == SATSOLVER_SAT, "Validation of learnt clause usefulness failed.");
+//#endif
+}
+
 cadet_res c2_rl_run_c2(Options* o) {
     while (true) {
         rl_init();
         char *file_name = c2_rl_readline();
-        
         // scan for end, should be terminated with newline
         char *end = file_name;
         int i = 0; int maxlen = 1000;
@@ -242,21 +359,7 @@ cadet_res c2_rl_run_c2(Options* o) {
             // Determine which learnt clauses were needed for the solution
             
             // Step 1: Add one fresh universal variable per learnt clause
-            
-            map* lc_vars = map_init(); // mapping learnt clauses idx to unviersal variables
-            for (unsigned i = 0; i < vector_count(solver->qcnf->clauses); i++) {
-                Clause* c = vector_get(solver->qcnf->clauses, i);
-                if (c && !c->original && c->consistent_with_originals) {
-                    // this is a learnt clause!
-                    unsigned universal = qcnf_fresh_universal(solver->qcnf);
-                    map_add(lc_vars, (int) c->clause_idx, (void*)(size_t) universal);
-                }
-            }
-            // Step 2: Replay skolem domain to build the SAT formula
-            Skolem* replay = skolem_init(solver->qcnf, o);
-            casesplits_record_conflicts(replay, solver->skolem->determinization_order);
-            
-//            int_vector* necessary_assumptions = casesplits_test_assumptions(cs, universal_assumptions);
+            c2_rl_necessary_learnt_clauses(solver, o);
             NOT_IMPLEMENTED();
         }
         

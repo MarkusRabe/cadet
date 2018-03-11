@@ -435,7 +435,7 @@ Clause* qcnf_new_clause(QCNF* qcnf, int_vector* literals) {
     c->blocked = false;
     c->universal_clause = true;
     c->is_cube = false;
-    c->simplified = false;
+    c->minimized = false;
     c->size = int_vector_count(literals);
     
     for (unsigned i = 0; i < c->size; i++) {

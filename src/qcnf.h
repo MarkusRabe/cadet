@@ -48,7 +48,7 @@ struct Clause {
     unsigned int blocked                   : 1;   // for blocked clause elimination
     unsigned int universal_clause          : 1;   // contains only universals
     unsigned int is_cube                   : 1;   // A clause that intentionally excludes universal assignments
-    unsigned int simplified                : 1;   // Indicates the clause has been simplified
+    unsigned int minimized                : 1;   // Indicates the clause has been simplified
     unsigned int size                      : 26;
     
     Lit occs[1]; // to avoid flexible array member and make code compatible with newer C standards

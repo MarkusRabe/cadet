@@ -462,6 +462,7 @@ void c2_run(C2* c2, unsigned remaining_conflicts) {
             c2->statistics.lvls_backtracked += old_dlvl - c2->skolem->decision_lvl;
             
             c2_new_clause(c2, learnt_clause); // can bring c2->state in c2_unsat
+            c2->statistics.added_clauses += 1;
             
             c2_decay_activity(c2);
             c2_log_clause(c2, learnt_clause);
@@ -807,6 +808,9 @@ cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
             }
             if (c2->options->certify_SAT) {
                 cert_AIG_certificate(c2);
+            }
+            if (!options->cegar && !options->casesplits) {
+                c2_rl_necessary_learnt_clauses(c2, options);
             }
             break;
         case CADET_RESULT_UNSAT:

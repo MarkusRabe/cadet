@@ -24,6 +24,7 @@ void c2_rl_conflict(Options* o, unsigned var_id);
 void c2_rl_print_activity(Options* o, unsigned var_id, float activity);
 int c2_rl_get_decision();
 
+void c2_rl_necessary_learnt_clauses(C2 *solver, Options *o);
 cadet_res c2_rl_run_c2(Options*);
 
 #endif /* c2_rl_h */

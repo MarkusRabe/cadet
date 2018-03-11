@@ -167,9 +167,9 @@ void c2_print_statistics(C2* c2) {
         examples_print_statistics(c2->examples);
     }
     V0("CADET statistics:\n")
-    V0("  Added clauses: %zu\n", c2->statistics.added_clauses);
     V0("  Decisions: %zu\n", c2->statistics.decisions);
     V0("  Conflicts: %zu\n", c2->statistics.conflicts);
+    V0("  Added clauses: %zu\n", c2->statistics.added_clauses);
     V0("  Levels backtracked: %zu\n", c2->statistics.lvls_backtracked);
     V0("  Restarts:  %zu\n", c2->restarts);
     V0("  Major restarts:  %zu\n", c2->major_restarts);

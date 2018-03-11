@@ -294,7 +294,6 @@ void casesplits_encode_last_case(Casesplits* cs) {
         assert(!skolem_is_conflicted(cs->skolem));
         assert(!cs->skolem->record_conflicts);
         
-        
         stack_push(cs->skolem->stack);
         
         // Encode the disjunction over the potentially conflicted variables.

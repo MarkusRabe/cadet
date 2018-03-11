@@ -57,9 +57,6 @@ struct C2_Statistics {
 struct C2_Magic_Values {
     unsigned initial_restart;
     float restart_factor;
-    float conflict_var_weight;
-    float conflict_clause_weight;
-    float long_clause_death_rate_on_restart_per_literal;
     float decision_var_activity_modifier;
     float activity_bump_value;
     float decay_rate;

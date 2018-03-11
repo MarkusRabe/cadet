@@ -74,8 +74,6 @@ C2* c2_init(Options* options) {
     c2->magic.initial_restart = 6; // [1..100] // depends also on restart factor
     c2->next_restart = c2->magic.initial_restart;
     c2->magic.restart_factor = (float) 1.2; // [1.01..2]
-    c2->magic.conflict_var_weight = 2; // [0..5]
-    c2->magic.conflict_clause_weight = 1; // [0..3]
     c2->magic.decision_var_activity_modifier = (float) 0.8; // [-3.0..2.0]
     c2->magic.decay_rate = (float) 0.99;
     c2->magic.activity_bump_value = (float) 1;
@@ -93,7 +91,7 @@ C2* c2_init(Options* options) {
     c2->skolem_success_recent_average = c2->magic.skolem_success_recent_average_initialization;
     c2->case_split_depth_penalty = C2_CASE_SPLIT_DEPTH_PENALTY_LINEAR; // C2_CASE_SPLIT_DEPTH_PENALTY_QUADRATIC
     c2->conflicts_between_case_splits_countdown = 1;
-    c2->magic.case_split_linear_depth_penalty_factor = options->easy_debugging ? 1 : 5;
+    c2->magic.case_split_linear_depth_penalty_factor = options->easy_debugging ? 1 : 1;
     
     return c2;
 }

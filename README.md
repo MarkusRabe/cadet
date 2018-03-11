@@ -1,13 +1,13 @@
 
 # CADET
+
 CADET is a solver for _quantified Boolean formulas_ with a forall-exists quantifier alternation (2QBF). The solver is based on the _Incremental Determinization_ algorithm published in SAT 2016 was written by [Markus N. Rabe](https://people.eecs.berkeley.edu/~rabe/). As of 2018, CADET is one of the fastest and most reliable solvers for 2QBF formulas. It won second price in the 2QBF track of [QBFEval](http://www.qbflib.org/qbfeval17.php) and can also _prove_ its results little overhead, which is unique in the current landscape of QBF solvers. 
 
 ## Example
 
 Here we discuss how to encode the formula ∀ x1 x2:  ∃ y:  y = (x1 & x2) and how to interpret CADET's results. 
 
-Natively, CADET reads the [QDIMACS](http://www.qbflib.org/qdimacs.html) format (and will soon also support [QAIGER](https://github.com/ltentrup/QAIGER)). 
-The example formula looks as follows in QDIMACS:
+Natively, CADET reads the [QDIMACS](http://www.qbflib.org/qdimacs.html) format (and will soon also support [QAIGER](https://github.com/ltentrup/QAIGER)). The example formula looks as follows in QDIMACS:
 
 ```qdimacs
 c This QDIMACS file encodes the formula     lines starting with c are a comment
@@ -39,7 +39,7 @@ SAT
 ```
 
 This indicates that the formula is satsifiable (i.e. true, as we consider only closed formulas).
-Internally CADET constructs a function assigning a value to y for every assignment to x1 and x2. For many applications (circuit repair, safety games, LTL synthesis, ...) we are interested in the function that CADET computed, as it can represent a circuit or strategy. With the command line argument `-c <filename>` CADET outputs this function as an AIGER circuit: 
+To prove formulas true CADET constructs a function assigning a value to y for every assignment to x1 and x2 (a _Skolem function_). For many applications, such as circuit repair, safety games, and [strategy extraction for LTL synthesis](https://www.react.uni-saarland.de/publications/FFT17.html) we are interested in the function that CADET computed as it represents the solution of the encoded problem. With the command line argument `-c <filename>` CADET outputs this function as an [AIGER](fmv.jku.at/aiger/) circuit: 
 
 ```bash
 $ ./cadet -c result.aig formula.qdimacs
@@ -62,7 +62,7 @@ i1 2
 o0 3
 ```
 
-to view a human-readable version of the circuit as shown above you have to convert the AIGER binrary formag `.aig` to the AIGER ASCII format `.aag` using the tool `aigtoaig` available in the [AIGER toolset](http://fmv.jku.at/aiger/aiger-1.9.9.tar.gz). 
+To view a human-readable version of the circuit as shown above you have to convert the AIGER binrary formag `.aig` to the AIGER ASCII format `.aag` using the tool `aigtoaig` available in the [AIGER toolset](http://fmv.jku.at/aiger/aiger-1.9.9.tar.gz). 
 
 ## Installing CADET
 

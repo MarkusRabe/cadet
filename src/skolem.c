@@ -55,7 +55,7 @@ Skolem* skolem_init(QCNF* qcnf, Options* o) {
     s->unique_consequence = int_vector_init();
     s->stack = stack_init(skolem_undo);
     
-    s->clauses_to_check = int_vector_init();
+    s->clauses_to_check = vector_init();
     
     s->decision_indicator_satlits = int_vector_init();
     s->decisions = int_vector_init();
@@ -84,14 +84,15 @@ Skolem* skolem_init(QCNF* qcnf, Options* o) {
     
     // initialize the initially deterministic variables; these are usually the universals
     for (unsigned i = 1; i < var_vector_count(qcnf->vars); i++) {
-        skolem_new_variable(s, i);
+        if (qcnf_var_exists(qcnf, i)) {
+            skolem_new_variable(s, i);
+        }
     }
     // search for unit clauses and clauses with unique consequence
-    for (unsigned i = 0; i < vector_count(s->qcnf->clauses); i++) {
-        Clause* c = vector_get(s->qcnf->clauses, i);
-        if (c) {skolem_new_clause(s, c);}
+    Clause_Iterator ci = qcnf_get_clause_iterator(qcnf); Clause* c = NULL;
+    while ((c = qcnf_next_clause(&ci)) != NULL) {
+        skolem_new_clause(s, c);
     }
-    
     return s;
 }
 
@@ -100,7 +101,7 @@ void skolem_free(Skolem* s) {
     skolem_var_vector_free(s->infos);
     pqueue_free(s->determinicity_queue);
     pqueue_free(s->pure_var_queue);
-    int_vector_free(s->clauses_to_check);
+    vector_free(s->clauses_to_check);
     int_vector_free(s->potential_conflicts_satlits);
     int_vector_free(s->unique_consequence);
     int_vector_free(s->decisions);
@@ -117,11 +118,11 @@ void skolem_push(Skolem* s) {
     satsolver_push(s->skolem);
     abortif(pqueue_count(s->determinicity_queue) != 0, "s->determinicity_queue nonempty upon push. Serious because the remaining elements might be forgotten to be tracked upon a pop.");
     abortif(pqueue_count(s->pure_var_queue), "s->pure_var_queue nonempty on push. Serious because the remaining elements might be forgotten to be tracked upon a pop.");
-    abortif(int_vector_count(s->clauses_to_check) != 0, "s->clauses_to_check nonempty upon push. Serious because the remaining elements might be forgotten to be tracked upon a pop.");
+    abortif(vector_count(s->clauses_to_check) != 0, "s->clauses_to_check nonempty upon push. Serious because the remaining elements might be forgotten to be tracked upon a pop.");
 }
 void skolem_pop(Skolem* s) {
-    if (int_vector_count(s->clauses_to_check) > 0) {
-        int_vector_reset(s->clauses_to_check);
+    if (vector_count(s->clauses_to_check) > 0) {
+        vector_reset(s->clauses_to_check);
     }
     if (pqueue_count(s->determinicity_queue) > 0) {
         pqueue_reset(s->determinicity_queue);
@@ -157,20 +158,9 @@ void skolem_new_clause(Skolem* s, Clause* c) {
         if (skolem_get_constant_value(s, lit) == 0) {
             non_constants += 1;
         }
-        // to make sure we don't miss pure variables
-        unsigned pos_count = vector_count(qcnf_get_occs_of_lit(s->qcnf,   (Lit) var_id));
-        unsigned neg_count = vector_count(qcnf_get_occs_of_lit(s->qcnf, - (Lit) var_id));
-        if (pos_count == 0 || neg_count == 0) {
-            pqueue_push(s->pure_var_queue,
-                        (int) (pos_count + neg_count),
-                        (void*) (size_t) var_id);
-        }
-        
     }
     if (fully_deterministic) {
-        if (c->is_cube) {
-            int_vector_add(s->clauses_to_check, (int) c->clause_idx);
-        }
+        if (c->is_cube) {vector_add(s->clauses_to_check, c);}
         if (s->options->functional_synthesis) {
             assert(s->decision_lvl == 0);
             V1("Functional synthesis detected a deterministic clause of length %u over dlvl0.\n", c->size);
@@ -202,9 +192,7 @@ void skolem_new_clause(Skolem* s, Clause* c) {
         }
     } else {
         skolem_check_for_unique_consequence(s, c);
-        if (non_constants == 1) {
-            int_vector_add(s->clauses_to_check, (int) c->clause_idx);
-        }
+        if (non_constants == 1) {vector_add(s->clauses_to_check, c);}
     }
 }
 
@@ -216,8 +204,8 @@ void skolem_forget_clause(Skolem* s, Clause* c) {
 }
 
 void skolem_new_variable(Skolem* s, unsigned var_id) {
-    if (qcnf_var_exists(s->qcnf, var_id)
-        && qcnf_is_universal(s->qcnf, var_id)
+    assert(qcnf_var_exists(s->qcnf, var_id));
+    if (qcnf_is_universal(s->qcnf, var_id)
         && !skolem_is_deterministic(s, var_id)) {
         
         skolem_update_deterministic(s, var_id);
@@ -236,18 +224,25 @@ void skolem_new_variable(Skolem* s, unsigned var_id) {
         }
         skolem_update_dependencies(s, var_id, dep);
     }
+    if (qcnf_is_existential(s->qcnf, var_id)) {
+        // to make sure we don't miss pure variables
+        unsigned pos_count = vector_count(qcnf_get_occs_of_lit(s->qcnf,   (Lit) var_id));
+        unsigned neg_count = vector_count(qcnf_get_occs_of_lit(s->qcnf, - (Lit) var_id));
+        pqueue_push(s->pure_var_queue,
+                    (int) (pos_count + neg_count),
+                    (void*) (size_t) var_id);
+    }
+
 }
 
 double skolem_size_of_active_set(Skolem* s) {
     unsigned total = 0;
     unsigned not_satisfied = 0;
-    for (unsigned i = 0; i < vector_count(s->qcnf->clauses); i++) {
-        Clause* c = vector_get(s->qcnf->clauses, i);
-        if (c) {
-            total += 1;
-            if (skolem_clause_satisfied(s, c)) {
-                not_satisfied += 1;
-            }
+    Clause_Iterator ci = qcnf_get_clause_iterator(s->qcnf); Clause* c = NULL;
+    while ((c = qcnf_next_clause(&ci)) != NULL) {
+        total += 1;
+        if (skolem_clause_satisfied(s, c)) {
+            not_satisfied += 1;
         }
     }
     return (double) not_satisfied / (double) total;
@@ -281,7 +276,7 @@ bool skolem_is_potentially_conflicted(Skolem* s){
     return int_vector_count(s->potential_conflicts_satlits) != 0;
 }
 bool skolem_can_propagate(Skolem* s) {
-    return (int_vector_count(s->clauses_to_check) || pqueue_count(s->determinicity_queue) || pqueue_count(s->pure_var_queue))
+    return (vector_count(s->clauses_to_check) || pqueue_count(s->determinicity_queue) || pqueue_count(s->pure_var_queue))
            && ! skolem_is_conflicted(s);
 }
 bool skolem_has_empty_domain(Skolem* s) {
@@ -369,7 +364,7 @@ Lit skolem_get_unique_consequence(Skolem* s, Clause* c) {
     if (int_vector_count(s->unique_consequence) > c->clause_idx) {
         return int_vector_get(s->unique_consequence, c->clause_idx);
     } else {
-        assert(vector_count(s->qcnf->clauses) > c->clause_idx);
+        assert(vector_count(s->qcnf->all_clauses) > c->clause_idx);
         return 0;
     }
 }
@@ -1094,7 +1089,8 @@ void skolem_undo(void* parent, char type, void* obj) {
             assert(int_vector_get(s->unique_consequence, (unsigned) obj) != 0);
             UNIQUE_CONSEQUENCE_UNDO_INFO_UNION ucui;
             ucui.data = (int64_t) obj;
-            if (vector_get(s->qcnf->clauses, ucui.components.clause_id) != NULL) {
+            Clause* c = vector_get(s->qcnf->all_clauses, ucui.components.clause_id);
+            if (c->active) {
                 int_vector_set(s->unique_consequence, ucui.components.clause_id, ucui.components.lit);
                 c2_rl_update_unique_consequence(s->options, ucui.components.clause_id, ucui.components.lit);
             } else {
@@ -1352,7 +1348,7 @@ void skolem_assign_constant_value(Skolem* s, Lit lit, union Dependencies propaga
     vector* opp_occs = qcnf_get_occs_of_lit(s->qcnf, - lit);
     for (unsigned i = 0; i < vector_count(opp_occs); i++) {
         Clause* c = (Clause*) vector_get(opp_occs, i);
-        int_vector_add(s->clauses_to_check, (int) c->clause_idx);
+        vector_add(s->clauses_to_check, c);
     }
     
     // Queue potentially new pure variables
@@ -1554,17 +1550,15 @@ void skolem_decision(Skolem* s, Lit decision_lit) {
 
 void skolem_propagate(Skolem* s) {
     V3("Propagating in Skolem domain\n");
-    while (int_vector_count(s->clauses_to_check) || pqueue_count(s->determinicity_queue) || pqueue_count(s->pure_var_queue)) {
+    while (vector_count(s->clauses_to_check) || pqueue_count(s->determinicity_queue) || pqueue_count(s->pure_var_queue)) {
         if (skolem_is_conflicted(s)) {
             V4("Skolem domain is in conflict state; stopping propagation.\n");
             return;
         }
         
-        if (int_vector_count(s->clauses_to_check)) {
-            unsigned clause_idx = (unsigned) int_vector_pop(s->clauses_to_check);
-            Clause* c = vector_get(s->qcnf->clauses, clause_idx);
-            if (!c) {continue;} // clause was deleted
-            assert(c->clause_idx == clause_idx);
+        if (vector_count(s->clauses_to_check)) {
+            Clause* c = vector_pop(s->clauses_to_check);
+            if (!c->active) {continue;}
             skolem_propagate_constants_over_clause(s, c);
         } else if (pqueue_count(s->determinicity_queue)) {
             unsigned var_id = (unsigned) pqueue_pop(s->determinicity_queue);

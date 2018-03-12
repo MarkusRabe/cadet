@@ -14,17 +14,17 @@
 #include <stdio.h>
 #include <assert.h>
 
-void c2_remove_literals_from_clause(QCNF* qcnf, Clause* c, int_vector* literals) {
-    int_vector_sort(literals, compare_integers_natural_order);
-    for (unsigned i = 0; i < c->size; i++) {
-        Lit l = c->occs[i];
-        if (int_vector_contains_sorted(literals, l)) {
-            bool removed = qcnf_remove_literal(qcnf, c, l);
-            i -= 1;
-            assert(removed);
-        }
-    }
-}
+//void c2_remove_literals_from_clause(QCNF* qcnf, Clause* c, int_vector* literals) {
+//    int_vector_sort(literals, compare_integers_natural_order);
+//    for (unsigned i = 0; i < c->size; i++) {
+//        Lit l = c->occs[i];
+//        if (int_vector_contains_sorted(literals, l)) {
+//            bool removed = qcnf_remove_literal(qcnf, c, l);
+//            i -= 1;
+//            assert(removed);
+//        }
+//    }
+//}
 
 /* Implements two ideas: 
  * (1) remove literals whose negation is implied by the negation of the remaining literals
@@ -32,94 +32,88 @@ void c2_remove_literals_from_clause(QCNF* qcnf, Clause* c, int_vector* literals)
  *
  * TODO: Can probably rewrite this; remove requirement that clause must be unregistered and reregistered; use SAT solver and extract unsat core.
  */
-unsigned c2_minimize_clause(C2* c2, Clause* c) {
+Clause* c2_minimize_clause(C2* c2, Clause* c) {
     assert(skolem_get_unique_consequence(c2->skolem, c) == 0);
     assert(c2->minimization_pa->stack->push_count == 0);
     assert(c2->minimization_pa->decision_lvl == 0);
+    assert(c->active);
     
-    statistics_start_timer(c2->statistics.minimization_stats);
-    
-    if (c->size == 0) {
+    if (!c2->options->minimize_learnt_clauses || c->size <= 1) {
         return 0;
     }
     
-    assert(vector_get(c2->qcnf->clauses, c->clause_idx) == c); // must be registered
-    qcnf_unregister_clause(c2->qcnf, c);
-    
-    unsigned removed_total = 0;
+    statistics_start_timer(c2->statistics.minimization_stats);
     unsigned initial_size = c->size;
     int_vector* to_remove = int_vector_init();
-    // Create random permutation of indices of the clause
-    int_vector* permutation = int_vector_init();
+    int_vector* permutation = int_vector_init(); // Create random permutation of indices of the clause
     
+    for (unsigned i = 0; i < c->size; i++) {
+        int_vector_add(permutation, (int) i);
+    }
+    int_vector_shuffle(permutation);
+    assert(c->size == int_vector_count(permutation));
     
-    // iterate the minimization a couple of times
-    unsigned max_iterations = 1;
-    for (unsigned k = 0; k < max_iterations; k++) {
-        int_vector_reset(to_remove);
-        int_vector_reset(permutation);
-        for (unsigned i = 0; i < c->size; i++) {
-            int_vector_add(permutation, (int) i);
+    partial_assignment_push(c2->minimization_pa);
+    for (unsigned i = 0; i < int_vector_count(permutation) - 1; i++) {
+        
+        Lit l = c->occs[int_vector_get(permutation, i)];
+        int val = partial_assignment_get_value_for_conflict_analysis(c2->minimization_pa, - l);
+        
+        if (val == 0) {
+            partial_assignment_assign_value(c2->minimization_pa, - l);
+            partial_assignment_propagate(c2->minimization_pa);
+        } else if (val == 1) {
+            V3("Removing implied literal %d from clause %u.\n", l, c->clause_idx);
+            int_vector_add(to_remove, l);
         }
-        int_vector_shuffle(permutation);
-        assert(c->size == int_vector_count(permutation));
         
-        partial_assignment_push(c2->minimization_pa);
-        for (unsigned i = 0; i < int_vector_count(permutation); i++) {
-            
-            Lit l = c->occs[int_vector_get(permutation, i)];
-            int val = partial_assignment_get_value_for_conflict_analysis(c2->minimization_pa, - l);
-            
-            if (val == 0) {
-                partial_assignment_assign_value(c2->minimization_pa, - l);
-                partial_assignment_propagate(c2->minimization_pa);
-            } else if (val == 1) {
-                V3("Removing implied literal %d from clause %u.\n", l, c->clause_idx);
-                int_vector_add(to_remove, l);
+        // TODO: this should actually extract the unsat core, but here we only remove the literals we didn't assume and then do this a couple of more times with other random orderings.
+        if (val == -1 || partial_assignment_is_conflicted(c2->minimization_pa)) {
+            // Should extract unsat core of assumptions made, but this should also work somewhat:
+            for (unsigned j = i+1; j < int_vector_count(permutation); j++) {
+                Lit other = c->occs[int_vector_get(permutation, j)];
+                int_vector_add(to_remove, other);
             }
-            
-            // TODO: this should actually extract the unsat core, but here we only remove the literals we didn't assume and then do this a couple of more times with other random orderings.
-            if (val == -1 || partial_assignment_is_conflicted(c2->minimization_pa)) {
-                // Should extract unsat core of assumptions made, but this should also work somewhat:
-                for (unsigned j = i+1; j < int_vector_count(permutation); j++) {
-                    Lit other = c->occs[int_vector_get(permutation, j)];
-                    int_vector_add(to_remove, other);
-                }
-                max_iterations = c->size;
-                break;
-            }
-        }
-        partial_assignment_pop(c2->minimization_pa);
-        
-        assert(int_vector_count(to_remove) <= c->size);
-        c2_remove_literals_from_clause(c2->qcnf, c, to_remove);
-        removed_total += int_vector_count(to_remove);
-        assert(int_vector_count(permutation) - int_vector_count(to_remove) == c->size);
-        
-        if (int_vector_count(to_remove) == 0) {
             break;
         }
     }
-    if (qcnf_register_clause(c2->qcnf, c)) {
-        if (removed_total) {
-            V2("Conflict clause minimization removed %u of %u literals.\n", removed_total, initial_size);
-            c->minimized = 1;
+    partial_assignment_pop(c2->minimization_pa);
+    
+    unsigned removed = int_vector_count(to_remove);
+    Clause* new_clause = NULL;
+    if (removed > 0) {
+        qcnf_unregister_clause(c2->qcnf, c);
+        for (unsigned i = 0; i < c->size; i++) {
+            if (!int_vector_contains(to_remove, c->occs[i])) {
+                qcnf_add_lit(c2->qcnf, c->occs[i]);
+            }
+        }
+        new_clause = qcnf_close_clause(c2->qcnf);
+        if (new_clause) {
             c2_rl_new_clause(c2->options, c);
+            new_clause->minimized = 1;
+            assert(c->size - int_vector_count(to_remove) == new_clause->size);
+            V2("Conflict clause minimization removed %u of %u literals.\n", int_vector_count(to_remove), initial_size);
+            // Schedule removed literals for pure variable checks
+            for (unsigned i = 0; i < int_vector_count(to_remove); i++) {
+                skolem_new_variable(c2->skolem, lit_to_var(int_vector_get(to_remove, i)));
+            }
+        } else {
+            V1("Clause minimization led to a duplicate.\n");
+            // Schedule all variables in the clause for pure variable checks
+            for (unsigned i = 0; i < c->size; i++) {
+                skolem_new_variable(c2->skolem, lit_to_var(c->occs[i]));
+            }
         }
     } else {
-        V1("Clause minimization led to a duplicate.\n");
-        assert(removed_total > 0);
-        skolem_forget_clause(c2->skolem, c);
-        qcnf_delete_clause(c2->qcnf, c);
-        c = NULL;
+        assert(!skolem_has_unique_consequence(c2->skolem, c));
     }
     
     int_vector_free(permutation);
     int_vector_free(to_remove);
+    assert(removed <= c->size);
     statistics_stop_and_record_timer(c2->statistics.minimization_stats);
+    c2->statistics.successful_conflict_clause_minimizations += removed;
     
-    assert(removed_total < initial_size);
-    c2->statistics.successful_conflict_clause_minimizations += removed_total;
-    
-    return removed_total;
+    return new_clause;
 }

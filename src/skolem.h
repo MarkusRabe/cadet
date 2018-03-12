@@ -88,14 +88,13 @@ struct Skolem {
     int_vector* determinization_order; // stores all determinizations in the order they happened
     int_vector* universals_assumptions;
     
-    
     /* Propagation worklists:
      * Constants are propagated through the clauses_to_check worklist.
      * For determinicity propagation, variables are first added to determinicity_queue,
      * if they are not deterministic, they are added to pure_var_queue to later check 
      * if they are pure.
      */
-    int_vector* clauses_to_check; // stores idxs of clauses to check for constant propagation
+    vector* clauses_to_check; // stores clauses to check for constant propagation
     pqueue* determinicity_queue; // contains unsigned var_id
     pqueue* pure_var_queue; // contains unsigned var_id
     

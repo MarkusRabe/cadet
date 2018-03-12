@@ -96,9 +96,9 @@ void casesplits_update_interface(Casesplits* cs, Skolem* skolem) {
     satsolver_set_max_var(cs->exists_solver, (int) max_var_id);
     
     // set up satsolver for existentials
-    for (unsigned i = 0; i < vector_count(cs->qcnf->clauses); i++) {
-        Clause* c = vector_get(cs->qcnf->clauses, i);
-        if (!c || ! c->original) {
+    for (unsigned i = 0; i < vector_count(cs->qcnf->all_clauses); i++) {
+        Clause* c = vector_get(cs->qcnf->all_clauses, i);
+        if (! c->original) {
             continue;
         }
         unsigned uc_var = lit_to_var(skolem_get_unique_consequence(cs->skolem, c));
@@ -115,9 +115,9 @@ void casesplits_update_interface(Casesplits* cs, Skolem* skolem) {
     // determine interface variables; variables that are deterministic and occur in clauses together with nondeterministic variables.
     int_vector* old_interface = cs->interface_vars;
     cs->interface_vars = int_vector_init();
-    for (unsigned i = 0; i < vector_count(cs->qcnf->clauses); i++) {
-        Clause* c = vector_get(cs->qcnf->clauses, i);
-        if (!c || ! c->original || c->blocked) {
+    for (unsigned i = 0; i < vector_count(cs->qcnf->all_clauses); i++) {
+        Clause* c = vector_get(cs->qcnf->all_clauses, i);
+        if (! c->original || c->blocked) {
             continue;
         }
         unsigned uc_var = lit_to_var(skolem_get_unique_consequence(cs->skolem, c));

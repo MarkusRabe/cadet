@@ -89,7 +89,7 @@ struct C2 {
     unsigned next_restart;
     size_t next_major_restart;
     unsigned restart_base_decision_lvl; // decision_lvl used for restarts
-    int_vector* current_conflict;
+    float_vector* variable_activities; // indexed by var_id
     
     // Reasoning domains
     Skolem* skolem;
@@ -101,6 +101,7 @@ struct C2 {
     
     // Data structures for heuristics
     float activity_factor;
+    float activity_factor_inverse;
     
     // Case splits
     Casesplits* cs;
@@ -160,7 +161,7 @@ void c2_scale_activity(C2* c2, unsigned var_id, float factor);
 unsigned c2_get_decision_lvl(C2* c2, unsigned var_id);
 void c2_backtrack_to_decision_lvl(C2 *c2, unsigned backtracking_lvl);
 
-unsigned c2_minimize_clause(C2*,Clause*);
+Clause* c2_minimize_clause(C2*,Clause*);
 
 // figuring out properties of instances:
 void c2_analysis_determine_number_of_partitions(C2* c2);

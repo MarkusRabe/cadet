@@ -13,6 +13,7 @@
 		284EED781ED3B65600581801 /* lglib.c in Sources */ = {isa = PBXBuildFile; fileRef = 284EED731ED3B65600581801 /* lglib.c */; };
 		284EED791ED3B65600581801 /* lglopts.c in Sources */ = {isa = PBXBuildFile; fileRef = 284EED761ED3B65600581801 /* lglopts.c */; };
 		28577A721E6F87200082100B /* qipasir.c in Sources */ = {isa = PBXBuildFile; fileRef = 28577A701E6F87200082100B /* qipasir.c */; };
+		286319502056650500808F7C /* active_clause_iterator.c in Sources */ = {isa = PBXBuildFile; fileRef = 2863194F2056650500808F7C /* active_clause_iterator.c */; };
 		28675A451DDAA9D000951212 /* aiger_utils.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A071DDAA9D000951212 /* aiger_utils.c */; };
 		28675A461DDAA9D000951212 /* aiger.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A091DDAA9D000951212 /* aiger.c */; };
 		28675A471DDAA9D000951212 /* bit_vector.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A0B1DDAA9D000951212 /* bit_vector.c */; };
@@ -85,6 +86,7 @@
 		284EED771ED3B65600581801 /* lglopts.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = lglopts.h; path = src/lingeling/lglopts.h; sourceTree = "<group>"; };
 		28577A701E6F87200082100B /* qipasir.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = qipasir.c; path = src/qipasir.c; sourceTree = "<group>"; };
 		28577A711E6F87200082100B /* qipasir.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = qipasir.h; path = src/qipasir.h; sourceTree = "<group>"; };
+		2863194F2056650500808F7C /* active_clause_iterator.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = active_clause_iterator.c; path = src/active_clause_iterator.c; sourceTree = "<group>"; };
 		28675A071DDAA9D000951212 /* aiger_utils.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = aiger_utils.c; path = src/aiger_utils.c; sourceTree = "<group>"; };
 		28675A081DDAA9D000951212 /* aiger_utils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = aiger_utils.h; path = src/aiger_utils.h; sourceTree = "<group>"; };
 		28675A091DDAA9D000951212 /* aiger.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = aiger.c; path = src/aiger.c; sourceTree = "<group>"; };
@@ -192,6 +194,16 @@
 			name = lingeling;
 			sourceTree = "<group>";
 		};
+		286319512056665400808F7C /* qcnf */ = {
+			isa = PBXGroup;
+			children = (
+				28675A2F1DDAA9D000951212 /* qcnf.h */,
+				28675A2E1DDAA9D000951212 /* qcnf.c */,
+				2863194F2056650500808F7C /* active_clause_iterator.c */,
+			);
+			name = qcnf;
+			sourceTree = "<group>";
+		};
 		28675A651DDAAA0600951212 /* datastructures */ = {
 			isa = PBXGroup;
 			children = (
@@ -244,14 +256,9 @@
 		28675A681DDAAA5600951212 /* cadet2 */ = {
 			isa = PBXGroup;
 			children = (
-				28675A2F1DDAA9D000951212 /* qcnf.h */,
-				28675A2E1DDAA9D000951212 /* qcnf.c */,
-				28675A101DDAA9D000951212 /* cadet2.h */,
-				28675A0F1DDAA9D000951212 /* cadet2.c */,
-				287C3B181E3C03A400F7096A /* cadet2_ext */,
-				28675A3A1DDAA9D000951212 /* skolem.h */,
-				28675A391DDAA9D000951212 /* skolem.c */,
-				287C3B171E3C035500F7096A /* skolem_ext */,
+				287C3B181E3C03A400F7096A /* cadet2 */,
+				286319512056665400808F7C /* qcnf */,
+				287C3B171E3C035500F7096A /* skolem */,
 				287C3B121E399C7A00F7096A /* casesplits.h */,
 				28FA8D341E14F4E900A43B7B /* casesplits.c */,
 				28C1C181202D3EB40094DB4E /* cegar.c */,
@@ -279,21 +286,25 @@
 			name = aiger;
 			sourceTree = "<group>";
 		};
-		287C3B171E3C035500F7096A /* skolem_ext */ = {
+		287C3B171E3C035500F7096A /* skolem */ = {
 			isa = PBXGroup;
 			children = (
+				28675A3A1DDAA9D000951212 /* skolem.h */,
+				28675A391DDAA9D000951212 /* skolem.c */,
 				287C3B151E3C01FE00F7096A /* skolem_var.h */,
 				287C3B141E3C01FE00F7096A /* skolem_var.c */,
 				28DA30F31DFFDD2600EABCA6 /* skolem_dependencies.h */,
 				28DA30F21DFFDD2600EABCA6 /* skolem_dependencies.c */,
 				28FEE64A1EDA304000A9D8CA /* skolem_conflict_analysis.c */,
 			);
-			name = skolem_ext;
+			name = skolem;
 			sourceTree = "<group>";
 		};
-		287C3B181E3C03A400F7096A /* cadet2_ext */ = {
+		287C3B181E3C03A400F7096A /* cadet2 */ = {
 			isa = PBXGroup;
 			children = (
+				28675A101DDAA9D000951212 /* cadet2.h */,
+				28675A0F1DDAA9D000951212 /* cadet2.c */,
 				287C3B111E399C7A00F7096A /* c2_casesplits_control.c */,
 				287C3B0F1E396B7600F7096A /* c2_traces.h */,
 				287C3B0E1E396B7600F7096A /* c2_traces.c */,
@@ -304,7 +315,7 @@
 				28261B911F71872D006974DC /* c2_clause_minimization.c */,
 				28C6FD961F831DC3008D109C /* c2_simplify.c */,
 			);
-			name = cadet2_ext;
+			name = cadet2;
 			sourceTree = "<group>";
 		};
 		28D2C3811DDAA95E000E9C51 = {
@@ -449,6 +460,7 @@
 				28577A721E6F87200082100B /* qipasir.c in Sources */,
 				28261B921F71872D006974DC /* c2_clause_minimization.c in Sources */,
 				28DA30F41DFFDD2600EABCA6 /* skolem_dependencies.c in Sources */,
+				286319502056650500808F7C /* active_clause_iterator.c in Sources */,
 				28675A461DDAA9D000951212 /* aiger.c in Sources */,
 				28675A611DDAA9D000951212 /* undo_stack.c in Sources */,
 				28C1C17F20197A000094DB4E /* c2_rl.c in Sources */,

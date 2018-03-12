@@ -27,15 +27,10 @@ void c2_backtrack_casesplit(C2* c2) {
     // Check learnt clauses for unique consequences ... the last backtracking may have removed the unique consequences
     // Can probably be removed once we can add items to deeper levels of the undo-list;
     // TODO: this is terrible code
-    for (unsigned i = vector_count(c2->qcnf->clauses); i > 0; i--) {
-        Clause* c = vector_get(c2->qcnf->clauses, i-1);
-        if (c) {
-            if (c->original == 1) {
-                break;
-            }
-            if (skolem_get_unique_consequence(c2->skolem, c) == 0) {
-                c2_new_clause(c2, c);
-            }
+    Clause_Iterator ci = qcnf_get_clause_iterator(c2->qcnf); Clause* c = NULL;
+    while ((c = qcnf_next_clause(&ci)) != NULL) {
+        if (skolem_get_unique_consequence(c2->skolem, c) == 0) {
+            c2_new_clause(c2, c);
         }
     }
 

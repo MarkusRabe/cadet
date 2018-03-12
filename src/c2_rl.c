@@ -126,7 +126,7 @@ void c2_rl_print_state(C2* c2, unsigned conflicts_until_next_restart) {
     // Formula statistics
     LOG_PRINTF("%u,%u,%f,",
                var_num,
-               vector_count(c2->qcnf->clauses),
+               vector_count(c2->qcnf->active_clauses),
                var_ratio);
     
     // Solver statistics
@@ -260,10 +260,9 @@ int_vector* c2_rl_necessary_learnt_clauses(C2 *solver, Options *o) {
             qcnf_new_var(qcnf_copy, v->is_universal, v->scope_id, v->var_id);
         }
     }
-    for (unsigned i = 0; i < vector_count(solver->qcnf->clauses); i++) {
-        Clause* c = (Clause*) vector_get(solver->qcnf->clauses, i);
-        if (c && !c->is_cube) {
-            assert(c->clause_idx == i);
+    Clause_Iterator ci = qcnf_get_clause_iterator(solver->qcnf); Clause* c = NULL;
+    while ((c = qcnf_next_clause(&ci)) != NULL) {
+        if (!c->is_cube) {
 //            assert(!c->minimized); // other clauses may contribute to the SAT proof indirectly by helping to minimize clauses
             Clause* new = NULL;
             for (unsigned j = 0; j < c->size; j++) {
@@ -304,7 +303,7 @@ int_vector* c2_rl_necessary_learnt_clauses(C2 *solver, Options *o) {
         unsigned var_id = lit_to_var(lit);
         unsigned clause_idx = (unsigned) map_get(lc_vars, (int) var_id);
         int_vector_add(necessary_clause_idxs, (int) clause_idx);
-        Clause* c = vector_get(qcnf_copy->clauses, clause_idx);
+        Clause* c = vector_get(qcnf_copy->all_clauses, clause_idx);
         assert(c && ! c->original && c->consistent_with_originals);
         if (debug_verbosity >= 1) {
             V1("  ");

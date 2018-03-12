@@ -29,9 +29,9 @@ Examples* examples_init(QCNF* qcnf, unsigned examples_max_num) {
     e->create_skolem = statistics_init(10000);
     
     // search for unit clauses and clauses with unique consequence
-    for (unsigned i = 0; i < vector_count(e->qcnf->clauses); i++) {
-        Clause* c = vector_get(e->qcnf->clauses, i);
-        if (c) {examples_new_clause(e, c);}
+    Clause_Iterator ci = qcnf_get_clause_iterator(e->qcnf); Clause* c = NULL;
+    while ((c = qcnf_next_clause(&ci)) != NULL) {
+        examples_new_clause(e, c);
     }
     
     return e;

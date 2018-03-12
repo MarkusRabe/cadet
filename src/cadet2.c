@@ -30,6 +30,16 @@ C2* c2_init(Options* options) {
     c2->qcnf = qcnf_init();
     c2->options = options;
     
+    c2->state = C2_READY;
+    c2->restarts = 0;
+    c2->major_restarts = 0;
+    c2->restarts_since_last_major = 0;
+    c2->decisions_since_last_conflict = 0;
+    c2->restart_base_decision_lvl = 0;
+    c2->activity_factor = 1.0f;
+    c2->activity_factor_inverse = 1.0f / c2->activity_factor;
+    c2->variable_activities = float_vector_init();
+    
     // DOMAINS
     c2->cs = casesplits_init(c2->qcnf);
     c2->skolem = skolem_init(c2->qcnf, c2->options);
@@ -44,17 +54,6 @@ C2* c2_init(Options* options) {
     
     // Clause minimization
     c2->minimization_pa = partial_assignment_init(c2->qcnf);
-    
-
-    c2->state = C2_READY;
-    c2->restarts = 0;
-    c2->major_restarts = 0;
-    c2->restarts_since_last_major = 0;
-    c2->decisions_since_last_conflict = 0;
-    c2->restart_base_decision_lvl = 0;
-    c2->activity_factor = (float) 1.0;
-    
-    c2->current_conflict = NULL;
 
     // Statistics
     c2->statistics.conflicts = 0;
@@ -103,58 +102,46 @@ void c2_free(C2* c2) {
     examples_free(c2->examples);
     conflict_analysis_free(c2->ca);
     qcnf_free(c2->qcnf);
-    if (c2->current_conflict) {
-        int_vector_free(c2->current_conflict);
-    }
     partial_assignment_free(c2->minimization_pa);
     statistics_free(c2->statistics.minimization_stats);
+    float_vector_free(c2->variable_activities);
     free(c2);
 }
 
-C2_VAR_DATA c2_initial_var_data() {
-    C2_VAR_DATA vd;
-    vd.activity = 0.0f;
-    return vd;
-}
 
 void c2_set_activity(C2* c2, unsigned var_id, float val) {
-    assert(val > -0.001);
-    Var* v = var_vector_get(c2->qcnf->vars, var_id);
-    if (v->var_id != 0) {
-        assert(v->var_id == var_id);
-        v->c2_vd.activity = val * c2->activity_factor;
-    }
+    assert(val > -0.0001);
+    float_vector_set(c2->variable_activities, var_id, val * c2->activity_factor);
 }
 
 float c2_get_activity(C2* c2, unsigned var_id) {
-    Var* v = var_vector_get(c2->qcnf->vars, var_id);
-    assert(v->var_id == var_id);
-    assert(v->c2_vd.activity > -0.001);
-    assert(c2->activity_factor >= 1.0);
-    return v->c2_vd.activity / c2->activity_factor;
+    float activity = float_vector_get(c2->variable_activities, var_id);
+    assert(activity > -0.001);
+    return activity * c2->activity_factor_inverse;
 }
 
 void c2_increase_activity(C2* c2, unsigned var_id, float val) {
     assert(val >= 0.0);
-    Var* v = var_vector_get(c2->qcnf->vars, var_id);
-    assert(v->var_id == var_id);
-    assert(v->c2_vd.activity > -0.001);
+    float activity = float_vector_get(c2->variable_activities, var_id);
+    assert(activity > -0.001);
     assert(c2->activity_factor >= 1.0);
-    v->c2_vd.activity += val * c2->activity_factor;
+    assert(c2->activity_factor_inverse <= 1.0);
+    float_vector_set(c2->variable_activities, var_id, activity + val * c2->activity_factor);
 }
 
 void c2_scale_activity(C2* c2, unsigned var_id, float factor) {
     assert(factor > 0.0 && factor < 1000.0); // just to be safe
-    Var* v = var_vector_get(c2->qcnf->vars, var_id);
-    assert(v->var_id == var_id);
-    assert(v->c2_vd.activity > -0.001);
+    float activity = float_vector_get(c2->variable_activities, var_id);
+    assert(activity > -0.001);
     assert(c2->activity_factor >= 1.0);
-    v->c2_vd.activity *= factor;
+    assert(c2->activity_factor_inverse <= 1.0);
+    float_vector_set(c2->variable_activities, var_id, activity * factor);
 }
 
 void c2_rescale_activity_values(C2* c2) {
     float rescale_factor = 1.0f / c2->activity_factor;
     c2->activity_factor = 1.0f;
+    c2->activity_factor_inverse = 1.0f;
     for (unsigned i = 0; i < var_vector_count(c2->qcnf->vars); i++) {
         Var* v = var_vector_get(c2->qcnf->vars, i);
         if (v->var_id != 0) {
@@ -285,12 +272,11 @@ void c2_decay_activity(C2* c2) {
     assert(c2->activity_factor > 0);
     assert(isfinite(c2->activity_factor));
     float new_activity_factor = c2->activity_factor / c2->magic.decay_rate;
-    if (isfinite(new_activity_factor) && isfinite(1.0 / c2->activity_factor) && new_activity_factor < 1000.0) {
-        c2->activity_factor = new_activity_factor;
-    } else {
+    if (!(isfinite(new_activity_factor) && isfinite(1.0 / c2->activity_factor) && new_activity_factor < 1000.0)) {
         c2_rescale_activity_values(c2);
-        c2->activity_factor *= 1 / c2->magic.decay_rate;
     }
+    c2->activity_factor *= c2->activity_factor / c2->magic.decay_rate;
+    c2->activity_factor_inverse = 1.0f / c2->activity_factor;
 }
 
 float c2_Jeroslow_Wang_log_weight(vector* clauses) {
@@ -308,49 +294,23 @@ float c2_Jeroslow_Wang_log_weight(vector* clauses) {
 }
 
 bool c2_is_in_conflcit(C2* c2) {
-    bool res = c2->state == C2_UNSAT
-            || c2->state == C2_EXAMPLES_CONFLICT
-            || c2->state == C2_SKOLEM_CONFLICT;
-//    assert(! res ||   c2->current_conflict); // currently not given because we eagerly clean up the current_conflict
-    assert(  res || ! c2->current_conflict);
-    return res;
+    return c2->state == C2_UNSAT
+        || c2->state == C2_EXAMPLES_CONFLICT
+        || c2->state == C2_SKOLEM_CONFLICT;
 }
 
 void c2_propagate(C2* c2) {
-    assert(c2->current_conflict == NULL);
-    
     examples_propagate(c2->examples);
     if (examples_is_conflicted(c2->examples)) {
-        assert(c2->state == C2_READY);
+        assert(c2->state == C2_READY); // may fail?
         c2->state = C2_EXAMPLES_CONFLICT;
-        PartialAssignment* pa = examples_get_conflicted_assignment(c2->examples);
-        c2_rl_conflict(c2->options, pa->conflicted_var);
-        c2->current_conflict = analyze_assignment_conflict(c2,
-                                               pa->conflicted_var,
-                                               pa->conflicted_clause,
-                                               pa,
-                                               partial_assignment_get_value_for_conflict_analysis,
-                                               partial_assignment_is_relevant_clause,
-                                               partial_assignment_is_legal_dependence,
-                                               partial_assignment_get_decision_lvl);
-        assert(c2_is_in_conflcit(c2));
         return;
     }
-    
     skolem_propagate(c2->skolem);
     if (skolem_is_conflicted(c2->skolem)) {
         c2_rl_conflict(c2->options, c2->skolem->conflict_var_id);
         assert(c2->state == C2_READY || c2->state == C2_SKOLEM_CONFLICT);
         c2->state = C2_SKOLEM_CONFLICT;
-        c2->current_conflict = analyze_assignment_conflict(c2,
-                                           c2->skolem->conflict_var_id,
-                                           c2->skolem->conflicted_clause,
-                                           c2->skolem,
-                                           skolem_get_value_for_conflict_analysis,
-                                           skolem_is_relevant_clause,
-                                           skolem_is_legal_dependence_for_conflict_analysis,
-                                           skolem_get_decision_lvl_for_conflict_analysis);
-        assert(c2_is_in_conflcit(c2));
         return;
     }
 }
@@ -382,15 +342,32 @@ void c2_run(C2* c2, unsigned remaining_conflicts) {
         c2_propagate(c2);
         
         if (c2_is_in_conflcit(c2)) {
-            
-            for (unsigned i = 0; i < int_vector_count(c2->current_conflict); i++) {
-                int lit = int_vector_get(c2->current_conflict, i);
-                qcnf_add_lit(c2->qcnf, - lit);
+            Clause* learnt_clause = NULL;
+            if (examples_is_conflicted(c2->examples)) {
+                PartialAssignment* pa = examples_get_conflicted_assignment(c2->examples);
+                c2_rl_conflict(c2->options, pa->conflicted_var);
+                learnt_clause = analyze_conflict(c2->ca,
+                                                 pa->conflicted_var,
+                                                 pa->conflicted_clause,
+                                                 pa,
+                                                 partial_assignment_get_value_for_conflict_analysis,
+                                                 partial_assignment_is_relevant_clause,
+                                                 partial_assignment_is_legal_dependence,
+                                                 partial_assignment_get_decision_lvl);
+            } else {
+                assert(skolem_is_conflicted(c2->skolem));
+                c2_rl_conflict(c2->options, c2->skolem->conflict_var_id);
+                learnt_clause = analyze_conflict(c2->ca,
+                                                 c2->skolem->conflict_var_id,
+                                                 c2->skolem->conflicted_clause,
+                                                 c2->skolem,
+                                                 skolem_get_value_for_conflict_analysis,
+                                                 skolem_is_relevant_clause,
+                                                 skolem_is_legal_dependence_for_conflict_analysis,
+                                                 skolem_get_decision_lvl_for_conflict_analysis);
             }
-            Clause* learnt_clause = qcnf_close_clause(c2->qcnf);
+            
             learnt_clause->original = false;
-            int_vector_free(c2->current_conflict);
-            c2->current_conflict = NULL;
             if (learnt_clause == NULL) {
                 abortif(satsolver_sat(c2->skolem->skolem) == SATSOLVER_SAT, "Conflict clause could not be created. Conflict counter: %zu", c2->statistics.conflicts);
                 c2->state = C2_CLOSE_CASE;
@@ -399,10 +376,11 @@ void c2_run(C2* c2, unsigned remaining_conflicts) {
             V3("Learnt clause %u\n", learnt_clause->clause_idx);
             c2->statistics.learnt_clauses_total_length += learnt_clause->size;
             
-            if (c2->options->minimize_learnt_clauses) {
-                c2_minimize_clause(c2, learnt_clause);
-                abortif(c2->state == C2_UNSAT, "Conflict clause minimization shouldn't bring us in UNSAT state.");
+            Clause* minimized = c2_minimize_clause(c2, learnt_clause);
+            if (minimized) {
+                learnt_clause = minimized;
             }
+            abortif(c2->state == C2_UNSAT, "Conflict clause minimization shouldn't bring us in UNSAT state.");
             
             c2_print_variable_states(c2);
 
@@ -587,14 +565,13 @@ cadet_res c2_check_propositional(QCNF* qcnf, Options* o) {
     V1("Using SAT solver to solve propositional problem.\n");
     SATSolver* checker = satsolver_init();
     satsolver_set_max_var(checker, (int) var_vector_count(qcnf->vars));
-    for (unsigned i = 0; i < vector_count(qcnf->clauses); i++) {
-        Clause* c = vector_get(qcnf->clauses, i);
-        if (c) {
-            for (unsigned j = 0; j < c->size; j++) {
-                satsolver_add(checker, c->occs[j]);
-            }
-            satsolver_clause_finished(checker);
+    
+    Clause_Iterator ci = qcnf_get_clause_iterator(qcnf); Clause* c = NULL;
+    while ((c = qcnf_next_clause(&ci)) != NULL) {
+        for (unsigned j = 0; j < c->size; j++) {
+            satsolver_add(checker, c->occs[j]);
         }
+        satsolver_clause_finished(checker);
     }
     sat_res res = satsolver_sat(checker);
     assert(res == SATSOLVER_SAT || res == SATSOLVER_UNSAT);
@@ -776,7 +753,7 @@ cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
     if (f != stdin) {fclose(f);}
 
     V1("Maximal variable index: %u\n", var_vector_count(c2->qcnf->vars));
-    V1("Number of clauses: %u\n", vector_count(c2->qcnf->clauses));
+    V1("Number of clauses: %u\n", vector_count(c2->qcnf->all_clauses));
     V1("Number of scopes: %u\n", vector_count(c2->qcnf->scopes));
 
     if (qcnf_is_propositional(c2->qcnf) && ! options->use_qbf_engine_also_for_propositional_problems) {
@@ -863,13 +840,17 @@ Clause* c2_add_lit(C2* c2, Lit lit) {
 }
 
 void c2_new_variable(C2* c2, bool is_universal, unsigned scope_id, unsigned var_id) {
+    while (var_id >= float_vector_count(c2->variable_activities)) {
+        float_vector_add(c2->variable_activities, 0.0);
+    }
     qcnf_new_var(c2->qcnf, is_universal, scope_id, var_id);
     skolem_new_variable(c2->skolem, var_id);
 }
 
 void c2_new_clause(C2* c2, Clause* c) {
-    assert(c->clause_idx <= vector_count(c2->qcnf->clauses));
     assert(c != NULL);
+    assert(vector_get(c2->qcnf->all_clauses, c->clause_idx) == c);
+    assert(c->active);
     examples_new_clause(c2->examples, c);
     assert(!examples_is_conflicted(c2->examples)); // need to handle this
     skolem_new_clause(c2->skolem, c);

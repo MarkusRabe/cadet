@@ -25,13 +25,13 @@ void c2_validate_var(C2* c2, unsigned var_id) {
 }
 
 void c2_validate_unique_consequences(C2* c2) {
-    for (unsigned i = 0; i < vector_count(c2->qcnf->clauses); i++) {
-        Clause* c = vector_get(c2->qcnf->clauses, i);
-        if (c && ! skolem_has_unique_consequence(c2->skolem, c) && ! skolem_clause_satisfied(c2->skolem, c)) {
+    for (unsigned i = 0; i < vector_count(c2->qcnf->all_clauses); i++) {
+        Clause* c = vector_get(c2->qcnf->all_clauses, i);
+        if (c->active && ! skolem_has_unique_consequence(c2->skolem, c) && ! skolem_clause_satisfied(c2->skolem, c)) {
             skolem_check_for_unique_consequence(c2->skolem, c);
             abortif(skolem_has_unique_consequence(c2->skolem, c), "Unique consequence messed up for clause %d.", c->clause_idx);
         }
-        if (!c) {
+        if (! c->active) {
             abortif(!c && i < int_vector_count(c2->skolem->unique_consequence)
                     && int_vector_get(c2->skolem->unique_consequence, i),
                     "Deleted clause still has a unique consequence.");

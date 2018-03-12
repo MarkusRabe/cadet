@@ -41,10 +41,9 @@ bool cert_check_UNSAT(C2* c2) {
     SATSolver* checker = satsolver_init();
     satsolver_set_max_var(checker, (int) var_vector_count(c2->qcnf->vars));
     
-    // TODO: better read clauses from original file
-    for (unsigned i = 0; i < vector_count(c2->qcnf->clauses); i++) {
-        Clause* c = vector_get(c2->qcnf->clauses, i);
-        if (c && c->original) {
+    for (unsigned i = 0; i < vector_count(c2->qcnf->all_clauses); i++) {
+        Clause* c = vector_get(c2->qcnf->all_clauses, i);
+        if (c->original) {
             for (unsigned j = 0; j < c->size; j++) {
                 satsolver_add(checker, c->occs[j]);
             }

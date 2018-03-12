@@ -34,9 +34,9 @@ void c2_analysis_determine_number_of_partitions(C2* c2) {
     }
     
     // Connect all vars to the minimal pn in each clause.
-    for (unsigned i = 0; i < vector_count(c2->qcnf->clauses); i++) {
-        Clause* c = vector_get(c2->qcnf->clauses, i);
-        if (c) {
+    for (unsigned i = 0; i < vector_count(c2->qcnf->all_clauses); i++) {
+        Clause* c = vector_get(c2->qcnf->all_clauses, i);
+        if (c->original) {
             unsigned minimal_pn = UINT_MAX;
             for (unsigned j = 0; j < c->size; j++) {
                 unsigned var_id = lit_to_var(c->occs[j]);
@@ -88,9 +88,9 @@ void c2_analysis_determine_number_of_partitions(C2* c2) {
     }
     
 #ifdef DEBUG
-    for (unsigned i = 0; i < vector_count(c2->qcnf->clauses); i++) {
-        Clause* c = vector_get(c2->qcnf->clauses, i);
-        if (c) {
+    for (unsigned i = 0; i < vector_count(c2->qcnf->all_clauses); i++) {
+        Clause* c = vector_get(c2->qcnf->all_clauses, i);
+        if (c->original) {
             unsigned clause_pn = 0;
             for (unsigned j = 0; j < c->size; j++) {
                 unsigned var_id = lit_to_var(c->occs[j]);
@@ -114,9 +114,9 @@ void c2_analysis_determine_number_of_partitions(C2* c2) {
         int_vector_add(interface_clauses_per_partition, 0);
         vector_add(interface_vars_per_partition, int_vector_init());
     }
-    for (unsigned i = 0; i < vector_count(c2->qcnf->clauses); i++) {
-        Clause* c = vector_get(c2->qcnf->clauses, i);
-        if (c) {
+    for (unsigned i = 0; i < vector_count(c2->qcnf->all_clauses); i++) {
+        Clause* c = vector_get(c2->qcnf->all_clauses, i);
+        if (c->original) {
             bool contains_deterministic = false;
             unsigned clause_partition_number = 0;
             for (unsigned j = 0; j < c->size; j++) {

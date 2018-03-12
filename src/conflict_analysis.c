@@ -15,6 +15,7 @@
 
 bool conflict_analysis_is_fresh(conflict_analysis* ca) {
     assert(int_vector_count(ca->conflicting_assignment) == 0);
+    assert(int_vector_count(ca->resolutions_of_last_conflict) == 0);
     assert(worklist_count(ca->queue) == 0);
     assert(ca->domain == NULL);
     assert(ca->conflicted_clause == NULL);
@@ -28,6 +29,7 @@ bool conflict_analysis_is_fresh(conflict_analysis* ca) {
 
 void conflict_analsysis_reset(conflict_analysis* ca) {
     int_vector_reset(ca->conflicting_assignment);
+    int_vector_reset(ca->resolutions_of_last_conflict);
     worklist_reset(ca->queue);
     ca->domain = NULL;
     ca->conflicted_clause = NULL;
@@ -47,6 +49,8 @@ conflict_analysis* conflcit_analysis_init(C2* c2) {
     ca->c2 = c2;
     ca->conflicting_assignment = int_vector_init();
     ca->queue = worklist_init_unique_computation(qcnf_compare_literals_by_var_id);
+    ca->resolution_graph = map_init();
+    ca->resolutions_of_last_conflict = int_vector_init();
     
     conflict_analsysis_reset(ca);
     
@@ -55,9 +59,10 @@ conflict_analysis* conflcit_analysis_init(C2* c2) {
 }
 
 void conflict_analysis_free(conflict_analysis* ca) {
-    assert(conflict_analysis_is_fresh(ca));
     int_vector_free(ca->conflicting_assignment);
     worklist_free(ca->queue);
+    int_vector_free(ca->resolutions_of_last_conflict);
+    map_free(ca->resolution_graph);
     free(ca);
 }
 
@@ -237,7 +242,7 @@ unsigned dependency_size(C2 *c2, Var* v) {
     return int_vector_count(scope->vars);
 }
 
-int_vector* analyze_assignment_conflict(C2* c2,
+Clause* analyze_conflict(conflict_analysis* ca,
                                         unsigned conflicted_var,
                                         Clause* conflicted_clause,
                                         void* domain,
@@ -252,7 +257,7 @@ int_vector* analyze_assignment_conflict(C2* c2,
         V3("NULL\n");
     }
     
-    conflict_analysis* ca = c2->ca;
+    conflict_analsysis_reset(ca);
     
     assert(conflict_analysis_is_fresh(ca));
     
@@ -298,15 +303,19 @@ int_vector* analyze_assignment_conflict(C2* c2,
 #ifdef DEBUG
     for (unsigned i = 0; i < int_vector_count(ca->conflicting_assignment); i++) {
         Lit l_debug = int_vector_get(ca->conflicting_assignment, i);
-        Var* v_debug = var_vector_get(c2->qcnf->vars, lit_to_var(l_debug));
+        Var* v_debug = var_vector_get(ca->c2->qcnf->vars, lit_to_var(l_debug));
         abortif(!v_debug->original, "Conflict clause contains helper variables.\n");
         abortif(int_vector_contains(ca->conflicting_assignment, -l_debug), "Conflict clause contains positive and negative literal.\n");
     }
 #endif
     
-    int_vector* conflict = ca->conflicting_assignment;
-    ca->conflicting_assignment = int_vector_init();
-    
-    conflict_analsysis_reset(ca);
-    return conflict;
+    // Create learnt clause and remember which other clauses it was resolved from
+    for (unsigned i = 0; i < int_vector_count(ca->conflicting_assignment); i++) {
+        qcnf_add_lit(ca->c2->qcnf, - int_vector_get(ca->conflicting_assignment, i));
+    }
+    Clause* c = qcnf_close_clause(ca->c2->qcnf);
+    abortif(!c, "Learnt clause could not be created");
+    map_add(ca->resolution_graph, (int) c->clause_idx, ca->resolutions_of_last_conflict);
+    ca->resolutions_of_last_conflict = int_vector_init();
+    return c;
 }

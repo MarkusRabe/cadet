@@ -147,11 +147,8 @@ void c2_print_statistics(C2* c2) {
     unsigned unique_consequence_clauses = 0;
     unsigned non_satisfied_clause_count = 0;
     
-    for (unsigned i = 0; i < vector_count(c2->qcnf->clauses); i++) {
-        Clause* c = vector_get(c2->qcnf->clauses, i++);
-        if (!c) {
-            continue;
-        }
+    Clause_Iterator ci = qcnf_get_clause_iterator(c2->qcnf); Clause* c = NULL;
+    while ((c = qcnf_next_clause(&ci)) != NULL) {
         if (skolem_has_unique_consequence(c2->skolem, c)) {
             unique_consequence_clauses++;
         }

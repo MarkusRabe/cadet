@@ -19,6 +19,8 @@
 
 struct Clause;
 typedef struct Clause Clause;
+struct Clause_Iterator;
+typedef struct Clause_Iterator Clause_Iterator;
 struct Var;
 typedef struct Var Var;
 typedef int Lit;
@@ -26,12 +28,6 @@ struct QCNF;
 typedef struct QCNF QCNF;
 struct Scope;
 typedef struct Scope Scope;
-
-struct C2_VAR_DATA {
-    float activity;
-};
-typedef struct C2_VAR_DATA C2_VAR_DATA;
-C2_VAR_DATA c2_initial_var_data();
 
 typedef enum {
     QCNF_PROPOSITIONAL,
@@ -48,10 +44,18 @@ struct Clause {
     unsigned int blocked                   : 1;   // for blocked clause elimination
     unsigned int universal_clause          : 1;   // contains only universals
     unsigned int is_cube                   : 1;   // A clause that intentionally excludes universal assignments
-    unsigned int minimized                : 1;   // Indicates the clause has been simplified
-    unsigned int size                      : 26;
+    unsigned int minimized                 : 1;   // Indicates the clause has been simplified
+    unsigned int active                    : 1;   // inactive clauses are not needed anymore, but are still in all_clauses
+    unsigned int in_active_clause_vector   : 1;   // inactive clauses are deleted lazily from the active clause vector; this bit indicates this list has not yet been thrown out
+    unsigned int size                      : 24;
     
     Lit occs[1]; // to avoid flexible array member and make code compatible with newer C standards
+};
+
+struct Clause_Iterator {
+    QCNF* qcnf;
+    size_t clause_iterator_token;
+    unsigned idx; // the NEXT position in the vector of active clauses
 };
 
 struct Var {
@@ -61,15 +65,8 @@ struct Var {
     char is_universal; // just a boolean value
     char original; // just a boolean value
     
-    // CADET2 data
-    struct C2_VAR_DATA c2_vd;
-    
     vector pos_occs; // vector of Clause*
     vector neg_occs;
-    
-    // Domains
-    // PA_INFO pa_var  // contains just the cause of bcp; can we avoid that and encode it in the unique_consequences of clauses?
-    // SKOLEM_VAR skolem_var
 }; // should have length of 48 byte because of 64 bit alignment
 
 
@@ -82,11 +79,10 @@ struct Scope {
 
 struct QCNF {
     var_vector* vars; // indexed by var_id
-    vector* clauses; // indexed by clause_id
-    unsigned next_free_clause_id;
-    
+    vector* all_clauses; // indexed by clause_idx
+    vector* active_clauses; // indexed by clause_idx
+    size_t clause_iterator_token; // makes sure that only one clause iterator is active at any point
     vector* scopes; // vector of scope, indexed by scope_id.
-    
     PROBLEM_TYPE problem_type;
     
     int_vector* new_clause;
@@ -184,8 +180,6 @@ typedef enum {
 
 void qcnf_undo_op(void* qcnf,char,void*);
 
-
-
 bool qcnf_register_clause(QCNF*, Clause*);
 void qcnf_unregister_clause(QCNF*, Clause*);
 bool qcnf_remove_literal(QCNF*, Clause*, Lit);
@@ -195,5 +189,8 @@ void qcnf_plaisted_greenbaum_completion(QCNF* qcnf);
 void qcnf_blocked_clause_detection(QCNF* qcnf);
 bool qcnf_is_blocked_by_lit(QCNF* qcnf, Clause* c, Lit pivot);
 bool qcnf_is_blocked(QCNF* qcnf, Clause* c);
+
+Clause_Iterator qcnf_get_clause_iterator(QCNF*);
+Clause* qcnf_next_clause(Clause_Iterator*);
 
 #endif /* qcnf_h */

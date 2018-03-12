@@ -39,9 +39,9 @@ PartialAssignment* partial_assignment_init(QCNF* qcnf) {
     pa->conflicts = 0;
     pa->propagations = 0;
     
-    for (unsigned i = 0; i < vector_count(qcnf->clauses); i++) {
-        Clause* c = vector_get(qcnf->clauses, i);
-        if (c && c->size == 1) {
+    Clause_Iterator ci = qcnf_get_clause_iterator(qcnf); Clause* c = NULL;
+    while ((c = qcnf_next_clause(&ci)) != NULL) {
+        if (c->size == 1) {
             worklist_push(pa->clauses_to_check, c);
         }
     }

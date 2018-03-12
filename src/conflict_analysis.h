@@ -28,12 +28,15 @@ struct conflict_analysis {
     unsigned conflicted_var_id;
     Clause* conflicted_clause;
     unsigned conflict_decision_lvl;
+    
+    map* resolution_graph; // mapping clause_idxs of learnt clauses to int_vectors holding clause_idxs they are derived from.
+    int_vector* resolutions_of_last_conflict;
 };
 
 conflict_analysis* conflcit_analysis_init(C2* c2);
 void conflict_analysis_free(conflict_analysis*);
 
-int_vector* analyze_assignment_conflict(C2* c2,
+Clause* analyze_conflict(conflict_analysis* ca,
                                         unsigned conflict_var,
                                         Clause* conflicted_clause,
                                         void* domain,

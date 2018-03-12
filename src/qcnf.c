@@ -20,7 +20,7 @@ bool qcnf_contains_clause_with_only_universals(QCNF* qcnf) {
     return int_vector_count(qcnf->universal_clauses) > 0;
 }
 bool qcnf_is_trivially_true(QCNF* qcnf) {
-    return vector_count(qcnf->clauses) == 0;
+    return vector_count(qcnf->active_clauses) == 0;
 }
 
 bool qcnf_is_propositional(QCNF* qcnf) {
@@ -67,9 +67,9 @@ bool qcnf_check_if_clause_is_universal(QCNF* qcnf, Clause* c) {
 }
 
 bool qcnf_is_duplicate(QCNF* qcnf, Clause* c) {
-    if (c->size == 0) {
+    if (c->size == 0) { // check if there is already an empty clause
         for (unsigned i = 0; i < int_vector_count(qcnf->universal_clauses); i++) {
-            Clause* other = vector_get(qcnf->clauses,
+            Clause* other = vector_get(qcnf->all_clauses,
                                        (unsigned) int_vector_get(qcnf->universal_clauses, i));
             if (other != c && other->size == 0) {
                 return true;
@@ -219,8 +219,9 @@ int qcnf_compare_occurrence_by_qtype_then_scope_size_then_var_id__static_qcnf(co
 QCNF* qcnf_init() {
     QCNF* qcnf = malloc(sizeof(QCNF));
     
-    qcnf->clauses = vector_init();
-    qcnf->next_free_clause_id = 0;
+    qcnf->active_clauses = vector_init();
+    qcnf->all_clauses = vector_init();
+    qcnf->clause_iterator_token = 0;
     
     qcnf->vars = var_vector_init();
     Var nullvar;
@@ -254,14 +255,12 @@ QCNF* qcnf_copy(QCNF* other) {
             qcnf_new_var(this, v->is_universal, v->scope_id, v->var_id);
         }
     }
-    for (unsigned i = 0; i < vector_count(other->clauses); i++) {
-        Clause* c = (Clause*) vector_get(other->clauses, i);
-        if (c) {
-            for (unsigned j = 0; j < c->size; j++) {
-                qcnf_add_lit(this, c->occs[j]);
-            }
-            qcnf_close_clause(this);
+    Clause_Iterator ci = qcnf_get_clause_iterator(other); Clause* c = NULL;
+    while ((c = qcnf_next_clause(&ci)) != NULL) {
+        for (unsigned j = 0; j < c->size; j++) {
+            qcnf_add_lit(this, c->occs[j]);
         }
+        qcnf_close_clause(this);
     }
     assert(int_vector_count(this->universal_clauses) == int_vector_count(other->universal_clauses));
     this->universals_constraints = int_vector_copy(other->universals_constraints);
@@ -269,6 +268,7 @@ QCNF* qcnf_copy(QCNF* other) {
 }
 
 Var* qcnf_new_var(QCNF* qcnf, bool is_universal, unsigned scope_id, unsigned var_id) {
+    abortif(scope_id >= UINT16_MAX, "Only supports %u scopes, was given %u", UINT16_MAX, scope_id);
     abortif(var_id == 0, "Variables must be greater than 0");
     abortif(qcnf_var_exists(qcnf, var_id), "Tried to create variable %u, but variable with this ID exists already.", var_id);
     abortif(scope_id > INT16_MAX, "Too many quantifiers, only %d quantifier levels supported.", INT16_MAX);
@@ -324,8 +324,6 @@ Var* qcnf_new_var(QCNF* qcnf, bool is_universal, unsigned scope_id, unsigned var
     var->is_universal = is_universal;
     vector_init_struct(&var->pos_occs);
     vector_init_struct(&var->neg_occs);
-    
-    var->c2_vd = c2_initial_var_data();
     
     stack_push_op(qcnf->stack, QCNF_OP_NEW_VAR, (void*) (size_t) var->var_id);
     
@@ -394,21 +392,6 @@ void qcnf_universal_reduction(QCNF* qcnf, Clause* clause) {
     }
 }
 
-unsigned qcnf_get_smallest_free_clause_id(QCNF* qcnf) {
-    assert(qcnf->next_free_clause_id <= vector_count(qcnf->clauses));
-    assert(vector_count(qcnf->clauses) == qcnf->next_free_clause_id || vector_get(qcnf->clauses, qcnf->next_free_clause_id) == NULL);
-    
-    unsigned res = qcnf->next_free_clause_id;
-    qcnf->next_free_clause_id += 1;
-    while (qcnf->next_free_clause_id < vector_count(qcnf->clauses) && vector_get(qcnf->clauses, qcnf->next_free_clause_id) != NULL) {
-        qcnf->next_free_clause_id += 1;
-    }
-    if (qcnf->next_free_clause_id > vector_count(qcnf->clauses)) {
-        vector_add(qcnf->clauses, NULL);
-    }
-    return res;
-}
-
 Clause* qcnf_new_clause(QCNF* qcnf, int_vector* literals) {
     assert(literals == qcnf->new_clause || int_vector_count(qcnf->new_clause) == 0);
     abortif(int_vector_count(literals) > 33554431, "Clause length is greater than 2^25. You're doing it wrong.");
@@ -429,13 +412,16 @@ Clause* qcnf_new_clause(QCNF* qcnf, int_vector* literals) {
     size_t bytes_to_allocate_for_literals = sizeof(Lit) * (size_t) ((int) int_vector_count(literals) - 1);
     
     Clause* c = malloc( sizeof(Clause) + bytes_to_allocate_for_literals );
-    c->clause_idx = qcnf_get_smallest_free_clause_id(qcnf); // UINT_MAX;
+    vector_add(qcnf->all_clauses, c);
+    c->clause_idx = vector_count(qcnf->all_clauses) - 1;
     c->original = true;
     c->consistent_with_originals = true;
     c->blocked = false;
     c->universal_clause = true;
     c->is_cube = false;
     c->minimized = false;
+    c->active = false;
+    c->in_active_clause_vector = false;
     c->size = int_vector_count(literals);
     
     for (unsigned i = 0; i < c->size; i++) {
@@ -461,7 +447,6 @@ Clause* qcnf_new_clause(QCNF* qcnf, int_vector* literals) {
     static_qcnf_variable_for_sorting = NULL;
     
     if (!qcnf_register_clause(qcnf, c)) {
-        qcnf_delete_clause(qcnf, c);
         c = NULL;
     }
     
@@ -496,7 +481,7 @@ void qcnf_free_clause(Clause* c) {
 
 bool qcnf_register_clause(QCNF* qcnf, Clause* c) {
     if (qcnf_is_duplicate(qcnf,c)) {
-        V2("Warning: detected duplicate clause.\n");
+        V2("Warning: detected duplicate clause with idx %u.\n", c->clause_idx);
         if (debug_verbosity >= 3) {
             qcnf_print_clause(c, stdout);
         }
@@ -507,8 +492,12 @@ bool qcnf_register_clause(QCNF* qcnf, Clause* c) {
     for (int i = 0; i < c->size; i++) {
         vector_add(qcnf_get_occs_of_lit(qcnf, c->occs[i]), c);
     }
-    assert(vector_get(qcnf->clauses, c->clause_idx) == NULL);
-    vector_set(qcnf->clauses, c->clause_idx, c);
+    assert(!c->active);
+    c->active = 1;
+    if (!c->in_active_clause_vector) {
+        c->in_active_clause_vector = 1;
+        vector_add(qcnf->active_clauses, c);
+    }
     
     qcnf_check_if_clause_is_universal(qcnf, c);
     if (c->universal_clause) {
@@ -521,28 +510,25 @@ bool qcnf_register_clause(QCNF* qcnf, Clause* c) {
 }
 
 void qcnf_unregister_clause(QCNF* qcnf, Clause* c) {
+    assert(c->active);
+    assert(c->in_active_clause_vector);
     if (c->universal_clause) {
         int_vector_remove(qcnf->universal_clauses, (int) c->clause_idx);
     }
-    
     // Update the occurrence lists
     for (int i = 0; i < c->size; i++) {
         vector* occs = qcnf_get_occs_of_lit(qcnf, c->occs[i]);
         vector_remove_unsorted(occs, c);
     }
-    
-    vector_set(qcnf->clauses, c->clause_idx, NULL);
+    c->active = 0; // will be cleaned up by the clause iterators
 }
 
 void qcnf_delete_clause(QCNF* qcnf, Clause* c) {
+    abortif(true, "Don't delete clauses for now.");
     assert(c);
+    assert(!c->active);
+    assert(!c->in_active_clause_vector);
     qcnf->deleted_clauses += 1;
-    qcnf_unregister_clause(qcnf, c);
-    
-    if (c->clause_idx < qcnf->next_free_clause_id) {
-        qcnf->next_free_clause_id = c->clause_idx;
-    }
-    
     qcnf_free_clause(c);
 }
 
@@ -554,18 +540,18 @@ void qcnf_free_var(Var* v) {
 }
 
 void qcnf_free(QCNF* qcnf) {
-    for (unsigned i = 0; i < vector_count(qcnf->clauses); i++) {
-        qcnf_free_clause(vector_get(qcnf->clauses, i));
+    for (unsigned i = 0; i < vector_count(qcnf->all_clauses); i++) {
+        Clause* c = vector_get(qcnf->all_clauses, i);
+        qcnf_free_clause(c);
     }
-    vector_free(qcnf->clauses);
+    vector_free(qcnf->all_clauses);
+    vector_free(qcnf->active_clauses);
     stack_free(qcnf->stack);
     var_vector_free(qcnf->vars); // also deallocates the variables
     
     for (unsigned i = 0 ; i < vector_count(qcnf->scopes); i++) {
         Scope* d = vector_get(qcnf->scopes, i);
-        if (d) {
-            qcnf_scope_free(d);
-        }
+        if (d) {qcnf_scope_free(d);}
     }
     vector_free(qcnf->scopes);
     free(qcnf);
@@ -582,9 +568,7 @@ void qcnf_undo_op(void* parent, char type, void* obj) {
         case QCNF_OP_NEW_CLAUSE:
             assert(obj != NULL);
             Clause* c = (Clause*) obj;
-            if (!c->consistent_with_originals) { // protects learned clauses
-                qcnf_delete_clause(qcnf, c);
-            }
+            qcnf_unregister_clause(qcnf, c);
             if (c->universal_clause) {
                 int_vector_remove(qcnf->universal_clauses, (int) c->clause_idx);
             }
@@ -728,22 +712,19 @@ void qcnf_print_qdimacs_file(QCNF* qcnf, FILE* f) {
     
     // count actual clauses
     unsigned clause_num = 0;
-    for (unsigned i = 0; i < vector_count(qcnf->clauses); i++) {
-        Clause* c = vector_get(qcnf->clauses, i);
-        if (c) {
-            clause_num++;
-        }
+    Clause_Iterator ci = qcnf_get_clause_iterator(qcnf); Clause* c = NULL;
+    while ((c = qcnf_next_clause(&ci)) != NULL) {
+        clause_num++;
     }
     
     fprintf(f, "p cnf %d %u\n", max_var_id, clause_num);
     
     qcnf_print_qdimacs_quantifiers(qcnf, f);
     
-    for (unsigned i = 0; i < vector_count(qcnf->clauses); i++) {
-        Clause* c = vector_get(qcnf->clauses, i);
+    ci = qcnf_get_clause_iterator(qcnf);
+    while ((c = qcnf_next_clause(&ci)) != NULL) {
         qcnf_print_clause(c, f);
     }
-    return;
 }
 
 void qcnf_print_qdimacs(QCNF* qcnf) {
@@ -769,7 +750,7 @@ void qcnf_print_statistics(QCNF* qcnf) {
     V0("  Scopes: %u\n", vector_count(qcnf->scopes));
     V0("  Existential variables: %u\n", existential_var_count);
     V0("  Universal variables: %u\n", universal_var_count);
-    V0("  Clauses: %u\n", vector_count(qcnf->clauses));
+    V0("  Clauses: %u\n", vector_count(qcnf->active_clauses));
     V0("  Universal reductions: %u\n", qcnf->universal_reductions);
     V0("  Deleted clauses: %u\n", qcnf->deleted_clauses);
 }
@@ -781,10 +762,9 @@ void qcnf_check_invariants_variable(QCNF* qcnf, Var* v) {
         abortif(v->scope_id >= vector_count(qcnf->scopes), "Illegal scope ID of variable %d", v->var_id);
 //    vector_check_invariants(&v->pos_occs);
 //    vector_check_invariants(&v->neg_occs);
-        abortif(v->pos_occs.count > vector_count(qcnf->clauses),"");
-        abortif(v->neg_occs.count > vector_count(qcnf->clauses),"");
+        abortif(v->pos_occs.count > vector_count(qcnf->active_clauses),"");
+        abortif(v->neg_occs.count > vector_count(qcnf->active_clauses),"");
         abortif(v->scope_id > 0 || !v->is_universal,"");
-        abortif(v->c2_vd.activity < 0.0, "Activity smaller than 0.");
         abortif(var_vector_get(qcnf->vars, v->var_id) != v, "Variable not found in var vector.");
     } else {
         abortif(v->scope_id == 0,"");
@@ -799,19 +779,21 @@ void qcnf_check_invariants_variable(QCNF* qcnf, Var* v) {
 }
 
 void qcnf_check_invariants_clause(QCNF* qcnf, Clause* c) {
-    for (unsigned i = 1; i < c->size; i++) {
-        Lit prev = c->occs[i-1];
-        Lit cur = c->occs[i];
-        assert(qcnf_compare_occurrence_by_qtype_then_scope_size_then_var_id(qcnf, &prev, &cur) < 0);
+    if (!c->active) {
+        assert(!vector_contains(qcnf->active_clauses, c));
+    } else {
+        for (unsigned i = 1; i < c->size; i++) {
+            Lit prev = c->occs[i-1];
+            Lit cur = c->occs[i];
+            assert(qcnf_compare_occurrence_by_qtype_then_scope_size_then_var_id(qcnf, &prev, &cur) < 0);
+        }
     }
 }
 
 void qcnf_check_invariants(QCNF* qcnf) {
-    for (unsigned i = 0; i < vector_count(qcnf->clauses); i++) {
-        Clause* c = vector_get(qcnf->clauses, i);
-        if (c) {
-            qcnf_check_invariants_clause(qcnf, c);
-        }
+    for (unsigned i = 0; i < vector_count(qcnf->all_clauses); i++) {
+        Clause* c = vector_get(qcnf->all_clauses, i);
+        qcnf_check_invariants_clause(qcnf, c);
     }
     for (unsigned i = 1; i < var_vector_count(qcnf->vars); i++) {
         Var* v = var_vector_get(qcnf->vars, i++);
@@ -1111,9 +1093,9 @@ bool qcnf_is_blocked(QCNF* qcnf, Clause* c) {
 }
 
 void qcnf_blocked_clause_detection(QCNF* qcnf) {
-    for (unsigned i = 0; i < vector_count(qcnf->clauses); i++) {
-        Clause* c = vector_get(qcnf->clauses, i);
-        if (c && qcnf_is_blocked(qcnf, c)) {
+    Clause_Iterator ci = qcnf_get_clause_iterator(qcnf); Clause* c = NULL;
+    while ((c = qcnf_next_clause(&ci)) != NULL) {
+        if (qcnf_is_blocked(qcnf, c)) {
             c->blocked = 1;
             qcnf->blocked_clauses += 1;
             qcnf_unregister_clause(qcnf, c);

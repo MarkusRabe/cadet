@@ -62,6 +62,12 @@ void conflict_analysis_free(conflict_analysis* ca) {
     int_vector_free(ca->conflicting_assignment);
     worklist_free(ca->queue);
     int_vector_free(ca->resolutions_of_last_conflict);
+    for (unsigned i = 0; i < vector_count(ca->c2->qcnf->all_clauses); i++) {
+        if (map_contains(ca->resolution_graph, (int) i)) {
+            int_vector* resolutions = map_get(ca->resolution_graph, (int) i);
+            int_vector_free(resolutions);
+        }
+    }
     map_free(ca->resolution_graph);
     free(ca);
 }
@@ -191,14 +197,15 @@ void conflict_analysis_follow_implication_graph(conflict_analysis* ca) {
             bool depends_on_illegals = false;
             Clause* reason = conflict_analysis_find_reason_for_value(ca, lit, &depends_on_illegals);
             if (reason) {
-                if (reason->consistent_with_originals) { // universal constraints clause (cube) or decision clause
+                if (reason->consistent_with_originals || reason->is_cube) { // universal constraints clause (cube) or decision clause
                     if (debug_verbosity >= VERBOSITY_HIGH) {
                         V3("  Reason for %d is clause %u: ", lit, reason->clause_idx);
                         qcnf_print_clause(reason, stdout);
                     }
+                    int_vector_add(ca->resolutions_of_last_conflict, (int) reason->clause_idx);
                     conflict_analysis_schedule_causing_vars_in_work_queue(ca, reason, lit);
                 } else {
-                    assert(reason->is_cube || skolem_is_decision_var(ca->c2->skolem, lit_to_var(lit)) || lit_to_var(lit) == ca->conflicted_var_id);
+                    assert(skolem_is_decision_var(ca->c2->skolem, lit_to_var(lit)) || lit_to_var(lit) == ca->conflicted_var_id);
                     int_vector_add(ca->conflicting_assignment, lit);
                 }
             } else {
@@ -275,6 +282,7 @@ Clause* analyze_conflict(conflict_analysis* ca,
     if (conflicted_clause) {
         // add literals of conflicted clause to worklist
         ca->conflict_decision_lvl = 0;
+        int_vector_add(ca->resolutions_of_last_conflict, (int) conflicted_clause->clause_idx);
         for (unsigned i = 0; i < conflicted_clause->size; i++) {
             Lit l = conflicted_clause->occs[i];
             unsigned var_id = lit_to_var(l);

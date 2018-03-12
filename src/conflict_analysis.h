@@ -30,7 +30,7 @@ struct conflict_analysis {
     unsigned conflict_decision_lvl;
     
     map* resolution_graph; // mapping clause_idxs of learnt clauses to int_vectors holding clause_idxs they are derived from.
-    int_vector* resolutions_of_last_conflict;
+    int_vector* resolutions_of_last_conflict; // containing clause idxs that were 'reasons' in last conflict
 };
 
 conflict_analysis* conflcit_analysis_init(C2* c2);

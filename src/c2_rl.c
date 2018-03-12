@@ -14,8 +14,15 @@
 #include <stdio.h>
 #include <math.h>
 
+float reward_cost_per_second = (float) 0.1;
+float total_reward_for_necessary_conflicts = (float) 0.1;
+
 typedef struct {
     Stats* stats;
+    // Record relevant information about the run to give rewards later
+    map* conflicts_in_reward_vector; // maps learnt clauses to an index in the reward vector. Used for rewarding "necessary" conflicts.
+    
+    // reward vector etc
     float_vector* rewards;
     float_vector* runtimes;
 } RL;
@@ -28,6 +35,7 @@ void rl_init() {
     rl->stats = statistics_init(10000);
     rl->rewards = float_vector_init();
     rl->runtimes = float_vector_init();
+    rl->conflicts_in_reward_vector = map_init();
 }
 
 void rl_add_reward(unsigned dec_idx, float value) { // for current decision
@@ -39,6 +47,7 @@ void rl_free() {
     statistics_free(rl->stats);
     float_vector_free(rl->rewards);
     float_vector_free(rl->runtimes);
+    map_free(rl->conflicts_in_reward_vector);
     free(rl);
     rl = NULL;
 }
@@ -80,6 +89,9 @@ void c2_rl_update_D(Options* o, unsigned var_id, bool deterministic) {
 void c2_rl_new_clause(Options* o, Clause* c) {
     if (!o->reinforcement_learning) {
         return;
+    }
+    if (!c->original && c->consistent_with_originals) {
+        map_add(rl->conflicts_in_reward_vector, (int) c->clause_idx, (void*) (size_t) (float_vector_count(rl->rewards) - 1));
     }
     LOG_PRINTF("clause %u %u lits", c->clause_idx, !c->original);
     for (unsigned i = 0; i < c->size; i++) {
@@ -236,7 +248,7 @@ int_vector* c2_rl_test_assumptions(Skolem* s, int_vector* universal_assumptions)
 
 char *debug_file_name;
 
-void c2_rl_necessary_learnt_clauses(C2 *solver, Options *o) {
+int_vector* c2_rl_necessary_learnt_clauses(C2 *solver, Options *o) {
     assert(c2_result(solver) == CADET_RESULT_SAT);
     map* lc_vars = map_init(); // mapping universal variable IDs to learnt clause idxs
     int_vector* universal_assumptions = int_vector_init();
@@ -285,11 +297,13 @@ void c2_rl_necessary_learnt_clauses(C2 *solver, Options *o) {
     V1("%d out of %d learnt clauses were necessary.\n",
        int_vector_count(necessary_assumptions),
        int_vector_count(universal_assumptions));
+    int_vector* necessary_clause_idxs = int_vector_init();
     for (unsigned i = 0; i < int_vector_count(necessary_assumptions); i++) {
         Lit lit = int_vector_get(necessary_assumptions, i);
         assert(lit > 0);
         unsigned var_id = lit_to_var(lit);
         unsigned clause_idx = (unsigned) map_get(lc_vars, (int) var_id);
+        int_vector_add(necessary_clause_idxs, (int) clause_idx);
         Clause* c = vector_get(qcnf_copy->clauses, clause_idx);
         assert(c && ! c->original && c->consistent_with_originals);
         if (debug_verbosity >= 1) {
@@ -297,28 +311,8 @@ void c2_rl_necessary_learnt_clauses(C2 *solver, Options *o) {
             qcnf_print_clause(c, stdout);
         }
     }
-//    
-//#ifdef DEBUG
-//    FILE* file = open_possibly_zipped_file("/Users/markus/work/cadet/dev/integration-tests/116_SAT.qdimacs");
-//    C2* new_solver = c2_from_file(file, o);
-//    
-//    for (unsigned i = 0; i < int_vector_count(necessary_assumptions); i++) {
-//        Lit lit = int_vector_get(necessary_assumptions, i);
-//        assert(lit > 0);
-//        unsigned var_id = lit_to_var(lit);
-//        unsigned clause_idx = (unsigned) map_get(lc_vars, (int) var_id);
-//        Clause* c = vector_get(qcnf_copy->clauses, clause_idx);
-//        assert(c && ! c->original && c->consistent_with_originals);
-//        for (unsigned j = 0; j < c->size; j++) {
-//            if (lit_to_var(c->occs[j]) != var_id) {
-//                c2_add_lit(new_solver, c->occs[j]);
-//            }
-//        }
-//        c2_add_lit(new_solver, 0);
-//    }
-//    casesplits_record_conflicts(new_solver->skolem, solver->skolem->determinization_order);
-//    abortif(satsolver_sat(new_solver->skolem->skolem) == SATSOLVER_SAT, "Validation of learnt clause usefulness failed.");
-//#endif
+    int_vector_free(necessary_assumptions);
+    return necessary_clause_idxs;
 }
 
 cadet_res c2_rl_run_c2(Options* o) {
@@ -351,22 +345,31 @@ cadet_res c2_rl_run_c2(Options* o) {
             // Could predict the refuting assignment ... but there may be many! We would need to check if the networks prediction was correct.
             
 //            int_vector* refutation = c2_refuting_assignment(solver);
-            NOT_IMPLEMENTED();
+            rl_add_reward(float_vector_count(rl->rewards) - 1, total_reward_for_necessary_conflicts);
         }
         if (res == CADET_RESULT_SAT) {
             // Determine which learnt clauses were needed for the solution
             
             // Step 1: Add one fresh universal variable per learnt clause
-            c2_rl_necessary_learnt_clauses(solver, o);
-            NOT_IMPLEMENTED();
+            int_vector* necessary_clause_idxs = c2_rl_necessary_learnt_clauses(solver, o);
+            for (unsigned i = 0; i < int_vector_count(necessary_clause_idxs); i++) {
+                unsigned cidx = (unsigned) int_vector_get(necessary_clause_idxs, i);
+                unsigned reward_idx = (unsigned) map_get(rl->conflicts_in_reward_vector, (int) cidx);
+                float reward = total_reward_for_necessary_conflicts
+                               / (float) int_vector_count(necessary_clause_idxs);
+                rl_add_reward(reward_idx, reward);
+            }
+            // If no conflicts were necessary, add the reward to the end; to avoid penalizing direct solutions.
+            if (int_vector_count(necessary_clause_idxs) == 0) {
+                rl_add_reward(float_vector_count(rl->rewards) - 1, total_reward_for_necessary_conflicts);
+            }
         }
-        
         
         for (unsigned i = 0; i < float_vector_count(rl->rewards); i++) {
             float seconds_since_last_decision = float_vector_get(rl->runtimes, i);
             assert(!isnan(seconds_since_last_decision)); // Time array contains NaN
             if (!isnan(seconds_since_last_decision)) {
-                rl_add_reward(i, - seconds_since_last_decision * (float) 0.1);
+                rl_add_reward(i, - seconds_since_last_decision * reward_cost_per_second);
             }
         }
         

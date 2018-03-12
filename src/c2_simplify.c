@@ -41,7 +41,7 @@ void c2_simplify(C2* c2) {
     for (unsigned i = 0; i < vector_count(c2->qcnf->active_clauses); i++) {
         if (c2->state != C2_READY) {break;}
         Clause* c = vector_get(c2->qcnf->active_clauses, i);
-        if (! c->active || c->original || skolem_get_unique_consequence(c2->skolem, c) != 0) {
+        if (! c->active || skolem_get_unique_consequence(c2->skolem, c) != 0) {
             continue;
         }
         

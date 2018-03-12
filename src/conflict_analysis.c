@@ -180,34 +180,35 @@ void conflict_analysis_follow_implication_graph(conflict_analysis* ca) {
     
     while (worklist_count(ca->queue) > 0) {
         Lit lit = (Lit) worklist_pop(ca->queue);
-
+        unsigned var_id = lit_to_var(lit);
         abortif(ca->c2->examples->state != EXAMPLES_STATE_INCONSISTENT_DECISION_CONFLICT && ca->domain_get_value(ca->domain, lit) != 1, "Variable to track in conflict analysis has no value.");
-        
-        Var* v = var_vector_get(ca->c2->qcnf->vars, lit_to_var(lit));
-        unsigned d_lvl = conflict_analysis_get_decision_lvl(ca, lit_to_var(lit));
+        unsigned d_lvl = conflict_analysis_get_decision_lvl(ca, var_id);
         assert(d_lvl <= ca->conflict_decision_lvl);
         
-//        bool is_value_decision = c2_is_decision_var(ca->c2, v->var_id) && skolem_get_constant_value(ca->c2->skolem, lit) == 1;
-        
-        if (v->is_universal || d_lvl < ca->conflict_decision_lvl) {
+        if (d_lvl < ca->conflict_decision_lvl) {
             int_vector_add(ca->conflicting_assignment, lit);
         } else {
             bool depends_on_illegals = false;
             Clause* reason = conflict_analysis_find_reason_for_value(ca, lit, &depends_on_illegals);
-            if (reason == NULL) {
-                abortif(ca->c2->state == C2_SKOLEM_CONFLICT && ! skolem_is_decision_var(ca->c2->skolem, v->var_id) && ! int_vector_contains(ca->c2->skolem->universals_assumptions, lit), "No reason for lit %d found in conflict analysis.\n", lit);
-//                assert(ca->c2->state == C2_EXAMPLES_CONFLICT && c2_is_decision_var(ca->c2, v->var_id)); // this means it was a decision variable for the example domain
-                int_vector_add(ca->conflicting_assignment, lit); // must be decision variable (and conflict caused by this decision)
-            } else if (!reason->consistent_with_originals) { // universal constraints clause (cube) or decision clause
-                assert(reason->is_cube || skolem_is_decision_var(ca->c2->skolem, lit_to_var(lit)) || lit_to_var(lit) == ca->conflicted_var_id);
-                int_vector_add(ca->conflicting_assignment, lit);
-            } else {
-                assert(reason->original || reason->consistent_with_originals);
-                if (debug_verbosity >= VERBOSITY_HIGH) {
-                    V3("  Reason for %d is clause %u: ", lit, reason->clause_idx);
-                    qcnf_print_clause(reason, stdout);
+            if (reason) {
+                if (reason->consistent_with_originals) { // universal constraints clause (cube) or decision clause
+                    if (debug_verbosity >= VERBOSITY_HIGH) {
+                        V3("  Reason for %d is clause %u: ", lit, reason->clause_idx);
+                        qcnf_print_clause(reason, stdout);
+                    }
+                    conflict_analysis_schedule_causing_vars_in_work_queue(ca, reason, lit);
+                } else {
+                    assert(reason->is_cube || skolem_is_decision_var(ca->c2->skolem, lit_to_var(lit)) || lit_to_var(lit) == ca->conflicted_var_id);
+                    int_vector_add(ca->conflicting_assignment, lit);
                 }
-                conflict_analysis_schedule_causing_vars_in_work_queue(ca, reason, lit);
+            } else {
+                abortif(ca->c2->state == C2_SKOLEM_CONFLICT
+                        && ! skolem_is_decision_var(ca->c2->skolem, var_id)
+                        && ! int_vector_contains(ca->c2->skolem->universals_assumptions, lit)
+                        && ! qcnf_is_universal(ca->c2->qcnf, var_id),
+                        "No reason for lit %d found in conflict analysis.\n", lit);
+                int_vector_add(ca->conflicting_assignment, lit);
+                // TODO: this is where assumptions for incremental solving would come in
             }
         }
     }
@@ -314,6 +315,7 @@ Clause* analyze_conflict(conflict_analysis* ca,
         qcnf_add_lit(ca->c2->qcnf, - int_vector_get(ca->conflicting_assignment, i));
     }
     Clause* c = qcnf_close_clause(ca->c2->qcnf);
+    c->original = 0;
     abortif(!c, "Learnt clause could not be created");
     map_add(ca->resolution_graph, (int) c->clause_idx, ca->resolutions_of_last_conflict);
     ca->resolutions_of_last_conflict = int_vector_init();

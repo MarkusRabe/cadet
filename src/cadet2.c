@@ -367,7 +367,6 @@ void c2_run(C2* c2, unsigned remaining_conflicts) {
                                                  skolem_get_decision_lvl_for_conflict_analysis);
             }
             
-            learnt_clause->original = false;
             if (learnt_clause == NULL) {
                 abortif(satsolver_sat(c2->skolem->skolem) == SATSOLVER_SAT, "Conflict clause could not be created. Conflict counter: %zu", c2->statistics.conflicts);
                 c2->state = C2_CLOSE_CASE;

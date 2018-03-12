@@ -31,6 +31,8 @@ Clause* qcnf_next_clause(Clause_Iterator* ci) {
             ci->idx += 1;
             return c;
         } else {
+            assert(c->in_active_clause_vector);
+            c->in_active_clause_vector = 0;
             Clause* tail_clause = vector_pop(ci->qcnf->active_clauses);
             if (tail_clause != c) {
                 vector_set(ci->qcnf->active_clauses, ci->idx, tail_clause);

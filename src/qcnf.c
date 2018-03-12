@@ -88,6 +88,10 @@ bool qcnf_is_duplicate(QCNF* qcnf, Clause* c) {
                 all_equal = all_equal && (c->occs[j] == other->occs[j]);
             }
             if (all_equal) {
+                V2("Warning: clause %u is duplicate of %d.\n", c->clause_idx, other->clause_idx);
+                if (debug_verbosity >= 3) {
+                    qcnf_print_clause(c, stdout);
+                }
                 return true;
             }
         }
@@ -481,10 +485,6 @@ void qcnf_free_clause(Clause* c) {
 
 bool qcnf_register_clause(QCNF* qcnf, Clause* c) {
     if (qcnf_is_duplicate(qcnf,c)) {
-        V2("Warning: detected duplicate clause with idx %u.\n", c->clause_idx);
-        if (debug_verbosity >= 3) {
-            qcnf_print_clause(c, stdout);
-        }
         return false;
     }
     

@@ -37,7 +37,7 @@ void c2_delete_learnt_clauses_greater_than(C2* c2, unsigned max_size) {
 
 void c2_simplify(C2* c2) {
     assert(c2->restart_base_decision_lvl == c2->skolem->decision_lvl); // because conflicts we may find are treated as UNSAT
-    bool simplify_originals = genrand_int32() % 10 ? false : true;
+    bool simplify_originals = c2->restarts % 15 ? false : true;
     for (unsigned i = 0; i < vector_count(c2->qcnf->active_clauses); i++) {
         if (c2->state != C2_READY) {break;}
         Clause* c = vector_get(c2->qcnf->active_clauses, i);

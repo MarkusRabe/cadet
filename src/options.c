@@ -57,6 +57,7 @@ Options* default_options() {
     o->trace_for_visualization = false;
     o->trace_for_profiling = false;
     o->reinforcement_learning = false;
+    o->reinforcement_learning_mock = false;
     o->cegar_soft_conflict_limit = false;
     
     return o;

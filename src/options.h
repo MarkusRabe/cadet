@@ -22,7 +22,8 @@ typedef enum {
 typedef struct {
     
     bool reinforcement_learning; // take decisions through stdin; trace state
-    bool cegar_soft_conflict_limit; // switches cegar on after 1000 conflicts to also solve hard problems. 
+    bool reinforcement_learning_mock; // for testing reinforcement learning code
+    bool cegar_soft_conflict_limit; // switches cegar on after 1000 conflicts to also solve hard problems.
     
     // Use a configuration of CADET 2 that is easier to debug than the performance-oriented configuration
     bool easy_debugging;

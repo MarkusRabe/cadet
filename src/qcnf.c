@@ -66,6 +66,24 @@ bool qcnf_check_if_clause_is_universal(QCNF* qcnf, Clause* c) {
     return c->universal_clause;
 }
 
+bool qcnf_is_learnt_clause(Clause* c) {
+    return !c->original && c->consistent_with_originals;
+}
+
+bool qcnf_is_learnt_clause_idx(QCNF* qcnf, unsigned clause_idx) {
+    Clause* c = vector_get(qcnf->all_clauses, clause_idx);
+    return qcnf_is_learnt_clause(c);
+}
+
+bool qcnf_is_original_clause(QCNF* qcnf, unsigned clause_idx) {
+    Clause* c = vector_get(qcnf->all_clauses, clause_idx);
+    return c->original;
+}
+bool qcnf_is_active(QCNF* qcnf, unsigned clause_idx) {
+    Clause* c = vector_get(qcnf->all_clauses, clause_idx);
+    return c->active;
+}
+
 bool qcnf_is_duplicate(QCNF* qcnf, Clause* c) {
     if (c->size == 0) { // check if there is already an empty clause
         for (unsigned i = 0; i < int_vector_count(qcnf->universal_clauses); i++) {

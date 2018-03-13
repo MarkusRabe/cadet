@@ -14,8 +14,10 @@
 #include <stdio.h>
 #include <math.h>
 
-float reward_cost_per_second = (float) 0.1;
-float total_reward_for_necessary_conflicts = (float) 0.1;
+float reward_cost_per_second = 0.1f;
+float total_reward_for_necessary_conflicts = 0.5f;
+float self_reward_factor = 0.5f;
+float completion_reward = 1.0f;
 
 typedef struct {
     Stats* stats;
@@ -25,6 +27,7 @@ typedef struct {
     // reward vector etc
     float_vector* rewards;
     float_vector* runtimes;
+    bool mute;
 } RL;
 
 RL* rl = NULL;
@@ -36,6 +39,21 @@ void rl_init() {
     rl->rewards = float_vector_init();
     rl->runtimes = float_vector_init();
     rl->conflicts_in_reward_vector = map_init();
+    rl->mute = false;
+}
+
+
+void rl_mute() {
+    if (rl) {
+        assert(!rl->mute);
+        rl->mute = true;
+    }
+}
+void rl_unmute() {
+    if (rl) {
+        assert(rl->mute);
+        rl->mute = false;
+    }
 }
 
 void rl_add_reward(unsigned dec_idx, float value) { // for current decision
@@ -53,44 +71,44 @@ void rl_free() {
 }
 
 void c2_rl_print_activity(Options* o, unsigned var_id, float activity) {
-    if (o->reinforcement_learning && activity > 0.5) {
+    if (o->reinforcement_learning && !rl->mute && activity > 0.5) {
         LOG_PRINTF("a %u,%f\n", var_id, activity);
     }
 }
 
 void c2_rl_conflict(Options* o, unsigned var_id) {
-    if (!o->reinforcement_learning) {
+    if (!o->reinforcement_learning || rl->mute) {
         return;
     }
     LOG_PRINTF("conflict %u\n", var_id);
 }
 
 void c2_rl_update_constant_value(Options* o, unsigned var_id, int val) {
-    if (!o->reinforcement_learning) {
+    if (!o->reinforcement_learning || rl->mute) {
         return;
     }
     LOG_PRINTF("v %u %d\n", var_id, val);
 }
 
 void c2_rl_update_unique_consequence(Options* o, unsigned clause_idx, Lit lit) {
-    if (!o->reinforcement_learning) {
+    if (!o->reinforcement_learning || rl->mute) {
         return;
     }
     LOG_PRINTF("uc %u %d\n", clause_idx, lit);
 }
 
 void c2_rl_update_D(Options* o, unsigned var_id, bool deterministic) {
-    if (!o->reinforcement_learning) {
+    if (!o->reinforcement_learning || rl->mute) {
         return;
     }
     LOG_PRINTF("u%c %u\n", deterministic?'+':'-',var_id);
 }
 
 void c2_rl_new_clause(Options* o, Clause* c) {
-    if (!o->reinforcement_learning) {
+    if (!o->reinforcement_learning || rl->mute) {
         return;
     }
-    if (!c->original && c->consistent_with_originals) {
+    if (!c->original) {
         map_add(rl->conflicts_in_reward_vector, (int) c->clause_idx, (void*) (size_t) (float_vector_count(rl->rewards) - 1));
     }
     LOG_PRINTF("clause %u %u lits", c->clause_idx, !c->original);
@@ -101,7 +119,7 @@ void c2_rl_new_clause(Options* o, Clause* c) {
 }
 
 void c2_rl_print_state(C2* c2, unsigned conflicts_until_next_restart) {
-    if (!c2->options->reinforcement_learning) {
+    if (!c2->options->reinforcement_learning || rl->mute) {
         return;
     }
     
@@ -178,7 +196,7 @@ char* c2_rl_readline() {
     return buffer;
 }
 
-int c2_rl_get_decision() {
+int c2_rl_get_decision(C2* solver) {
     double seconds_since_last_decision = 0.0;
     if (statistics_timer_is_running(rl->stats)) {
         seconds_since_last_decision = statistics_stop_and_record_timer(rl->stats);
@@ -187,14 +205,21 @@ int c2_rl_get_decision() {
         float_vector_set(rl->runtimes, float_vector_count(rl->runtimes) - 1, seconds_since_last_decision_float);
     }
     
-    char *s = c2_rl_readline();
-    
-    char *end = NULL;
-    long ret = LONG_MIN;
-    ret = strtol(s, &end, 10); // convert to an integer, base 10, end pointer indicates last character read.
-//    LOG_PRINTF("The number(unsigned long integer) is %ld\n", ret);
-    abortif(*s == '\0', "String could not be read.");
-    abortif(*end != '\0' && *end != '\n', "String not terminated by \\0 or \\n");
+    long ret = 0;
+    if (solver->options->reinforcement_learning_mock) {
+        Var* v = c2_pick_most_active_notdeterministic_variable(solver);
+        if (v) {
+            ret = v->var_id;
+        }
+    } else {
+        char *s = c2_rl_readline();
+        char *end = NULL;
+        ret = LONG_MIN;
+        ret = strtol(s, &end, 10); // convert to an integer, base 10, end pointer indicates last character read.
+        //    LOG_PRINTF("The number(unsigned long integer) is %ld\n", ret);
+        abortif(*s == '\0', "String could not be read.");
+        abortif(*end != '\0' && *end != '\n', "String not terminated by \\0 or \\n");
+    }
     assert(ret != LONG_MIN);
     assert(ret <= INT_MAX);
     assert(ret >= INT_MIN);
@@ -248,7 +273,8 @@ int_vector* c2_rl_test_assumptions(Skolem* s, int_vector* universal_assumptions)
 
 char *debug_file_name;
 
-int_vector* c2_rl_necessary_learnt_clauses(C2 *solver, Options *o) {
+int_vector* c2_rl_necessary_learnt_clauses(C2* solver) {
+    rl_mute();
     assert(c2_result(solver) == CADET_RESULT_SAT);
     map* lc_vars = map_init(); // mapping universal variable IDs to learnt clause idxs
     int_vector* universal_assumptions = int_vector_init();
@@ -262,36 +288,43 @@ int_vector* c2_rl_necessary_learnt_clauses(C2 *solver, Options *o) {
     }
     Clause_Iterator ci = qcnf_get_clause_iterator(solver->qcnf); Clause* c = NULL;
     while ((c = qcnf_next_clause(&ci)) != NULL) {
-        if (!c->is_cube) {
-//            assert(!c->minimized); // other clauses may contribute to the SAT proof indirectly by helping to minimize clauses
-            Clause* new = NULL;
-            for (unsigned j = 0; j < c->size; j++) {
-                qcnf_add_lit(qcnf_copy, c->occs[j]);
-            }
-            if (!c->original && c->consistent_with_originals) {
-                // this is a learnt clause!
-                unsigned universal = qcnf_fresh_universal(qcnf_copy);
-                qcnf_add_lit(qcnf_copy, - (Lit) universal);
-                new = qcnf_close_clause(qcnf_copy);
-                map_add(lc_vars, (int) universal, (void*)(size_t) new->clause_idx); // clause_idxs of new and c may differ
-                int_vector_add(universal_assumptions, (int) universal);
-            } else {
-                new = qcnf_close_clause(qcnf_copy);
-            }
-            new->original = c->original;
-            new->blocked = c->blocked;
-            new->consistent_with_originals = c->consistent_with_originals;
-            new->is_cube = c->is_cube;
-            new->minimized = c->minimized;
+        assert(c->active);
+        if (c->is_cube) {
+            // Even without casesplits, CADET generates an empty cube as the last step
+            assert(c->size == 0);
+            continue;
         }
+        for (unsigned j = 0; j < c->size; j++) {
+            qcnf_add_lit(qcnf_copy, c->occs[j]);
+        }
+        if (!c->original) {
+            // this is a learnt clause or a minimized clause
+            unsigned universal = qcnf_fresh_universal(qcnf_copy);
+            map_add(lc_vars, (int) universal, (void*)(size_t) c->clause_idx); // clause_idxs of new and c may differ
+            int_vector_add(universal_assumptions, (int) universal);
+            
+            qcnf_add_lit(qcnf_copy, - (Lit) universal);
+        }
+        Clause* new = qcnf_close_clause(qcnf_copy);
+        new->original = c->original;
+        new->blocked = c->blocked;
+        new->consistent_with_originals = c->consistent_with_originals;
+        new->is_cube = c->is_cube;
+        new->minimized = c->minimized;
+        new->universal_clause = c->universal_clause;
     }
     
     // Step 2: Replay skolem domain to build the SAT formula
-    Skolem* replay = skolem_init(qcnf_copy, o);
+    Skolem* replay = skolem_init(qcnf_copy, solver->options);
 
     Case* last_case = vector_get(solver->cs->closed_cases, vector_count(solver->cs->closed_cases) - 1);
     casesplits_record_conflicts(replay, last_case->decisions);
     int_vector* necessary_assumptions = c2_rl_test_assumptions(replay, universal_assumptions);
+#ifdef DEBUG
+    for (unsigned i = 0; i < int_vector_count(necessary_assumptions); i++) {
+        assert(int_vector_contains(universal_assumptions, int_vector_get(necessary_assumptions, i)));
+    }
+#endif
     abortif(!necessary_assumptions, "Formula was not solved correctly in RL mode. Generation of early rewards failed.");
     V1("%d out of %d learnt clauses were necessary.\n",
        int_vector_count(necessary_assumptions),
@@ -302,16 +335,65 @@ int_vector* c2_rl_necessary_learnt_clauses(C2 *solver, Options *o) {
         assert(lit > 0);
         unsigned var_id = lit_to_var(lit);
         unsigned clause_idx = (unsigned) map_get(lc_vars, (int) var_id);
+        assert(qcnf_is_active(solver->qcnf, clause_idx));
         int_vector_add(necessary_clause_idxs, (int) clause_idx);
-        Clause* c = vector_get(qcnf_copy->all_clauses, clause_idx);
-        assert(c && ! c->original && c->consistent_with_originals);
-        if (debug_verbosity >= 1) {
-            V1("  ");
-            qcnf_print_clause(c, stdout);
-        }
     }
     int_vector_free(necessary_assumptions);
+    rl_unmute();
     return necessary_clause_idxs;
+}
+
+// Gives half the reward to the clause itself and, recursively, the other half
+// of the reward to the clauses it was derived from.
+void rl_reward_clause(C2* solver, unsigned idx, float total_reward) {
+    int_vector* clauses_to_reward = int_vector_init();
+    int_vector_add(clauses_to_reward, (int) idx);
+    float_vector* clause_rewards_to_distribute = float_vector_init();
+    float_vector_add(clause_rewards_to_distribute, total_reward);
+    while (int_vector_count(clauses_to_reward)) {
+        assert(int_vector_count(clauses_to_reward) == float_vector_count(clause_rewards_to_distribute));
+        unsigned idx = (unsigned) int_vector_pop(clauses_to_reward);
+        assert(!qcnf_is_original_clause(solver->qcnf, idx));
+        assert(map_contains(rl->conflicts_in_reward_vector, (int) idx));
+        
+        float reward = float_vector_pop(clause_rewards_to_distribute);
+        unsigned reward_idx = (unsigned) map_get(rl->conflicts_in_reward_vector, (int) idx);
+        
+        float self_reward = reward * self_reward_factor;
+        float remaining_reward = reward - self_reward;
+        rl_add_reward(reward_idx, self_reward);
+        V1("Rewarding clause %u at pos %u with %f\n", idx, reward_idx, self_reward);
+        
+        if (map_contains(solver->ca->resolution_graph, (int) idx)) {
+            int_vector* resolution_operands = map_get(solver->ca->resolution_graph, (int) idx);
+            
+            // Count how many of the operands were learnt clauses, then distribute the remaining reward evenly
+            unsigned learnt_clause_operands = 0;
+            for (unsigned i = 0; i < int_vector_count(resolution_operands); i++) {
+                unsigned operand_clause_idx = (unsigned) int_vector_get(resolution_operands, i);
+                if (!qcnf_is_original_clause(solver->qcnf, operand_clause_idx)) {
+                    learnt_clause_operands += 1;
+                }
+            }
+            if (learnt_clause_operands > 0) {
+                float reward_per_operand = remaining_reward / (float) learnt_clause_operands;
+                for (unsigned i = 0; i < int_vector_count(resolution_operands); i++) {
+                    unsigned operand_clause_idx = (unsigned) int_vector_get(resolution_operands, i);
+                    if (!qcnf_is_original_clause(solver->qcnf, operand_clause_idx)) {
+                        unsigned operand_reward_idx = (unsigned) map_get(rl->conflicts_in_reward_vector, (int) operand_clause_idx);
+                        assert(operand_reward_idx < reward_idx);
+                        int_vector_add(clauses_to_reward, (int) operand_clause_idx);
+                        float_vector_add(clause_rewards_to_distribute, reward_per_operand);
+                    }
+                }
+            } else {
+                rl_add_reward(reward_idx, remaining_reward);
+                V1("Rewarding REMAINING for clause %u at pos %u with %f\n", idx, reward_idx, remaining_reward);
+            }
+        }
+    }
+    int_vector_free(clauses_to_reward);
+    clauses_to_reward = NULL;
 }
 
 cadet_res c2_rl_run_c2(Options* o) {
@@ -335,32 +417,43 @@ cadet_res c2_rl_run_c2(Options* o) {
         cadet_res res = c2_sat(solver);
         
         if (res == CADET_RESULT_SAT || res == CADET_RESULT_UNSAT) {
-            rl_add_reward(float_vector_count(rl->rewards) - 1, 1.0);
+            if (float_vector_count(rl->rewards) > 0) {
+                rl_add_reward(float_vector_count(rl->rewards) - 1, completion_reward);
+            }
         }
         
         if (res == CADET_RESULT_UNSAT) {
             // Determine which parts of the formula/decisions were important to figure out the counterexample.
             // Could predict the UNSAT core (but there could be multiple ... have to compute a covering of all possible UNSAT cores?)
             // Could predict the refuting assignment ... but there may be many! We would need to check if the networks prediction was correct.
-            
+            assert(solver->state == C2_UNSAT);
+            if (vector_count(solver->qcnf->all_clauses) > 0) {
+                unsigned last_clause_idx = (unsigned) vector_count(solver->qcnf->all_clauses) - 1;
+                assert(qcnf_is_active(solver->qcnf, last_clause_idx));
+                if (!qcnf_is_original_clause(solver->qcnf, last_clause_idx)) {
+                    rl_reward_clause(solver, last_clause_idx, total_reward_for_necessary_conflicts);
+                }
+            }
 //            int_vector* refutation = c2_refuting_assignment(solver);
-            rl_add_reward(float_vector_count(rl->rewards) - 1, total_reward_for_necessary_conflicts);
+            if (float_vector_count(rl->rewards) == 0) {
+                rl_add_reward(float_vector_count(rl->rewards) - 1, total_reward_for_necessary_conflicts);
+            }
         }
         if (res == CADET_RESULT_SAT) {
             // Determine which learnt clauses were needed for the solution
             
             // Step 1: Add one fresh universal variable per learnt clause
-            int_vector* necessary_clause_idxs = c2_rl_necessary_learnt_clauses(solver, o);
-            for (unsigned i = 0; i < int_vector_count(necessary_clause_idxs); i++) {
-                unsigned cidx = (unsigned) int_vector_get(necessary_clause_idxs, i);
-                unsigned reward_idx = (unsigned) map_get(rl->conflicts_in_reward_vector, (int) cidx);
-                float reward = total_reward_for_necessary_conflicts
-                               / (float) int_vector_count(necessary_clause_idxs);
-                rl_add_reward(reward_idx, reward);
-            }
             // If no conflicts were necessary, add the reward to the end; to avoid penalizing direct solutions.
+            int_vector* necessary_clause_idxs = c2_rl_necessary_learnt_clauses(solver);
             if (int_vector_count(necessary_clause_idxs) == 0) {
                 rl_add_reward(float_vector_count(rl->rewards) - 1, total_reward_for_necessary_conflicts);
+            } else {
+                float reward_per_necessary_conflict = total_reward_for_necessary_conflicts / (float) int_vector_count(necessary_clause_idxs);
+                for (unsigned i = 0; i < int_vector_count(necessary_clause_idxs); i++) {
+                    unsigned cidx = (unsigned) int_vector_get(necessary_clause_idxs, i);
+                    assert(qcnf_is_active(solver->qcnf, cidx));
+                    rl_reward_clause(solver, cidx, reward_per_necessary_conflict);
+                }
             }
         }
         

@@ -38,8 +38,8 @@ Clause* c2_minimize_clause(C2* c2, Clause* c) {
     assert(c2->minimization_pa->decision_lvl == 0);
     assert(c->active);
     
-    if (!c2->options->minimize_learnt_clauses || c->size <= 1) {
-        return 0;
+    if (!c2->options->minimize_learnt_clauses || c->size <= 1 || skolem_clause_satisfied(c2->skolem, c)) {
+        return NULL;
     }
     
     statistics_start_timer(c2->statistics.minimization_stats);
@@ -54,7 +54,7 @@ Clause* c2_minimize_clause(C2* c2, Clause* c) {
     assert(c->size == int_vector_count(permutation));
     
     partial_assignment_push(c2->minimization_pa);
-    for (unsigned i = 0; i < int_vector_count(permutation) - 1; i++) {
+    for (unsigned i = 0; i < c->size - 1; i++) {
         
         Lit l = c->occs[int_vector_get(permutation, i)];
         int val = partial_assignment_get_value_for_conflict_analysis(c2->minimization_pa, - l);
@@ -77,6 +77,7 @@ Clause* c2_minimize_clause(C2* c2, Clause* c) {
             break;
         }
     }
+    
     partial_assignment_pop(c2->minimization_pa);
     
     unsigned removed = int_vector_count(to_remove);
@@ -90,8 +91,9 @@ Clause* c2_minimize_clause(C2* c2, Clause* c) {
         }
         new_clause = qcnf_close_clause(c2->qcnf);
         if (new_clause) {
-            c2_rl_new_clause(c2->options, c);
+            new_clause->original = 0;
             new_clause->minimized = 1;
+            c2_rl_new_clause(c2->options, new_clause);
             assert(c->size - int_vector_count(to_remove) == new_clause->size);
             V2("Conflict clause minimization removed %u of %u literals.\n", int_vector_count(to_remove), initial_size);
             // Schedule removed literals for pure variable checks

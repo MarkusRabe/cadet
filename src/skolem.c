@@ -151,7 +151,6 @@ void skolem_new_clause(Skolem* s, Clause* c) {
     unsigned non_constants = 0;
     for (int i = c->size - 1; i >= 0; i--) { // iterating backwards as existentials are in the back of the clause
         int lit = c->occs[i];
-        unsigned var_id = lit_to_var(lit);
         if (! skolem_is_deterministic(s, lit_to_var(lit))) {
             fully_deterministic = false;
         }

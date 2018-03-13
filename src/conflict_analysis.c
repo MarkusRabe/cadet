@@ -8,6 +8,7 @@
 
 #include "conflict_analysis.h"
 #include "log.h"
+#include "c2_rl.h"
 
 #include <assert.h>
 #include <stdint.h>
@@ -327,5 +328,6 @@ Clause* analyze_conflict(conflict_analysis* ca,
     abortif(!c, "Learnt clause could not be created");
     map_add(ca->resolution_graph, (int) c->clause_idx, ca->resolutions_of_last_conflict);
     ca->resolutions_of_last_conflict = int_vector_init();
+    c2_rl_new_clause(ca->c2->options, c);
     return c;
 }

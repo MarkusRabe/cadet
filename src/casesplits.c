@@ -8,6 +8,7 @@
 
 #include "casesplits.h"
 #include "log.h"
+#include "c2_rl.h"
 
 #include <math.h>
 
@@ -294,6 +295,7 @@ void casesplits_encode_last_case(Casesplits* cs) {
         assert(!skolem_is_conflicted(cs->skolem));
         assert(!cs->skolem->record_conflicts);
         
+        rl_mute();
         stack_push(cs->skolem->stack);
         
         // Encode the disjunction over the potentially conflicted variables.
@@ -326,6 +328,7 @@ void casesplits_encode_last_case(Casesplits* cs) {
 #endif
         
         stack_pop(cs->skolem->stack, cs->skolem);
+        rl_unmute();
     }
 }
 

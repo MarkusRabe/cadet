@@ -442,7 +442,6 @@ void c2_run(C2* c2, unsigned remaining_conflicts) {
             c2_decay_activity(c2);
             c2_log_clause(c2, learnt_clause);
             c2_trace_for_profiling(c2);
-            c2_rl_new_clause(c2->options, learnt_clause);
 #ifdef DEBUG
             c2_validate_unique_consequences(c2);
 #endif
@@ -486,7 +485,7 @@ void c2_run(C2* c2, unsigned remaining_conflicts) {
             
             if (decision_var != NULL && c2->options->reinforcement_learning) {
                 c2_rl_print_state(c2, remaining_conflicts);
-                int d = c2_rl_get_decision();
+                int d = c2_rl_get_decision(c2);
                 if (d == 0) {
                     c2->state = C2_ABORT_RL;
                     return;
@@ -782,9 +781,6 @@ cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
             }
             if (c2->options->certify_SAT) {
                 cert_AIG_certificate(c2);
-            }
-            if (!options->cegar && !options->casesplits) {
-                c2_rl_necessary_learnt_clauses(c2, options);
             }
             break;
         case CADET_RESULT_UNSAT:

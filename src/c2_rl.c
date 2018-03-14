@@ -31,6 +31,7 @@ typedef struct {
 } RL;
 
 RL* rl = NULL;
+FILE* mock_file = NULL;
 
 void rl_init() {
     assert(rl == NULL);
@@ -235,13 +236,24 @@ int c2_rl_get_decision(C2* solver) {
 }
 
 void c2_rl_print_rewards() {
+    float total = 0.0f;
+    unsigned positive_reward_num = 0;
     LOG_PRINTF("rewards");
     for (unsigned i = 0; i < float_vector_count(rl->rewards); i++) {
-        LOG_PRINTF(" %f", float_vector_get(rl->rewards, i));
+        float r = float_vector_get(rl->rewards, i);
+        LOG_PRINTF(" %f", r);
+        total += r;
+        if (r > 0.0) {positive_reward_num += 1;}
     }
     LOG_PRINTF("\n");
+    V1("Total reward %f over %u decisions; %u of which are positive.\n", total, float_vector_count(rl->rewards), positive_reward_num);
 }
 
+void rl_print_auxilliary(C2* solver) {
+    for (unsigned i = 0; i < float_vector_count(rl->rewards); i++) {
+//        asdf
+    }
+}
 
 int_vector* c2_rl_test_assumptions(Skolem* s, int_vector* universal_assumptions) {
     V1("Testing assumption of closed case\n");
@@ -381,7 +393,7 @@ void rl_reward_clause(C2* solver, unsigned idx, float total_reward) {
                     unsigned operand_clause_idx = (unsigned) int_vector_get(resolution_operands, i);
                     if (!qcnf_is_original_clause(solver->qcnf, operand_clause_idx)) {
                         unsigned operand_reward_idx = (unsigned) map_get(rl->conflicts_in_reward_vector, (int) operand_clause_idx);
-                        assert(operand_reward_idx < reward_idx);
+                        assert(operand_reward_idx <= reward_idx);
                         int_vector_add(clauses_to_reward, (int) operand_clause_idx);
                         float_vector_add(clause_rewards_to_distribute, reward_per_operand);
                     }
@@ -396,23 +408,70 @@ void rl_reward_clause(C2* solver, unsigned idx, float total_reward) {
     clauses_to_reward = NULL;
 }
 
+void rl_mock_file(FILE* file) {
+    mock_file = file;
+}
+
+void rl_action_rewards(C2* solver) {
+    cadet_res res = c2_result(solver);
+    if (res == CADET_RESULT_UNSAT) {
+        // Determine which parts of the formula/decisions were important to figure out the counterexample.
+        // Could predict the UNSAT core (but there could be multiple ... have to compute a covering of all possible UNSAT cores?)
+        // Could predict the refuting assignment ... but there may be many! We would need to check if the networks prediction was correct.
+        assert(solver->state == C2_UNSAT);
+        if (vector_count(solver->qcnf->all_clauses) > 0) {
+            unsigned last_clause_idx = (unsigned) vector_count(solver->qcnf->all_clauses) - 1;
+            assert(solver->statistics.decisions == 0 || qcnf_is_active(solver->qcnf, last_clause_idx));
+            if (!qcnf_is_original_clause(solver->qcnf, last_clause_idx)) {
+                rl_reward_clause(solver, last_clause_idx, total_reward_for_necessary_conflicts);
+            }
+        }
+        //            int_vector* refutation = c2_refuting_assignment(solver);
+    }
+    if (res == CADET_RESULT_SAT) {
+        // Determine which learnt clauses were needed for the solution
+        
+        // Step 1: Add one fresh universal variable per learnt clause
+        // If no conflicts were necessary, add the reward to the end; to avoid penalizing direct solutions.
+        int_vector* necessary_clause_idxs = c2_rl_necessary_learnt_clauses(solver);
+        if (int_vector_count(necessary_clause_idxs) == 0) {
+            if (float_vector_count(rl->rewards) > 0) {
+                rl_add_reward(float_vector_count(rl->rewards) - 1, total_reward_for_necessary_conflicts);
+            }
+        } else {
+            float reward_per_necessary_conflict = total_reward_for_necessary_conflicts / (float) int_vector_count(necessary_clause_idxs);
+            for (unsigned i = 0; i < int_vector_count(necessary_clause_idxs); i++) {
+                unsigned cidx = (unsigned) int_vector_get(necessary_clause_idxs, i);
+                assert(qcnf_is_active(solver->qcnf, cidx));
+                rl_reward_clause(solver, cidx, reward_per_necessary_conflict);
+            }
+        }
+    }
+}
+
 cadet_res c2_rl_run_c2(Options* o) {
     while (true) {
         rl_init();
-        char *file_name = c2_rl_readline();
-        // scan for end, should be terminated with newline
-        char *end = file_name;
-        int i = 0; int maxlen = 1000;
-        while (i < maxlen) {
-            if (*end == '\n') *end = '\0';
-            if (*end == '\0') break;
-            end += 1;
-            i += 1;
-        }
-        abortif(i >= maxlen, "File name too long.");
         
-        LOG_PRINTF("\n");
-        FILE* file = open_possibly_zipped_file(file_name);
+        FILE* file = NULL;
+        if (mock_file) {
+            file = mock_file;
+        } else {
+            char *file_name = c2_rl_readline();
+            // scan for end, should be terminated with newline
+            char *end = file_name;
+            int i = 0; int maxlen = 1000;
+            while (i < maxlen) {
+                if (*end == '\n') *end = '\0';
+                if (*end == '\0') break;
+                end += 1;
+                i += 1;
+            }
+            abortif(i >= maxlen, "File name too long.");
+            file = open_possibly_zipped_file(file_name);
+            LOG_PRINTF("\n");
+        }
+        
         C2* solver = c2_from_file(file, o);
         cadet_res res = c2_sat(solver);
         
@@ -422,41 +481,9 @@ cadet_res c2_rl_run_c2(Options* o) {
             }
         }
         
-        if (res == CADET_RESULT_UNSAT) {
-            // Determine which parts of the formula/decisions were important to figure out the counterexample.
-            // Could predict the UNSAT core (but there could be multiple ... have to compute a covering of all possible UNSAT cores?)
-            // Could predict the refuting assignment ... but there may be many! We would need to check if the networks prediction was correct.
-            assert(solver->state == C2_UNSAT);
-            if (vector_count(solver->qcnf->all_clauses) > 0) {
-                unsigned last_clause_idx = (unsigned) vector_count(solver->qcnf->all_clauses) - 1;
-                assert(qcnf_is_active(solver->qcnf, last_clause_idx));
-                if (!qcnf_is_original_clause(solver->qcnf, last_clause_idx)) {
-                    rl_reward_clause(solver, last_clause_idx, total_reward_for_necessary_conflicts);
-                }
-            }
-//            int_vector* refutation = c2_refuting_assignment(solver);
-            if (float_vector_count(rl->rewards) == 0) {
-                rl_add_reward(float_vector_count(rl->rewards) - 1, total_reward_for_necessary_conflicts);
-            }
-        }
-        if (res == CADET_RESULT_SAT) {
-            // Determine which learnt clauses were needed for the solution
-            
-            // Step 1: Add one fresh universal variable per learnt clause
-            // If no conflicts were necessary, add the reward to the end; to avoid penalizing direct solutions.
-            int_vector* necessary_clause_idxs = c2_rl_necessary_learnt_clauses(solver);
-            if (int_vector_count(necessary_clause_idxs) == 0) {
-                rl_add_reward(float_vector_count(rl->rewards) - 1, total_reward_for_necessary_conflicts);
-            } else {
-                float reward_per_necessary_conflict = total_reward_for_necessary_conflicts / (float) int_vector_count(necessary_clause_idxs);
-                for (unsigned i = 0; i < int_vector_count(necessary_clause_idxs); i++) {
-                    unsigned cidx = (unsigned) int_vector_get(necessary_clause_idxs, i);
-                    assert(qcnf_is_active(solver->qcnf, cidx));
-                    rl_reward_clause(solver, cidx, reward_per_necessary_conflict);
-                }
-            }
-        }
+        rl_action_rewards(solver);
         
+        // Negative rewards for execution time
         for (unsigned i = 0; i < float_vector_count(rl->rewards); i++) {
             float seconds_since_last_decision = float_vector_get(rl->runtimes, i);
             assert(!isnan(seconds_since_last_decision)); // Time array contains NaN
@@ -466,7 +493,14 @@ cadet_res c2_rl_run_c2(Options* o) {
         }
         
         c2_rl_print_rewards();
+        
+        rl_print_auxilliary(solver);
+        
+        if (mock_file) {
+            return c2_result(solver);
+        }
         rl_free();
+        c2_free(solver);
     }
     return CADET_RESULT_UNKNOWN;
 }

@@ -240,6 +240,7 @@ int main(int argc, const char* argv[]) {
 //            LOG_WARNING("Switching off clause minimization for reinforcement learning.\n");
 //            options->minimize_learnt_clauses = false;
 //        }
+        rl_mock_file(file);
         return c2_rl_run_c2(options);
     }
 }

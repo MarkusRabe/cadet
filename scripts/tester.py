@@ -534,7 +534,7 @@ if __name__ == "__main__":
         ARGS.instances = None
         # ARGS.certify = False
         categories = ['test_files']
-        configs = ['--debugging', '--debugging --cegar', '--debugging --case_splits', '--debugging --cegar --case_splits', '', '--cegar', '--case_splits', '--cegar --case_splits']
+        configs = ['--debugging', '--debugging --cegar', '--debugging --case_splits', '--debugging --cegar --case_splits', '', '--cegar', '--case_splits', '--cegar --case_splits', '--rl --rl_mock', '--rl --rl_mock --debugging', '--rl --rl_mock --debugging --minimize']
     
     if ARGS.config:
         configs = []

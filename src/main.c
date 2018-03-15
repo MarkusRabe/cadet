@@ -159,6 +159,8 @@ int main(int argc, const char* argv[]) {
                     } else if (strcmp(argv[i], "--rl") == 0) {
                         options->reinforcement_learning = true;
                         log_colors = false;
+                    } else if (strcmp(argv[i], "--rl_advanced_rewards") == 0) {
+                        options->rl_advanced_rewards = ! options->rl_advanced_rewards;
                     } else if (strcmp(argv[i], "--rl_mock") == 0) {
                         options->reinforcement_learning_mock = true;
                     } else if (strcmp(argv[i], "--cegar_soft_conflict_limit") == 0) {

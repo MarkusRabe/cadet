@@ -161,7 +161,7 @@ Var* c2_pick_most_active_notdeterministic_variable(C2* c2) {
             if (v->var_id != 0) {
                 assert(v->var_id == i);
                 float v_activity = c2_get_activity(c2, v->var_id);
-                c2_rl_print_activity(c2->options, v->var_id, v_activity);
+                c2_rl_print_activity(v->var_id, v_activity);
                 assert(v_activity > -0.001);
                 if (decision_var_activity < v_activity) {
                     decision_var_activity = v_activity;
@@ -308,7 +308,7 @@ void c2_propagate(C2* c2) {
     }
     skolem_propagate(c2->skolem);
     if (skolem_is_conflicted(c2->skolem)) {
-        c2_rl_conflict(c2->options, c2->skolem->conflict_var_id);
+        c2_rl_conflict(c2->skolem->conflict_var_id);
         assert(c2->state == C2_READY || c2->state == C2_SKOLEM_CONFLICT);
         c2->state = C2_SKOLEM_CONFLICT;
         return;
@@ -345,7 +345,7 @@ void c2_run(C2* c2, unsigned remaining_conflicts) {
             Clause* learnt_clause = NULL;
             if (examples_is_conflicted(c2->examples)) {
                 PartialAssignment* pa = examples_get_conflicted_assignment(c2->examples);
-                c2_rl_conflict(c2->options, pa->conflicted_var);
+                c2_rl_conflict(pa->conflicted_var);
                 learnt_clause = analyze_conflict(c2->ca,
                                                  pa->conflicted_var,
                                                  pa->conflicted_clause,
@@ -356,7 +356,7 @@ void c2_run(C2* c2, unsigned remaining_conflicts) {
                                                  partial_assignment_get_decision_lvl);
             } else {
                 assert(skolem_is_conflicted(c2->skolem));
-                c2_rl_conflict(c2->options, c2->skolem->conflict_var_id);
+                c2_rl_conflict(c2->skolem->conflict_var_id);
                 learnt_clause = analyze_conflict(c2->ca,
                                                  c2->skolem->conflict_var_id,
                                                  c2->skolem->conflicted_clause,
@@ -494,7 +494,7 @@ void c2_run(C2* c2, unsigned remaining_conflicts) {
                     decision_var = var_vector_get(c2->qcnf->vars, lit_to_var(d));
                     abortif(decision_var->is_universal, "Cannot select universal variable as decision var");
                     abortif(skolem_is_deterministic(c2->skolem, decision_var->var_id), "Cannot select deterministic variable as decision var.");
-                    c2_rl_print_decision(c2->options, decision_var->var_id, phase);
+                    c2_rl_print_decision(decision_var->var_id, phase);
                 }
             }
             

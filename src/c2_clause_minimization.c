@@ -93,7 +93,7 @@ Clause* c2_minimize_clause(C2* c2, Clause* c) {
         if (new_clause) {
             new_clause->original = 0;
             new_clause->minimized = 1;
-            c2_rl_new_clause(c2->options, new_clause);
+            c2_rl_new_clause(new_clause);
             assert(c->size - int_vector_count(to_remove) == new_clause->size);
             V2("Conflict clause minimization removed %u of %u literals.\n", int_vector_count(to_remove), initial_size);
             // Schedule removed literals for pure variable checks

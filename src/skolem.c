@@ -356,7 +356,7 @@ void skolem_set_unique_consequence(Skolem* s, Clause* c, Lit lit) {
     stack_push_op(s->stack, SKOLEM_OP_UNIQUE_CONSEQUENCE, (void*) (uint64_t) ucui.data); // (uint64_t) c->clause_id
     int_vector_set(s->unique_consequence, c->clause_idx, lit);
     
-    c2_rl_update_unique_consequence(s->options, c->clause_idx, lit);
+    c2_rl_update_unique_consequence(c->clause_idx, lit);
 }
 
 Lit skolem_get_unique_consequence(Skolem* s, Clause* c) {
@@ -1056,7 +1056,7 @@ void skolem_undo(void* parent, char type, void* obj) {
             si = skolem_var_vector_get(s->infos, suu.sus.var_id);
             if (si->deterministic && (unsigned) suu.sus.val == 0) {
                 int_vector_pop(s->determinization_order);
-                c2_rl_update_D(s->options, suu.sus.var_id, false);
+                c2_rl_update_D(suu.sus.var_id, false);
             }
             si->deterministic = (unsigned) suu.sus.val;
             break;
@@ -1091,7 +1091,7 @@ void skolem_undo(void* parent, char type, void* obj) {
             Clause* c = vector_get(s->qcnf->all_clauses, ucui.components.clause_id);
             if (c->active) {
                 int_vector_set(s->unique_consequence, ucui.components.clause_id, ucui.components.lit);
-                c2_rl_update_unique_consequence(s->options, ucui.components.clause_id, ucui.components.lit);
+                c2_rl_update_unique_consequence(ucui.components.clause_id, ucui.components.lit);
             } else {
                 // Clause was deleted
                 assert(int_vector_get(s->unique_consequence, ucui.components.clause_id) == 0);
@@ -1341,7 +1341,7 @@ void skolem_assign_constant_value(Skolem* s, Lit lit, union Dependencies propaga
     
     skolem_update_dependencies(s, var_id, propagation_deps);
     
-    c2_rl_update_constant_value(s->options, var_id, skolem_get_constant_value(s, (Lit) var_id));
+    c2_rl_update_constant_value(var_id, skolem_get_constant_value(s, (Lit) var_id));
     
     // Queue potentially new constants
     vector* opp_occs = qcnf_get_occs_of_lit(s->qcnf, - lit);

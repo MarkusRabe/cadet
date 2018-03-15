@@ -14,13 +14,14 @@
 #include "cadet2.h"
 
 void c2_rl_print_state(C2*, unsigned conflicts_until_next_restart);
-void c2_rl_print_decision(Options*, unsigned decision_var_id, int phase);
-void c2_rl_update_constant_value(Options*, unsigned var_id, int val); // val indicates if the variable is assigned a constant
-void c2_rl_update_unique_consequence(Options*, unsigned clause_idx, Lit lit);
-void c2_rl_update_D(Options*, unsigned var_id, bool deterministic); // Update the member of of var_id in D. True for adding, False for removing
-void c2_rl_new_clause(Options*, Clause*);
-void c2_rl_conflict(Options*, unsigned var_id);
-void c2_rl_print_activity(Options*, unsigned var_id, float activity);
+void c2_rl_print_decision(unsigned decision_var_id, int phase);
+void c2_rl_update_constant_value(unsigned var_id, int val); // val indicates if the variable is assigned a constant
+void c2_rl_update_unique_consequence(unsigned clause_idx, Lit lit);
+void c2_rl_update_D(unsigned var_id, bool deterministic); // Update the member of of var_id in D. True for adding, False for removing
+void c2_rl_new_clause(Clause*);
+void c2_rl_delete_clause(Clause*);
+void c2_rl_conflict(unsigned var_id);
+void c2_rl_print_activity(unsigned var_id, float activity);
 int c2_rl_get_decision(C2*);
 
 void rl_mute();

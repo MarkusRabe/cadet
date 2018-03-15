@@ -243,7 +243,7 @@ void skolem_update_deterministic(Skolem* s, unsigned var_id) {
     }
     
     int_vector_add(s->determinization_order, (int) var_id);
-    c2_rl_update_D(s->options, var_id, true);
+    c2_rl_update_D(var_id, true);
     
     V4("Setting var %u deterministic\n", var_id);
     union skolem_undo_union suu;

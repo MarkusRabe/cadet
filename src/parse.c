@@ -231,7 +231,7 @@ C2* c2_from_qdimacs_and_header(Options* options, FILE* file, char* header, int l
             int next_lit = get_next_lit(line, &pos, line_num);
             abortif(pos >= (size_t)len, "Clause was way too long. Cannot parse.\n");
             Clause* c = c2_add_lit(c2, next_lit);
-            if (c) {c2_rl_new_clause(options, c);}
+            if (c) {c2_rl_new_clause(c);}
             skip_space(line, &pos);
         }
     } while (fgets(line, len, file));
@@ -254,9 +254,208 @@ bool aiger_quantification_polarity(unsigned depends_on_input_group, bool is_inpu
     return depends_on_input_group % 2 == 1 && is_input;
 }
 
-C2* c2_from_aiger(aiger* aig, Options* o) {
+//C2* c2_from_aiger(aiger* aig, Options* o) {
+//    assert (aiger_check(aig) == NULL);
+//    abortif(aig->num_bad == 0 && aig->num_constraints == 0, "No bad outputs and no constraints detected.");
+//    if (aig->num_bad > 1) {
+//        LOG_WARNING("Multiple bad outputs defined. CADET uses their conjunction as the bad property.");
+//    }
+//    abortif(aig->num_latches > 0, "CADET only supports reading combinatorial AIGs for QBF input. What should a latch mean in the context of a QBF?");
+//    if (o->aiger_negated_encoding) {
+//        LOG_WARNING("The negated encoding so far only creates 3QBF, according to the informal standard that Baruch and Markus agreed on. Shall be extended to Leander's QBF interpretation of AIGs later on.");
+//    }
+//
+//    C2* c2 = c2_init(o);
+//
+//    unsigned input_group = o->aiger_negated_encoding ? 0 : 1;
+//
+//    // uncontrollable inputs
+//    for (size_t i = 0; i < aig->num_inputs; i++) {
+//        aiger_symbol input = aig->inputs[i];
+//        if ( ! is_controllable_input(input.name,o)) {
+//            c2_new_variable(c2, aiger_quantification_polarity(input_group, true), aiger_quantification_levels(input_group), aiger_lit2var(input.lit));
+//            if (o->print_name_mapping)
+//                V0("%s not controllable; var %d\n", input.name, aiger_lit2var(input.lit));
+//            options_set_variable_name(o, aiger_lit2var(input.lit), input.name);
+//        }
+//    }
+//
+//    input_group += 1;
+//
+//    // controllable inputs
+//    for (size_t i = 0; i < aig->num_inputs; i++) {
+//        aiger_symbol input = aig->inputs[i];
+//        if (is_controllable_input(input.name, o)) {
+//            c2_new_variable(c2, aiger_quantification_polarity(input_group, true), aiger_quantification_levels(input_group), aiger_lit2var(input.lit));
+//            if (o->print_name_mapping)
+//                V0("%s is controllable; var %d\n", input.name, aiger_lit2var(input.lit));
+//            options_set_variable_name(o, aiger_lit2var(input.lit), input.name);
+//        }
+//    }
+//
+////    // next values for latches
+////    for (size_t i = 0; i < aig->num_latches; i++) {
+////        aiger_symbol l = aig->latches[i];
+////        if (l.next > 1 && ! qcnf_var_exists(qcnf, aiger_lit2var(l.next))) {
+////            c2_new_variable(c2, true, 1, aiger_lit2var(l.next));
+////        }
+////    }
+//
+//    // remember the names of outputs
+//    for (size_t i = 0; i < aig->num_outputs; i++) {
+//        aiger_symbol out = aig->outputs [i];
+//        options_set_variable_name(o, aiger_lit2var(out.lit), out.name);
+//    }
+//
+//    // outputs
+//    for (size_t i = 0; i < aig->num_bad; i++) {
+//        aiger_symbol b = aig->bad[i];
+//        if (b.lit > 1 && ! qcnf_var_exists(c2->qcnf, aiger_lit2var(b.lit))) {
+//            c2_new_variable(c2, aiger_quantification_polarity(input_group, false), aiger_quantification_levels(input_group), aiger_lit2var(b.lit));
+//        } // else ignore // we can ignore true and false signals.
+//        options_set_variable_name(o, aiger_lit2var(b.lit), b.name);
+//    }
+//
+//    for (size_t i = 0; i < aig->num_constraints; i++) {
+//        aiger_symbol c = aig->constraints[i];
+//        if (c.lit > 1 && ! qcnf_var_exists(c2->qcnf, aiger_lit2var(c.lit))) {
+//            c2_new_variable(c2, aiger_quantification_polarity(o->aiger_negated_encoding ? 0 : 1, false), aiger_quantification_levels(o->aiger_negated_encoding ? 0 : 1), aiger_lit2var(c.lit));
+//        } // else ignore // we can ignore true and false signals.
+//        options_set_variable_name(o, aiger_lit2var(c.lit), c.name);
+//    }
+//    unsigned circuit_depth = 0;
+//    while (true) {
+//        bool new_gate = false;
+//        for (size_t i = 0; i < aig->num_ands; i++) {
+//            aiger_and a = aig->ands[i];
+//            if (! qcnf_var_exists(c2->qcnf, aiger_lit2var(a.lhs)) && qcnf_var_exists(c2->qcnf, aiger_lit2var(a.rhs0)) && qcnf_var_exists(c2->qcnf, aiger_lit2var(a.rhs1))) {
+//                new_gate = true;
+//                Var* rhs0 = var_vector_get(c2->qcnf->vars, aiger_lit2var(a.rhs0));
+//                Var* rhs1 = var_vector_get(c2->qcnf->vars, aiger_lit2var(a.rhs1));
+//                unsigned gate_dependency = rhs0->scope_id > rhs1->scope_id ? rhs0->scope_id : rhs1->scope_id;
+//                c2_new_variable(c2, aiger_quantification_polarity(gate_dependency, false), aiger_quantification_levels(gate_dependency), aiger_lit2var(a.lhs));
+//            }
+//        }
+//        if (!new_gate) {
+//            break;
+//        }
+//        circuit_depth += 1;
+//    }
+//    V1("Circuit has depth %u\n", circuit_depth);
+//
+//    ////// CLAUSES //////
+//
+//    // bads
+//    unsigned bads_qcnf_var = (unsigned) aiger_lit2lit( 2 * (aig->maxvar + 1) );
+//    options_set_variable_name(o, bads_qcnf_var, "BADS");
+//
+//    c2_new_variable(c2, aiger_quantification_polarity(input_group, false), aiger_quantification_levels(input_group), bads_qcnf_var);
+//    if (o->print_name_mapping) {
+//        V0("bads summary variable %d\n", bads_qcnf_var);
+//    }
+//
+//    for (size_t i = 0; i < aig->num_bad; i++) {
+//        aiger_symbol b = aig->bad[i];
+//        c2_add_lit(c2, - aiger_lit2lit(b.lit));
+//        c2_add_lit(c2, (Lit) bads_qcnf_var);
+//        c2_add_lit(c2, 0);
+//
+//        if (o->print_name_mapping) {
+//            V0("bad %d\n", aiger_lit2lit(b.lit));
+//        }
+//    }
+//    for (size_t i = 0; i < aig->num_bad; i++) {
+//        aiger_symbol b = aig->bad[i];
+//        c2_add_lit(c2, aiger_lit2lit(b.lit));
+//    }
+//    c2_add_lit(c2, - (Lit) bads_qcnf_var);
+//    c2_add_lit(c2, 0);
+//
+//    // constraints
+//    unsigned constraints_qcnf_var = (unsigned) aiger_lit2lit( 2 * (aig->maxvar + 2) );
+//    int_vector_add(c2->qcnf->universals_constraints, (int) constraints_qcnf_var);
+//    options_set_variable_name(o, constraints_qcnf_var, "CONSTRAINTS");
+//
+//    c2_new_variable(c2, aiger_quantification_polarity(o->aiger_negated_encoding ? 0 : 1, false), aiger_quantification_levels(o->aiger_negated_encoding ? 0 : 1), constraints_qcnf_var);
+//    if (o->print_name_mapping) {
+//        V0("constraints summary variable %d\n", constraints_qcnf_var);
+//    }
+//
+//    for (size_t i = 0; i < aig->num_constraints; i++) {
+//        aiger_symbol c = aig->constraints[i];
+//        c2_add_lit(c2, aiger_lit2lit(c.lit));
+//        c2_add_lit(c2, - (Lit) constraints_qcnf_var);
+//        c2_add_lit(c2, 0);
+//        if (o->print_name_mapping)
+//            V0("constraint %d\n", aiger_lit2lit(c.lit));
+//    }
+//    for (size_t i = 0; i < aig->num_constraints; i++) {
+//        aiger_symbol c = aig->constraints[i];
+//        c2_add_lit(c2, - aiger_lit2lit(c.lit));
+//    }
+//    c2_add_lit(c2, (Lit) constraints_qcnf_var);
+//    c2_add_lit(c2, 0);
+//
+//    if (o->aiger_negated_encoding) {
+//        LOG_WARNING("Double-check polarity of bad signals and constraints in negated AIGER encoding.\n");
+//        c2_add_lit(c2, (Lit) - bads_qcnf_var);
+//        c2_add_lit(c2, 0);
+//        c2_add_lit(c2, (Lit) constraints_qcnf_var);
+//        c2_add_lit(c2, 0);
+//
+//    } else {
+//        // putting constraints and bads together: if the constraints hold, then the bads should be false.
+//        c2_add_lit(c2, (Lit) - constraints_qcnf_var);
+//        c2_add_lit(c2, (Lit) - bads_qcnf_var);
+//        c2_add_lit(c2, 0);
+//    }
+//
+//    // circuit definition
+//    for (size_t i = 0; i < aig->num_ands; i++) {
+//        aiger_and a = aig->ands[i];
+//        assert(a.lhs % 2 == 0);
+//        // make sure all three symbols exist, create if necessary
+//        assert(qcnf_var_exists(c2->qcnf, aiger_lit2var(a.lhs)));
+//        assert(a.rhs0 < 2 || qcnf_var_exists(c2->qcnf, aiger_lit2var(a.rhs0)));
+//        assert(a.rhs0 < 2 || qcnf_var_exists(c2->qcnf, aiger_lit2var(a.rhs1)));
+//
+//        // create and gate with with three clauses
+//        if (a.rhs0 != 1) {
+//            c2_add_lit(c2, - aiger_lit2lit(a.lhs));
+//            if (a.rhs0 != 0) {
+//                c2_add_lit(c2, aiger_lit2lit(a.rhs0));
+//            } // else lit is literally false
+//            c2_add_lit(c2, 0);
+//        } // else lit is true and thus clause is satisfied.
+//
+//        if (a.rhs1 != 1) {
+//            c2_add_lit(c2,  - aiger_lit2lit(a.lhs));
+//            if (a.rhs1 != 0) {
+//                c2_add_lit(c2,  aiger_lit2lit(a.rhs1));
+//            } // else lit is literally false
+//            c2_add_lit(c2, 0);
+//        } // else lit is true and thus clause is satisfied.
+//
+//        if (a.rhs0 != 0 && a.rhs1 != 0) {
+//            c2_add_lit(c2, aiger_lit2lit(a.lhs));
+//            if (a.rhs0 != 1) { // lit is literally false
+//                c2_add_lit(c2,  - aiger_lit2lit(a.rhs0));
+//            }
+//            if (a.rhs1 != 1) { // lit is literally false
+//                c2_add_lit(c2,  - aiger_lit2lit(a.rhs1));
+//            }
+//            c2_add_lit(c2, 0);
+//        }
+//    }
+//    return c2;
+//}
+
+C2* c2_from_qaiger(aiger* aig, Options* o) {
     assert (aiger_check(aig) == NULL);
-    abortif(aig->num_bad == 0 && aig->num_constraints == 0, "No bad outputs and no constraints detected.");
+    if (aig->num_bad != 0) LOG_WARNING("QAIGER does not support bad outputs; conjoining them with outputs.");
+    if (aig->num_outputs > 1) LOG_WARNING("QAIGER requires a single output but given %u; conjoining outputs.", aig->num_outputs);
+    if (aig->num_constraints != 0) LOG_WARNING("QAIGER does not support constraints.");
+    NOT_IMPLEMENTED();
     if (aig->num_bad > 1) {
         LOG_WARNING("Multiple bad outputs defined. CADET uses their conjunction as the bad property.");
     }
@@ -293,13 +492,7 @@ C2* c2_from_aiger(aiger* aig, Options* o) {
         }
     }
     
-//    // next values for latches
-//    for (size_t i = 0; i < aig->num_latches; i++) {
-//        aiger_symbol l = aig->latches[i];
-//        if (l.next > 1 && ! qcnf_var_exists(qcnf, aiger_lit2var(l.next))) {
-//            c2_new_variable(c2, true, 1, aiger_lit2var(l.next));
-//        }
-//    }
+    assert(aig->num_latches == 0);
     
     // remember the names of outputs
     for (size_t i = 0; i < aig->num_outputs; i++) {
@@ -450,7 +643,6 @@ C2* c2_from_aiger(aiger* aig, Options* o) {
     return c2;
 }
 
-
 C2* c2_from_file(FILE* file, Options* options) {
     int len = 1000; // max 1kb for the first line
     char *line = malloc((size_t)len);
@@ -481,7 +673,7 @@ C2* c2_from_file(FILE* file, Options* options) {
         
         abortif(err, "Error while reading aiger file:\n %s", err);
         
-        solver = c2_from_aiger(aig, options);
+        solver = c2_from_qaiger(aig, options);
     } else {
         abortif(true, "Cannot identify header of the file. Wrong file format? Some line must start with 'p cnf', 'aig', or 'aag'.");
     }

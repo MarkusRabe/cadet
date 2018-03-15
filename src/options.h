@@ -22,6 +22,7 @@ typedef enum {
 typedef struct {
     
     bool reinforcement_learning; // take decisions through stdin; trace state
+    bool rl_advanced_rewards;
     bool reinforcement_learning_mock; // for testing reinforcement learning code
     bool cegar_soft_conflict_limit; // switches cegar on after 1000 conflicts to also solve hard problems.
     

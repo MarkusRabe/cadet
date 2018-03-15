@@ -71,52 +71,54 @@ void rl_free() {
     rl = NULL;
 }
 
-void c2_rl_print_activity(Options* o, unsigned var_id, float activity) {
-    if (o->reinforcement_learning && !rl->mute && activity > 0.5) {
+void c2_rl_print_activity(unsigned var_id, float activity) {
+    if (rl && !rl->mute && activity > 0.5) {
         LOG_PRINTF("a %u,%f\n", var_id, activity);
     }
 }
 
-void c2_rl_conflict(Options* o, unsigned var_id) {
-    if (!o->reinforcement_learning || rl->mute) {
-        return;
+void c2_rl_conflict(unsigned var_id) {
+    if (rl && !rl->mute) {
+        LOG_PRINTF("conflict %u\n", var_id);
     }
-    LOG_PRINTF("conflict %u\n", var_id);
 }
 
-void c2_rl_update_constant_value(Options* o, unsigned var_id, int val) {
-    if (!o->reinforcement_learning || rl->mute) {
-        return;
+void c2_rl_update_constant_value(unsigned var_id, int val) {
+    if (rl && !rl->mute) {
+        LOG_PRINTF("v %u %d\n", var_id, val);
     }
-    LOG_PRINTF("v %u %d\n", var_id, val);
+    
 }
 
-void c2_rl_update_unique_consequence(Options* o, unsigned clause_idx, Lit lit) {
-    if (!o->reinforcement_learning || rl->mute) {
-        return;
+void c2_rl_update_unique_consequence(unsigned clause_idx, Lit lit) {
+    if (rl && !rl->mute) {
+        LOG_PRINTF("uc %u %d\n", clause_idx, lit);
     }
-    LOG_PRINTF("uc %u %d\n", clause_idx, lit);
 }
 
-void c2_rl_update_D(Options* o, unsigned var_id, bool deterministic) {
-    if (!o->reinforcement_learning || rl->mute) {
-        return;
+void c2_rl_update_D(unsigned var_id, bool deterministic) {
+    if (rl && !rl->mute) {
+        LOG_PRINTF("u%c %u\n", deterministic?'+':'-',var_id);
     }
-    LOG_PRINTF("u%c %u\n", deterministic?'+':'-',var_id);
 }
 
-void c2_rl_new_clause(Options* o, Clause* c) {
-    if (!o->reinforcement_learning || rl->mute) {
-        return;
+void c2_rl_new_clause(Clause* c) {
+    if (rl && !rl->mute) {
+        if (!c->original) {
+            map_add(rl->conflicts_in_reward_vector, (int) c->clause_idx, (void*) (size_t) (float_vector_count(rl->rewards) - 1));
+        }
+        LOG_PRINTF("clause %u %u lits", c->clause_idx, !c->original);
+        for (unsigned i = 0; i < c->size; i++) {
+            LOG_PRINTF(" %d",c->occs[i]);
+        }
+        LOG_PRINTF("\n");
     }
-    if (!c->original) {
-        map_add(rl->conflicts_in_reward_vector, (int) c->clause_idx, (void*) (size_t) (float_vector_count(rl->rewards) - 1));
+}
+
+void c2_rl_delete_clause(Clause* c) {
+    if (rl && !rl->mute) {
+        LOG_PRINTF("delete_clause %u\n", c->clause_idx);
     }
-    LOG_PRINTF("clause %u %u lits", c->clause_idx, !c->original);
-    for (unsigned i = 0; i < c->size; i++) {
-        LOG_PRINTF(" %d",c->occs[i]);
-    }
-    LOG_PRINTF("\n");
 }
 
 void c2_rl_print_state(C2* c2, unsigned conflicts_until_next_restart) {
@@ -178,7 +180,7 @@ void c2_rl_print_state(C2* c2, unsigned conflicts_until_next_restart) {
                );
 }
 
-void c2_rl_print_decision(Options* o, unsigned decision_var_id, int phase) {
+void c2_rl_print_decision(unsigned decision_var_id, int phase) {
     LOG_PRINTF("d %u,%d\n", decision_var_id, phase);
 }
 

@@ -11,6 +11,7 @@
 #include "log.h"
 #include "util.h"
 #include "heap.h"
+#include "c2_rl.h"
 
 #include <string.h>
 #include <assert.h>
@@ -539,6 +540,7 @@ void qcnf_unregister_clause(QCNF* qcnf, Clause* c) {
         vector_remove_unsorted(occs, c);
     }
     c->active = 0; // will be cleaned up by the clause iterators
+    c2_rl_delete_clause(c);
 }
 
 void qcnf_delete_clause(QCNF* qcnf, Clause* c) {

@@ -122,15 +122,16 @@ void c2_rl_delete_clause(Clause* c) {
 }
 
 void c2_rl_print_state(C2* c2, unsigned conflicts_until_next_restart) {
-    if (!c2->options->reinforcement_learning || rl->mute) {
+    if (!rl || rl->mute) {
         return;
     }
     
-    assert(qcnf_is_2QBF(c2->qcnf));
-    
     unsigned var_num = var_vector_count(c2->qcnf->vars);
-    Scope* s = vector_get(c2->qcnf->scopes, 1);
-    unsigned uvar_num = int_vector_count(s->vars);
+    unsigned uvar_num = 0;
+    if (!qcnf_is_propositional(c2->qcnf)) {
+        Scope* s = vector_get(c2->qcnf->scopes, 1);
+        uvar_num = int_vector_count(s->vars);
+    }
     float var_ratio = (float) uvar_num / (float) (var_num + 1);
     
     // Solver state
@@ -308,6 +309,7 @@ int_vector* c2_rl_necessary_learnt_clauses(C2* solver) {
             assert(c->size == 0);
             continue;
         }
+        assert(!c->universal_clause);
         for (unsigned j = 0; j < c->size; j++) {
             qcnf_add_lit(qcnf_copy, c->occs[j]);
         }

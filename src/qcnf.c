@@ -454,7 +454,7 @@ Clause* qcnf_new_clause(QCNF* qcnf, int_vector* literals) {
         unsigned var_id = lit_to_var(lit);
         
         if (! qcnf_var_exists(qcnf,var_id)) {
-            LOG_WARNING("Warning: Variable %d is not bound. This may be a 3QBF.\n", var_id);
+            LOG_WARNING("Variable %d is not bound. This may be a 3QBF.", var_id);
             qcnf_new_var(qcnf, false, qcnf_get_empty_scope(qcnf), var_id);
         }
         V4("clause %u, lit is %d\n", c->clause_idx, lit);

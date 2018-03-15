@@ -230,6 +230,9 @@ C2* c2_from_qdimacs_and_header(Options* options, FILE* file, char* header, int l
             skip_space(line, &pos);
             int next_lit = get_next_lit(line, &pos, line_num);
             abortif(pos >= (size_t)len, "Clause was way too long. Cannot parse.\n");
+            if (next_lit != 0 && !qcnf_var_exists(c2->qcnf, lit_to_var(next_lit))) {
+                c2_new_variable(c2, 0, 0, lit_to_var(next_lit));
+            }
             Clause* c = c2_add_lit(c2, next_lit);
             if (c) {c2_rl_new_clause(c);}
             skip_space(line, &pos);

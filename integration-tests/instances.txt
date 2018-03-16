@@ -69,9 +69,16 @@ integration-tests/16966_UNSAT.qdimacs | 20
 integration-tests/empty_clause.qdimacs | 20
 integration-tests/888_SAT.qdimacs | 10
 integration-tests/826_SAT.qdimacs.gz | 10
+integration-tests/1_SAT.dimacs.gz | 10
+integration-tests/2_UNSAT.dimacs.gz | 20
+integration-tests/3_UNSAT.dimacs.gz | 20
+integration-tests/4_UNSAT.dimacs.gz | 20
+integration-tests/5_SAT.dimacs.gz | 10
+integration-tests/qaiger/equiv.qaig | 10
 integration-tests/stmt27rrr.qdimacs | 20
 integration-tests/eequery_query04_1344n.qdimacs.txt | 10
 integration-tests/adder2.qdimacs | 20
+
 
 [test_fullqbf]
 integration-tests/bug1.qdimacs | 20

@@ -258,8 +258,6 @@ QCNF* qcnf_init() {
     qcnf->new_clause = int_vector_init();
     qcnf->universal_clauses = int_vector_init();
     
-    qcnf->universals_constraints = int_vector_init();
-    
     qcnf->stack = stack_init(qcnf_undo_op);
     
     // Statistics
@@ -286,7 +284,6 @@ QCNF* qcnf_copy(QCNF* other) {
         qcnf_close_clause(this);
     }
     assert(int_vector_count(this->universal_clauses) == int_vector_count(other->universal_clauses));
-    this->universals_constraints = int_vector_copy(other->universals_constraints);
     return this;
 }
 

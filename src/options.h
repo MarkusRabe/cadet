@@ -38,7 +38,6 @@ typedef struct {
     
     // Aiger interpretations
     const char* aiger_controllable_inputs;
-    bool aiger_negated_encoding; // creates 3QBF out of 2QBF, for example
     
     // Certificates
     bool certify_internally_UNSAT;

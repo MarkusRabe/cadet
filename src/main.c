@@ -119,8 +119,6 @@ int main(int argc, const char* argv[]) {
                         log_colors = false;
                     } else if (strcmp(argv[i], "--no_colors") == 0) {
                         log_colors = false;
-                    } else if (strcmp(argv[i], "--aiger_negated") == 0) {
-                        options->aiger_negated_encoding = true;
                     } else if (strcmp(argv[i], "--debugging") == 0) {
                         options->easy_debugging = !options->easy_debugging;
                     } else if (strcmp(argv[i], "--aiger_controllable_inputs") == 0) {

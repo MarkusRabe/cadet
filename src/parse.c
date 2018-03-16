@@ -253,8 +253,8 @@ unsigned aiger_quantification_levels(unsigned depends_on_input_group) {
     return (depends_on_input_group + 1) / 2; // because we joined quantification levels in CADET2
 }
 // true for universal, false for existential
-bool aiger_quantification_polarity(unsigned depends_on_input_group, bool is_input) {
-    return depends_on_input_group % 2 == 1 && is_input;
+bool aiger_quantification_polarity(unsigned input_group, bool is_input) {
+    return input_group % 2 == 1 && is_input;
 }
 
 //C2* c2_from_aiger(aiger* aig, Options* o) {
@@ -453,32 +453,34 @@ bool aiger_quantification_polarity(unsigned depends_on_input_group, bool is_inpu
 //    return c2;
 //}
 
-C2* c2_from_qaiger(aiger* aig, Options* o) {
+C2* c2_from_qaiger(aiger* aig, Options* options) {
     assert (aiger_check(aig) == NULL);
-    if (aig->num_bad != 0) LOG_WARNING("QAIGER does not support bad outputs; conjoining them with outputs.");
-    if (aig->num_outputs > 1) LOG_WARNING("QAIGER requires a single output but given %u; conjoining outputs.", aig->num_outputs);
-    if (aig->num_constraints != 0) LOG_WARNING("QAIGER does not support constraints.");
-    NOT_IMPLEMENTED();
+    if (aig->num_bad > 0) {
+        LOG_WARNING("QAIGER does not support bad outputs; conjoining them with outputs.");
+    }
+    if (aig->num_outputs > 1) {
+        LOG_WARNING("QAIGER requires a single output but given %u; conjoining outputs.", aig->num_outputs);
+    }
+    if (aig->num_constraints != 0) {
+        LOG_WARNING("QAIGER does not support constraints.");
+    }
     if (aig->num_bad > 1) {
         LOG_WARNING("Multiple bad outputs defined. CADET uses their conjunction as the bad property.");
     }
-    abortif(aig->num_latches > 0, "CADET only supports reading combinatorial AIGs for QBF input. What should a latch mean in the context of a QBF?");
-    if (o->aiger_negated_encoding) {
-        LOG_WARNING("The negated encoding so far only creates 3QBF, according to the informal standard that Baruch and Markus agreed on. Shall be extended to Leander's QBF interpretation of AIGs later on.");
-    }
+    abortif(aig->num_latches > 0, "CADET only supports reading combinatorial AIGs for QBF input.");
     
-    C2* c2 = c2_init(o);
+    C2* c2 = c2_init(options);
     
-    unsigned input_group = o->aiger_negated_encoding ? 0 : 1;
+    unsigned input_group = 1;
     
     // uncontrollable inputs
     for (size_t i = 0; i < aig->num_inputs; i++) {
         aiger_symbol input = aig->inputs[i];
-        if ( ! is_controllable_input(input.name,o)) {
+        if ( ! is_controllable_input(input.name,options)) {
             c2_new_variable(c2, aiger_quantification_polarity(input_group, true), aiger_quantification_levels(input_group), aiger_lit2var(input.lit));
-            if (o->print_name_mapping)
+            if (options->print_name_mapping)
                 V0("%s not controllable; var %d\n", input.name, aiger_lit2var(input.lit));
-            options_set_variable_name(o, aiger_lit2var(input.lit), input.name);
+            options_set_variable_name(options, aiger_lit2var(input.lit), input.name);
         }
     }
     
@@ -487,11 +489,11 @@ C2* c2_from_qaiger(aiger* aig, Options* o) {
     // controllable inputs
     for (size_t i = 0; i < aig->num_inputs; i++) {
         aiger_symbol input = aig->inputs[i];
-        if (is_controllable_input(input.name, o)) {
+        if (is_controllable_input(input.name, options)) {
             c2_new_variable(c2, aiger_quantification_polarity(input_group, true), aiger_quantification_levels(input_group), aiger_lit2var(input.lit));
-            if (o->print_name_mapping)
+            if (options->print_name_mapping)
                 V0("%s is controllable; var %d\n", input.name, aiger_lit2var(input.lit));
-            options_set_variable_name(o, aiger_lit2var(input.lit), input.name);
+            options_set_variable_name(options, aiger_lit2var(input.lit), input.name);
         }
     }
     
@@ -500,7 +502,7 @@ C2* c2_from_qaiger(aiger* aig, Options* o) {
     // remember the names of outputs
     for (size_t i = 0; i < aig->num_outputs; i++) {
         aiger_symbol out = aig->outputs [i];
-        options_set_variable_name(o, aiger_lit2var(out.lit), out.name);
+        options_set_variable_name(options, aiger_lit2var(out.lit), out.name);
     }
     
     // outputs
@@ -509,15 +511,15 @@ C2* c2_from_qaiger(aiger* aig, Options* o) {
         if (b.lit > 1 && ! qcnf_var_exists(c2->qcnf, aiger_lit2var(b.lit))) {
             c2_new_variable(c2, aiger_quantification_polarity(input_group, false), aiger_quantification_levels(input_group), aiger_lit2var(b.lit));
         } // else ignore // we can ignore true and false signals.
-        options_set_variable_name(o, aiger_lit2var(b.lit), b.name);
+        options_set_variable_name(options, aiger_lit2var(b.lit), b.name);
     }
     
     for (size_t i = 0; i < aig->num_constraints; i++) {
         aiger_symbol c = aig->constraints[i];
         if (c.lit > 1 && ! qcnf_var_exists(c2->qcnf, aiger_lit2var(c.lit))) {
-            c2_new_variable(c2, aiger_quantification_polarity(o->aiger_negated_encoding ? 0 : 1, false), aiger_quantification_levels(o->aiger_negated_encoding ? 0 : 1), aiger_lit2var(c.lit));
+            c2_new_variable(c2, aiger_quantification_polarity(1, false), aiger_quantification_levels(1), aiger_lit2var(c.lit));
         } // else ignore // we can ignore true and false signals.
-        options_set_variable_name(o, aiger_lit2var(c.lit), c.name);
+        options_set_variable_name(options, aiger_lit2var(c.lit), c.name);
     }
     unsigned circuit_depth = 0;
     while (true) {
@@ -543,22 +545,36 @@ C2* c2_from_qaiger(aiger* aig, Options* o) {
     
     // bads
     unsigned bads_qcnf_var = (unsigned) aiger_lit2lit( 2 * (aig->maxvar + 1) );
-    options_set_variable_name(o, bads_qcnf_var, "BADS");
+    options_set_variable_name(options, bads_qcnf_var, "BADS");
     
     c2_new_variable(c2, aiger_quantification_polarity(input_group, false), aiger_quantification_levels(input_group), bads_qcnf_var);
-    if (o->print_name_mapping) {
+    if (options->print_name_mapping) {
         V0("bads summary variable %d\n", bads_qcnf_var);
     }
     
+    for (size_t i = 0; i < aig->num_outputs; i++) {
+        aiger_symbol o = aig->outputs[i];
+        c2_add_lit(c2, - aiger_lit2lit(o.lit));
+        c2_add_lit(c2, (Lit) bads_qcnf_var);
+        c2_add_lit(c2, 0);
+        
+        if (options->print_name_mapping) {
+            V0("bad %d\n", aiger_lit2lit(o.lit));
+        }
+    }
     for (size_t i = 0; i < aig->num_bad; i++) {
         aiger_symbol b = aig->bad[i];
         c2_add_lit(c2, - aiger_lit2lit(b.lit));
         c2_add_lit(c2, (Lit) bads_qcnf_var);
         c2_add_lit(c2, 0);
         
-        if (o->print_name_mapping) {
+        if (options->print_name_mapping) {
             V0("bad %d\n", aiger_lit2lit(b.lit));
         }
+    }
+    for (size_t i = 0; i < aig->num_outputs; i++) {
+        aiger_symbol o = aig->outputs[i];
+        c2_add_lit(c2, aiger_lit2lit(o.lit));
     }
     for (size_t i = 0; i < aig->num_bad; i++) {
         aiger_symbol b = aig->bad[i];
@@ -569,11 +585,11 @@ C2* c2_from_qaiger(aiger* aig, Options* o) {
     
     // constraints
     unsigned constraints_qcnf_var = (unsigned) aiger_lit2lit( 2 * (aig->maxvar + 2) );
-    int_vector_add(c2->qcnf->universals_constraints, (int) constraints_qcnf_var);
-    options_set_variable_name(o, constraints_qcnf_var, "CONSTRAINTS");
+//    int_vector_add(c2->qcnf->universals_constraints, (int) constraints_qcnf_var);
+    options_set_variable_name(options, constraints_qcnf_var, "CONSTRAINTS");
     
-    c2_new_variable(c2, aiger_quantification_polarity(o->aiger_negated_encoding ? 0 : 1, false), aiger_quantification_levels(o->aiger_negated_encoding ? 0 : 1), constraints_qcnf_var);
-    if (o->print_name_mapping) {
+    c2_new_variable(c2, aiger_quantification_polarity(1, false), aiger_quantification_levels(1), constraints_qcnf_var);
+    if (options->print_name_mapping) {
         V0("constraints summary variable %d\n", constraints_qcnf_var);
     }
     
@@ -582,7 +598,7 @@ C2* c2_from_qaiger(aiger* aig, Options* o) {
         c2_add_lit(c2, aiger_lit2lit(c.lit));
         c2_add_lit(c2, - (Lit) constraints_qcnf_var);
         c2_add_lit(c2, 0);
-        if (o->print_name_mapping)
+        if (options->print_name_mapping)
             V0("constraint %d\n", aiger_lit2lit(c.lit));
     }
     for (size_t i = 0; i < aig->num_constraints; i++) {
@@ -592,19 +608,10 @@ C2* c2_from_qaiger(aiger* aig, Options* o) {
     c2_add_lit(c2, (Lit) constraints_qcnf_var);
     c2_add_lit(c2, 0);
     
-    if (o->aiger_negated_encoding) {
-        LOG_WARNING("Double-check polarity of bad signals and constraints in negated AIGER encoding.\n");
-        c2_add_lit(c2, (Lit) - bads_qcnf_var);
-        c2_add_lit(c2, 0);
-        c2_add_lit(c2, (Lit) constraints_qcnf_var);
-        c2_add_lit(c2, 0);
-        
-    } else {
-        // putting constraints and bads together: if the constraints hold, then the bads should be false.
-        c2_add_lit(c2, (Lit) - constraints_qcnf_var);
-        c2_add_lit(c2, (Lit) - bads_qcnf_var);
-        c2_add_lit(c2, 0);
-    }
+    // putting constraints and bads together: if the constraints hold, then the bads should be false.
+    c2_add_lit(c2, (Lit) - constraints_qcnf_var);
+    c2_add_lit(c2, (Lit) - bads_qcnf_var);
+    c2_add_lit(c2, 0);
     
     // circuit definition
     for (size_t i = 0; i < aig->num_ands; i++) {

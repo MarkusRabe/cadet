@@ -315,21 +315,6 @@ void c2_propagate(C2* c2) {
     }
 }
 
-void c2_initial_propagation(C2* c2) {
-    c2_propagate(c2);
-    if (! c2_is_in_conflcit(c2)) {
-        // Restrict the universals to always satisfy the constraints (derived from AIGER circuits)
-        for (unsigned i = 0; i < int_vector_count(c2->qcnf->universals_constraints); i++) {
-            unsigned var_id = (unsigned) int_vector_get(c2->qcnf->universals_constraints, i);
-            abortif( ! skolem_is_deterministic(c2->skolem, var_id), "Constraint variable is not determinsitic. This should be a constraint purely over the universals.");
-            satsolver_add(c2->skolem->skolem, skolem_get_satsolver_lit(c2->skolem, (Lit) var_id));
-            satsolver_clause_finished(c2->skolem->skolem);
-            skolem_make_universal_assumption(c2->skolem, (Lit) var_id);
-        }
-        c2_propagate(c2); // initial propagation may be extended after assuming constants for constraints
-    }
-}
-
 // MAIN LOOPS
 void c2_run(C2* c2, unsigned remaining_conflicts) {
     
@@ -603,7 +588,7 @@ void c2_replenish_skolem_satsolver(C2* c2) {
     Casesplits* old_cs = c2->cs;
     c2->cs = casesplits_init(c2->qcnf);
     
-    c2_initial_propagation(c2); // (re-)establishes dlvl 0
+    c2_propagate(c2);
     abortif(c2->state != C2_READY, "Conflicted after replenishing.");
     
     casesplits_update_interface(c2->cs, c2->skolem);
@@ -679,7 +664,7 @@ cadet_res c2_sat(C2* c2) {
     abortif(int_vector_count(c2->skolem->universals_assumptions) != 0, "There are universal assumptions before solving started.");
     assert(int_vector_count(c2->qcnf->universal_clauses) == 0); // they must have been detected through c2_new_clause
     
-    c2_initial_propagation(c2);
+    c2_propagate(c2);
     if (c2_is_in_conflcit(c2)) {
         c2->state = C2_UNSAT;
         goto return_result;

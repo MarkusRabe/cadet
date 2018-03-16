@@ -88,8 +88,6 @@ struct QCNF {
     int_vector* new_clause;
     int_vector* universal_clauses; // idxs of clauses containing only universals
     
-    int_vector* universals_constraints;
-    
     Stack* stack;
     
     // Stats

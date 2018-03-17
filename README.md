@@ -33,7 +33,7 @@ You can also pipe QDIMACS into the solver:
 
 #### Input Formats
 
-CADET reads files in both [QDIMACS](http://www.qbflib.org/qdimacs.html) and [AIGER](http://fmv.jku.at/papers/BiereHeljankoWieringa-FMV-TR-11-2.pdf) format. Files can be zipped with gzip, but must then end with the file extension gz or gzip. Details on the interpretation of AIGER files as 2QBF can be found in the [user guide](https://github.com/MarkusRabe/cadet/blob/master/doc/user_guide.pdf).
+CADET reads files in both [QDIMACS](http://www.qbflib.org/qdimacs.html) and [QAIGER](https://github.com/ltentrup/QAIGER) format. Files can be zipped with gzip, but must then end with the file extension gz or gzip. 
 
 ## Proofs
 

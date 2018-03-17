@@ -252,10 +252,6 @@ bool is_controllable_input(const char* str, Options* options) {
 unsigned aiger_quantification_levels(unsigned depends_on_input_group) {
     return (depends_on_input_group + 1) / 2; // because we joined quantification levels in CADET2
 }
-// true for universal, false for existential
-bool aiger_quantification_polarity(unsigned input_group, bool is_input) {
-    return input_group % 2 == 1 && is_input;
-}
 
 //C2* c2_from_aiger(aiger* aig, Options* o) {
 //    assert (aiger_check(aig) == NULL);
@@ -453,6 +449,19 @@ bool aiger_quantification_polarity(unsigned input_group, bool is_input) {
 //    return c2;
 //}
 
+unsigned qaiger_quantifier_level(char* name) {
+    if (strncmp("0 ", name, 2) == 0) {
+        return 0;
+    }
+    if (strncmp("1 ", name, 2) == 0) {
+        return 1;
+    }
+    if (strncmp("2 ", name, 2) == 0) {
+        return 2;
+    }
+    abortif(true, "Only 2 QBF is supported");
+}
+
 C2* c2_from_qaiger(aiger* aig, Options* options) {
     assert (aiger_check(aig) == NULL);
     if (aig->num_bad > 0) {
@@ -471,35 +480,22 @@ C2* c2_from_qaiger(aiger* aig, Options* options) {
     
     C2* c2 = c2_init(options);
     
-    unsigned input_group = 1;
-    
     // uncontrollable inputs
     for (size_t i = 0; i < aig->num_inputs; i++) {
         aiger_symbol input = aig->inputs[i];
-        if ( ! is_controllable_input(input.name,options)) {
-            c2_new_variable(c2, aiger_quantification_polarity(input_group, true), aiger_quantification_levels(input_group), aiger_lit2var(input.lit));
-            if (options->print_name_mapping)
-                V0("%s not controllable; var %d\n", input.name, aiger_lit2var(input.lit));
-            options_set_variable_name(options, aiger_lit2var(input.lit), input.name);
+        unsigned qaiger_quantifier_lvl = qaiger_quantifier_level(input.name);
+        c2_new_variable(c2, qaiger_quantifier_lvl % 2, aiger_quantification_levels(qaiger_quantifier_lvl), aiger_lit2var(input.lit));
+        
+        if (options->print_name_mapping) {
+            V0("%s %s controllable; var %d\n",
+               input.name,
+               qaiger_quantifier_lvl == 1 ? "not" : "is",
+               aiger_lit2var(input.lit));
         }
+        options_set_variable_name(options, aiger_lit2var(input.lit), input.name);
     }
     
-    input_group += 1;
-    
-    // controllable inputs
-    for (size_t i = 0; i < aig->num_inputs; i++) {
-        aiger_symbol input = aig->inputs[i];
-        if (is_controllable_input(input.name, options)) {
-            c2_new_variable(c2, aiger_quantification_polarity(input_group, true), aiger_quantification_levels(input_group), aiger_lit2var(input.lit));
-            if (options->print_name_mapping)
-                V0("%s is controllable; var %d\n", input.name, aiger_lit2var(input.lit));
-            options_set_variable_name(options, aiger_lit2var(input.lit), input.name);
-        }
-    }
-    
-    assert(aig->num_latches == 0);
-    
-    // remember the names of outputs
+    // remember the names of outputs, but don't do more
     for (size_t i = 0; i < aig->num_outputs; i++) {
         aiger_symbol out = aig->outputs [i];
         options_set_variable_name(options, aiger_lit2var(out.lit), out.name);
@@ -509,7 +505,7 @@ C2* c2_from_qaiger(aiger* aig, Options* options) {
     for (size_t i = 0; i < aig->num_bad; i++) {
         aiger_symbol b = aig->bad[i];
         if (b.lit > 1 && ! qcnf_var_exists(c2->qcnf, aiger_lit2var(b.lit))) {
-            c2_new_variable(c2, aiger_quantification_polarity(input_group, false), aiger_quantification_levels(input_group), aiger_lit2var(b.lit));
+            c2_new_variable(c2, false, qaiger_quantifier_level(b.name), aiger_lit2var(b.lit));
         } // else ignore // we can ignore true and false signals.
         options_set_variable_name(options, aiger_lit2var(b.lit), b.name);
     }
@@ -517,7 +513,7 @@ C2* c2_from_qaiger(aiger* aig, Options* options) {
     for (size_t i = 0; i < aig->num_constraints; i++) {
         aiger_symbol c = aig->constraints[i];
         if (c.lit > 1 && ! qcnf_var_exists(c2->qcnf, aiger_lit2var(c.lit))) {
-            c2_new_variable(c2, aiger_quantification_polarity(1, false), aiger_quantification_levels(1), aiger_lit2var(c.lit));
+            c2_new_variable(c2, false, 1, aiger_lit2var(c.lit));
         } // else ignore // we can ignore true and false signals.
         options_set_variable_name(options, aiger_lit2var(c.lit), c.name);
     }
@@ -531,7 +527,7 @@ C2* c2_from_qaiger(aiger* aig, Options* options) {
                 Var* rhs0 = var_vector_get(c2->qcnf->vars, aiger_lit2var(a.rhs0));
                 Var* rhs1 = var_vector_get(c2->qcnf->vars, aiger_lit2var(a.rhs1));
                 unsigned gate_dependency = rhs0->scope_id > rhs1->scope_id ? rhs0->scope_id : rhs1->scope_id;
-                c2_new_variable(c2, aiger_quantification_polarity(gate_dependency, false), aiger_quantification_levels(gate_dependency), aiger_lit2var(a.lhs));
+                c2_new_variable(c2, false, aiger_quantification_levels(gate_dependency), aiger_lit2var(a.lhs));
             }
         }
         if (!new_gate) {
@@ -547,7 +543,7 @@ C2* c2_from_qaiger(aiger* aig, Options* options) {
     unsigned bads_qcnf_var = (unsigned) aiger_lit2lit( 2 * (aig->maxvar + 1) );
     options_set_variable_name(options, bads_qcnf_var, "BADS");
     
-    c2_new_variable(c2, aiger_quantification_polarity(input_group, false), aiger_quantification_levels(input_group), bads_qcnf_var);
+    c2_new_variable(c2, false, 1, bads_qcnf_var);
     if (options->print_name_mapping) {
         V0("bads summary variable %d\n", bads_qcnf_var);
     }
@@ -588,7 +584,7 @@ C2* c2_from_qaiger(aiger* aig, Options* options) {
 //    int_vector_add(c2->qcnf->universals_constraints, (int) constraints_qcnf_var);
     options_set_variable_name(options, constraints_qcnf_var, "CONSTRAINTS");
     
-    c2_new_variable(c2, aiger_quantification_polarity(1, false), aiger_quantification_levels(1), constraints_qcnf_var);
+    c2_new_variable(c2, false, 1, constraints_qcnf_var);
     if (options->print_name_mapping) {
         V0("constraints summary variable %d\n", constraints_qcnf_var);
     }

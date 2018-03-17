@@ -324,16 +324,23 @@ def run_testcase(testcase_input):
         elif sys.platform == "win32":
             # Windows...
             file_reader = 'zcat' # will not work
+        
+        # using bash -c to run the command because otherwise sh may be used on some machines
+        command_string = 'bash -c "{} {} | {} {} {} {}"'.format(
+                            file_reader, 
+                            file_path, 
+                            preprocessing_string, 
+                            TIME_UTIL, 
+                            ARGS.tool, 
+                            ' '.join(parameters))
     else: 
-        file_reader = 'cat'
-    
-    command_string = 'bash -c "{} {} | {} {} {} {}"'.format(   # using bash -c here because otherwise the command is executed in sh which may cause strange behavior
-                        file_reader, 
-                        file_path, 
-                        preprocessing_string, 
-                        TIME_UTIL, 
-                        ARGS.tool, 
-                        ' '.join(parameters))
+        # using bash -c to run the command because otherwise sh may be used on some machines
+        command_string = 'bash -c "{} {} {} {} {}"'.format(
+                            preprocessing_string, 
+                            TIME_UTIL, 
+                            ARGS.tool, 
+                            ' '.join(parameters), 
+                            file_path)
     
     return_value, output, error = call(command_string, ARGS.timeout)
     

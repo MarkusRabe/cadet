@@ -26,7 +26,7 @@ Options* default_options() {
     o->examples_max_num = 0; // 0 corresponds to not doing examples at all
 
     // Aiger interpretations
-    o->aiger_controllable_inputs = "1 "; // "controllable_";
+    o->aiger_controllable_inputs = "2 "; // "controllable_";
 
     // Certificates
     o->certify_internally_UNSAT = true;

@@ -16,11 +16,11 @@
 
 #include <stdio.h>
 
+bool cert_check_UNSAT(C2*);
+//bool cert_check_SAT(C2*); // not implemented
+
 void cert_AIG_certificate(C2* c2);
 void c2_print_qdimacs_output(int_vector* refuting_assignment);
-bool cert_check_UNSAT(C2*);
 void cert_propositional_AIG_certificate_SAT(QCNF* qcnf, Options* o, void* domain, int (*get_value)(void* domain, Lit lit));
-
-bool cert_check_SAT(C2* c2);
 
 #endif /* certificates_h */

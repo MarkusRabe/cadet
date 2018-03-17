@@ -18,7 +18,7 @@
 		28675A461DDAA9D000951212 /* aiger.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A091DDAA9D000951212 /* aiger.c */; };
 		28675A471DDAA9D000951212 /* bit_vector.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A0B1DDAA9D000951212 /* bit_vector.c */; };
 		28675A491DDAA9D000951212 /* cadet2.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A0F1DDAA9D000951212 /* cadet2.c */; };
-		28675A4A1DDAA9D000951212 /* certify.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A111DDAA9D000951212 /* certify.c */; };
+		28675A4A1DDAA9D000951212 /* certify_SAT.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A111DDAA9D000951212 /* certify_SAT.c */; };
 		28675A4C1DDAA9D000951212 /* conflict_analysis.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A151DDAA9D000951212 /* conflict_analysis.c */; };
 		28675A4D1DDAA9D000951212 /* debug.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A171DDAA9D000951212 /* debug.c */; };
 		28675A4E1DDAA9D000951212 /* heap.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A191DDAA9D000951212 /* heap.c */; };
@@ -46,6 +46,7 @@
 		287C3B131E399C7A00F7096A /* c2_casesplits_control.c in Sources */ = {isa = PBXBuildFile; fileRef = 287C3B111E399C7A00F7096A /* c2_casesplits_control.c */; };
 		287C3B161E3C01FE00F7096A /* skolem_var.c in Sources */ = {isa = PBXBuildFile; fileRef = 287C3B141E3C01FE00F7096A /* skolem_var.c */; };
 		287C3B1B1E3C2D5500F7096A /* val_vector.c in Sources */ = {isa = PBXBuildFile; fileRef = 287C3B191E3C2D5500F7096A /* val_vector.c */; };
+		28A9631E205CD52700B32831 /* certify_UNSAT.c in Sources */ = {isa = PBXBuildFile; fileRef = 28A9631D205CD52700B32831 /* certify_UNSAT.c */; };
 		28C1C17F20197A000094DB4E /* c2_rl.c in Sources */ = {isa = PBXBuildFile; fileRef = 28C1C17E20197A000094DB4E /* c2_rl.c */; };
 		28C1C182202D3EB40094DB4E /* cegar.c in Sources */ = {isa = PBXBuildFile; fileRef = 28C1C181202D3EB40094DB4E /* cegar.c */; };
 		28C6FD981F831DC3008D109C /* c2_simplify.c in Sources */ = {isa = PBXBuildFile; fileRef = 28C6FD961F831DC3008D109C /* c2_simplify.c */; };
@@ -95,7 +96,7 @@
 		28675A0C1DDAA9D000951212 /* bit_vector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = bit_vector.h; path = src/bit_vector.h; sourceTree = "<group>"; };
 		28675A0F1DDAA9D000951212 /* cadet2.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = cadet2.c; path = src/cadet2.c; sourceTree = "<group>"; };
 		28675A101DDAA9D000951212 /* cadet2.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = cadet2.h; path = src/cadet2.h; sourceTree = "<group>"; };
-		28675A111DDAA9D000951212 /* certify.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = certify.c; path = src/certify.c; sourceTree = "<group>"; };
+		28675A111DDAA9D000951212 /* certify_SAT.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = certify_SAT.c; path = src/certify_SAT.c; sourceTree = "<group>"; };
 		28675A121DDAA9D000951212 /* certify.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = certify.h; path = src/certify.h; sourceTree = "<group>"; };
 		28675A151DDAA9D000951212 /* conflict_analysis.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = conflict_analysis.c; path = src/conflict_analysis.c; sourceTree = "<group>"; };
 		28675A161DDAA9D000951212 /* conflict_analysis.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = conflict_analysis.h; path = src/conflict_analysis.h; sourceTree = "<group>"; };
@@ -146,6 +147,7 @@
 		287C3B151E3C01FE00F7096A /* skolem_var.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = skolem_var.h; path = src/skolem_var.h; sourceTree = "<group>"; };
 		287C3B191E3C2D5500F7096A /* val_vector.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = val_vector.c; path = src/val_vector.c; sourceTree = "<group>"; };
 		287C3B1A1E3C2D5500F7096A /* val_vector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = val_vector.h; path = src/val_vector.h; sourceTree = "<group>"; };
+		28A9631D205CD52700B32831 /* certify_UNSAT.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = certify_UNSAT.c; path = src/certify_UNSAT.c; sourceTree = "<group>"; };
 		28C1C17D20197A000094DB4E /* c2_rl.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = c2_rl.h; path = src/c2_rl.h; sourceTree = "<group>"; };
 		28C1C17E20197A000094DB4E /* c2_rl.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = c2_rl.c; path = src/c2_rl.c; sourceTree = "<group>"; };
 		28C1C181202D3EB40094DB4E /* cegar.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = cegar.c; path = src/cegar.c; sourceTree = "<group>"; };
@@ -264,7 +266,7 @@
 				28C1C181202D3EB40094DB4E /* cegar.c */,
 				287BB7C11E0609B000AAE180 /* partitions.c */,
 				28675A121DDAA9D000951212 /* certify.h */,
-				28675A111DDAA9D000951212 /* certify.c */,
+				28A9631C205CD4FC00B32831 /* certify */,
 				28675A161DDAA9D000951212 /* conflict_analysis.h */,
 				28675A151DDAA9D000951212 /* conflict_analysis.c */,
 				287C3B0C1E37EF7B00F7096A /* examples.h */,
@@ -316,6 +318,15 @@
 				28C6FD961F831DC3008D109C /* c2_simplify.c */,
 			);
 			name = cadet2;
+			sourceTree = "<group>";
+		};
+		28A9631C205CD4FC00B32831 /* certify */ = {
+			isa = PBXGroup;
+			children = (
+				28675A111DDAA9D000951212 /* certify_SAT.c */,
+				28A9631D205CD52700B32831 /* certify_UNSAT.c */,
+			);
+			name = certify;
 			sourceTree = "<group>";
 		};
 		28D2C3811DDAA95E000E9C51 = {
@@ -446,12 +457,13 @@
 				28675A541DDAA9D000951212 /* options.c in Sources */,
 				28675A5F1DDAA9D000951212 /* skolem.c in Sources */,
 				28675A641DDAA9D000951212 /* vector.c in Sources */,
+				28A9631E205CD52700B32831 /* certify_UNSAT.c in Sources */,
 				28675A561DDAA9D000951212 /* partial_assignment.c in Sources */,
 				28675A581DDAA9D000951212 /* pqueue.c in Sources */,
 				28675A4E1DDAA9D000951212 /* heap.c in Sources */,
 				28FEE64B1EDA304000A9D8CA /* skolem_conflict_analysis.c in Sources */,
 				28675A551DDAA9D000951212 /* parse.c in Sources */,
-				28675A4A1DDAA9D000951212 /* certify.c in Sources */,
+				28675A4A1DDAA9D000951212 /* certify_SAT.c in Sources */,
 				28EBA5541DE195DD003D21EB /* skolem_var_vector.c in Sources */,
 				28675A571DDAA9D000951212 /* picosat.c in Sources */,
 				28675A5D1DDAA9D000951212 /* satsolver_picosat.c in Sources */,

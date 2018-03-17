@@ -30,6 +30,4 @@ double get_seconds();
 const char* get_filename_ext(const char* filename);
 FILE* open_possibly_zipped_file(const char* file_name);
 
-int strncmp(const char* s1, const char* s2, size_t n);
-
 #endif

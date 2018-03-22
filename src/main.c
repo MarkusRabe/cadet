@@ -3,7 +3,7 @@
 #include "certify.h"
 #include "options.h"
 #include "util.h"
-#include "cadet2.h"
+#include "cadet_internal.h"
 #include "heap.h"
 #include "c2_rl.h"
 #include "mersenne_twister.h"
@@ -104,7 +104,7 @@ int main(int argc, const char* argv[]) {
                         print_usage(argv[0]);
                         return 1;
                     }
-                    options->seed = strtol(argv[i+1], NULL, 0);
+                    options->seed = (unsigned long) strtol(argv[i+1], NULL, 0);
                     i++;
                     break;
                 

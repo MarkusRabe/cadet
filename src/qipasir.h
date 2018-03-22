@@ -101,7 +101,7 @@ int qipasir_solve (void * solver);
 
 /**
  * Get the truth value of the given top-level literal. Return 'lit' if True, '-lit' if False, 
- * and 0 if not irrelevant in the current assignment. 
+ * and 0 if not relevant in the current assignment.
  *
  * Top-level variables are the variables on quantifier level 0 or, if quantifier level 0 is empty, 
  * the variables on level 1.

@@ -9,7 +9,7 @@
 #ifndef c2_traces_h
 #define c2_traces_h
 
-#include "cadet2.h"
+#include "cadet_internal.h"
 #include <stdio.h>
 
 void c2_print_variable_states(C2*);

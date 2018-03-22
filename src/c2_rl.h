@@ -11,7 +11,7 @@
 #ifndef c2_rl_h
 #define c2_rl_h
 
-#include "cadet2.h"
+#include "cadet_internal.h"
 
 void c2_rl_print_state(C2*, unsigned conflicts_until_next_restart);
 void c2_rl_print_decision(unsigned decision_var_id, int phase);

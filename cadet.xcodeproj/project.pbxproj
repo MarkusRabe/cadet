@@ -148,6 +148,7 @@
 		287C3B191E3C2D5500F7096A /* val_vector.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = val_vector.c; path = src/val_vector.c; sourceTree = "<group>"; };
 		287C3B1A1E3C2D5500F7096A /* val_vector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = val_vector.h; path = src/val_vector.h; sourceTree = "<group>"; };
 		28A9631D205CD52700B32831 /* certify_UNSAT.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = certify_UNSAT.c; path = src/certify_UNSAT.c; sourceTree = "<group>"; };
+		28A9631F20642D6100B32831 /* cadet_internal.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = cadet_internal.h; path = src/cadet_internal.h; sourceTree = "<group>"; };
 		28C1C17D20197A000094DB4E /* c2_rl.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = c2_rl.h; path = src/c2_rl.h; sourceTree = "<group>"; };
 		28C1C17E20197A000094DB4E /* c2_rl.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = c2_rl.c; path = src/c2_rl.c; sourceTree = "<group>"; };
 		28C1C181202D3EB40094DB4E /* cegar.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = cegar.c; path = src/cegar.c; sourceTree = "<group>"; };
@@ -306,6 +307,7 @@
 			isa = PBXGroup;
 			children = (
 				28675A101DDAA9D000951212 /* cadet2.h */,
+				28A9631F20642D6100B32831 /* cadet_internal.h */,
 				28675A0F1DDAA9D000951212 /* cadet2.c */,
 				287C3B111E399C7A00F7096A /* c2_casesplits_control.c */,
 				287C3B0F1E396B7600F7096A /* c2_traces.h */,

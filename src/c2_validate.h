@@ -9,7 +9,7 @@
 #ifndef c2_validate_h
 #define c2_validate_h
 
-#include "cadet2.h"
+#include "cadet_internal.h"
 
 #include <stdio.h>
 

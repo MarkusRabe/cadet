@@ -6,7 +6,7 @@
 //  Copyright © 2016 Saarland University. All rights reserved.
 //
 
-#include "cadet2.h"
+#include "cadet_internal.h"
 #include "log.h"
 #include "util.h"
 #include "conflict_analysis.h"
@@ -840,4 +840,11 @@ void c2_new_clause(C2* c2, Clause* c) {
     if (skolem_is_conflicted(c2->skolem)) {
         c2->state = C2_UNSAT;
     }
+}
+
+int c2_val (C2* c2, int lit) {
+    assert(c2->state == C2_UNSAT);
+    assert(skolem_is_conflicted(c2->skolem));
+    assert(qcnf_is_universal(c2->qcnf, lit_to_var(lit)));
+    return skolem_get_constant_value(c2->skolem, lit) * lit;
 }

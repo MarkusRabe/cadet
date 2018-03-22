@@ -9,7 +9,7 @@
 #ifndef conflict_analysis_h
 #define conflict_analysis_h
 
-#include "cadet2.h"
+#include "cadet_internal.h"
 #include "statistics.h"
 
 struct conflict_analysis;

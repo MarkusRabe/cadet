@@ -6,7 +6,7 @@
 //  Copyright © 2018 UC Berkeley. All rights reserved.
 //
 
-#include "cadet2.h"
+#include "cadet_internal.h"
 #include "casesplits.h"
 #include "log.h"
 

@@ -12,7 +12,7 @@
 #include "qcnf.h"
 #include "options.h"
 #include "aiger.h"
-#include "cadet2.h"
+#include "cadet_internal.h"
 
 #include <stdio.h>
 

@@ -6,7 +6,7 @@
 //  Copyright © 2016 UC Berkeley. All rights reserved.
 //
 
-#include "cadet2.h"
+#include "cadet_internal.h"
 #include "log.h"
 #include <assert.h>
 

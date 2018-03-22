@@ -25,7 +25,7 @@
 //  SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-#include "cadet2.h"
+#include "cadet_internal.h"
 
 #include "util.h"
 #include "log.h"

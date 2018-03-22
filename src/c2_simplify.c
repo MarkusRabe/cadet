@@ -6,7 +6,7 @@
 //  Copyright © 2017 UC Berkeley. All rights reserved.
 //
 
-#include "cadet2.h"
+#include "cadet_internal.h"
 #include "log.h"
 #include "mersenne_twister.h"
 

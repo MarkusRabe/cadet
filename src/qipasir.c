@@ -68,11 +68,7 @@ int qipasir_solve (void * solver) {
 
 int qipasir_val (void * solver, int lit) {
     C2* c2 = (C2*) solver;
-#ifdef DEBUG
-    Var* v = var_vector_get(c2->qcnf->vars, lit_to_var(lit));
-    assert(v->scope_id == 0 || v->scope_id == 1 && v->is_universal);
-#endif
-    return skolem_get_constant_value(c2->skolem, lit) * lit;
+    return c2_val(c2,lit);
 }
 
 //int qipasir_failed (void * solver, int lit) {

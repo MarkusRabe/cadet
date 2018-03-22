@@ -66,7 +66,6 @@ struct C2_Magic_Values {
     unsigned case_split_linear_depth_penalty_factor;
 };
 
-
 struct conflict_analysis;
 typedef struct conflict_analysis conflict_analysis;
 
@@ -109,6 +108,8 @@ struct C2 {
     struct C2_Magic_Values magic;
 };
 
+void c2_new_clause(C2*, Clause* c);
+bool c2_is_in_conflcit(C2*);
 
 // Case splits
 void c2_backtrack_casesplit(C2*);
@@ -144,5 +145,7 @@ Clause* c2_minimize_clause(C2*,Clause*);
 void c2_analysis_determine_number_of_partitions(C2* c2);
 
 void c2_delete_learnt_clauses_greater_than(C2* c2, unsigned max_size);
+
+void c2_print_debug_info(C2*);
 
 #endif /* cadet_internal_h */

@@ -8,13 +8,15 @@
 
 #include "skolem_var_vector.h"
 #include "skolem.h"
-
-#include "vector.h"
 #include "log.h"
 #include "stdbool.h"
 #include "util.h"
 
 #include <assert.h>
+
+#define VECTOR_NOT_FOUND (unsigned)-1
+#define INITIAL_SIZE 2
+#define INCREASE_FACTOR 2
 
 void skolem_var_vector_increase(skolem_var_vector* v) {
     v->size *= INCREASE_FACTOR;

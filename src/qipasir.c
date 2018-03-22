@@ -13,6 +13,7 @@
 #include "var_vector.h"
 
 #include <assert.h>
+#include <limits.h>
 
 const char * qipasir_signature () {
     return "CADET" VERSION;
@@ -40,11 +41,6 @@ void qipasir_add (void * solver, int lit_or_zero) {
     c2_add_lit(solver, lit_or_zero);
 }
 
-//void qipasir_assume (void * solver, int lit) {
-//    V0("Not implemented");
-//    abort();
-//}
-
 int qipasir_solve (void * solver) {
     cadet_res res = c2_sat(solver);
     switch (res) {
@@ -70,6 +66,11 @@ int qipasir_val (void * solver, int lit) {
     C2* c2 = (C2*) solver;
     return c2_val(c2,lit);
 }
+
+//void qipasir_assume (void * solver, int lit) {
+//    V0("Not implemented");
+//    abort();
+//}
 
 //int qipasir_failed (void * solver, int lit) {
 //    V0("Not implemented");

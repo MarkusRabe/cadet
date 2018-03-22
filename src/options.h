@@ -9,7 +9,6 @@
 #ifndef options_h
 #define options_h
 
-#include "aiger.h"
 #include "vector.h"
 
 #include <stdbool.h>
@@ -42,11 +41,9 @@ typedef struct {
     
     // Certificates
     bool certify_internally_UNSAT;
-    bool certify_UNSAT;
     bool certify_SAT;
     const char* certificate_file_name;
     certificate_type certificate_type;
-    aiger_mode certificate_aiger_mode;
     
     // Case splits
     bool casesplits;

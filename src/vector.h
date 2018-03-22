@@ -2,14 +2,7 @@
 #ifndef VECTOR_H
 #define VECTOR_H
 
-#include <stdlib.h>
 #include <stdbool.h>
-
-#include "int_vector.h"
-
-#define VECTOR_NOT_FOUND (unsigned)-1
-#define INITIAL_SIZE 2
-#define INCREASE_FACTOR 2
 
 typedef struct {
     void** data;

@@ -19,8 +19,9 @@
     #error "No SAT solver selected. See file satsolver.h"
 #endif
 
+#include "int_vector.h"
+
 #include <stdbool.h>
-#include "vector.h"
 
 struct SATSolver;
 typedef struct SATSolver SATSolver;

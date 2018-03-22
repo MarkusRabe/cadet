@@ -31,11 +31,9 @@ Options* default_options() {
 
     // Certificates
     o->certify_internally_UNSAT = true;
-    o->certify_UNSAT = false;
     o->certify_SAT = false;
     o->certificate_file_name = NULL;
     o->certificate_type = CAQECERT;
-    o->certificate_aiger_mode = aiger_ascii_mode;
 
     // Optimizations
     o->plaisted_greenbaum_completion = false; // pure literal detection is better

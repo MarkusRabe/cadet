@@ -7,6 +7,7 @@
 //
 
 #include "cadet_internal.h"
+#include "qcnf.h"
 #include "log.h"
 #include "util.h"
 #include "conflict_analysis.h"
@@ -27,6 +28,7 @@
 
 
 C2* c2_init(Options* options) {
+    if (!options) {options = default_options();}
     init_genrand((unsigned long)options->seed);
     
     C2* c2 = malloc(sizeof(C2));
@@ -568,9 +570,6 @@ cadet_res c2_check_propositional(QCNF* qcnf, Options* o) {
         int_vector* refuting_assignment = int_vector_init();
         // empty assignment
         c2_print_qdimacs_output(refuting_assignment);
-        if (o->certify_UNSAT) {
-            NOT_IMPLEMENTED();
-        }
     }
     satsolver_free(checker);
     return res == SATSOLVER_SAT ? CADET_RESULT_SAT : CADET_RESULT_UNSAT;
@@ -735,6 +734,7 @@ int_vector* c2_refuting_assignment(C2* c2) {
  * c2_solve_qdimacs is the traditional entry point to C2. It reads the qdimacs, then solves, then prints and checks the result after calling c2_sat.
  */
 cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
+    if (!options) {options = default_options();}
     C2* c2 = c2_from_file(f, options);
     if (f != stdin) {fclose(f);}
 
@@ -768,7 +768,7 @@ cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
                 printf("s cnf 1\n");
             }
             if (c2->options->certify_SAT) {
-                cert_AIG_certificate(c2);
+                cert_AIG_certificate(c2, options->certificate_file_name);
             }
             break;
         case CADET_RESULT_UNSAT:
@@ -778,9 +778,6 @@ cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
                     "Should not reach UNSAT output in functional synthesis mode.");
             if (log_qdimacs_compliant) {
                 printf("s cnf 0\n");
-            }
-            if (c2->options->certify_UNSAT) {
-                NOT_IMPLEMENTED();
             }
             
             V1("  UNSAT via Skolem conflict.\n");
@@ -809,16 +806,17 @@ cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
     return res;
 }
 
-Clause* c2_add_lit(C2* c2, Lit lit) {
+void c2_add_lit(C2* c2, Lit lit) {
     if (lit != 0) {
         qcnf_add_lit(c2->qcnf, lit);
-        return NULL;
+        return;
     } else {
         Clause* c = qcnf_close_clause(c2->qcnf);
         if (c) {
             c2_new_clause(c2, c);
+            c2_rl_new_clause(c);
         }
-        return c;
+        return;
     }
 }
 

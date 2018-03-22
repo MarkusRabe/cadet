@@ -266,7 +266,6 @@
 				28FA8D341E14F4E900A43B7B /* casesplits.c */,
 				28C1C181202D3EB40094DB4E /* cegar.c */,
 				287BB7C11E0609B000AAE180 /* partitions.c */,
-				28675A121DDAA9D000951212 /* certify.h */,
 				28A9631C205CD4FC00B32831 /* certify */,
 				28675A161DDAA9D000951212 /* conflict_analysis.h */,
 				28675A151DDAA9D000951212 /* conflict_analysis.c */,
@@ -325,6 +324,7 @@
 		28A9631C205CD4FC00B32831 /* certify */ = {
 			isa = PBXGroup;
 			children = (
+				28675A121DDAA9D000951212 /* certify.h */,
 				28675A111DDAA9D000951212 /* certify_SAT.c */,
 				28A9631D205CD52700B32831 /* certify_UNSAT.c */,
 			);

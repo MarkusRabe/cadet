@@ -6,8 +6,11 @@
 #include "stdbool.h"
 #include "util.h"
 
-/* Helper */
+#define VECTOR_NOT_FOUND (unsigned)-1
+#define INITIAL_SIZE 2
+#define INCREASE_FACTOR 2
 
+/* Helper */
 void vector_increase(vector* v) {
     v->size *= INCREASE_FACTOR;
     v->data = realloc(v->data, sizeof(void*) * v->size);

@@ -15,20 +15,17 @@
 
 #include <string.h>
 
-void cert_write_aiger(aiger* a, Options* o) {
+void cert_write_aiger(aiger* a, const char* filename) {
     const char* err = aiger_check(a);
     abortif(err, "%s", err);
     
-    if (strcmp(o->certificate_file_name, "stdout") == 0) {
-        assert(o->certificate_aiger_mode == aiger_ascii_mode);
+    if (!filename || strcmp(filename, "stdout") == 0) {
         aiger_write_to_file(a, aiger_ascii_mode, stdout);
     } else {
-        int write_success = aiger_open_and_write_to_file(a, o->certificate_file_name);
-        abortif(!write_success,
-                "Could not write to file for aiger certificate (file name '%s').", o->certificate_file_name);
+        int write_success = aiger_open_and_write_to_file(a, filename);
+        abortif(!write_success, "Could not write to file for aiger certificate (file name '%s').", filename);
     }
 }
-
 
 aiger* cert_setup_AIG(QCNF* qcnf, Options* o) {
     aiger* a = aiger_init();
@@ -80,7 +77,7 @@ void cert_propositional_AIG_certificate_SAT(QCNF* qcnf, Options* o, void* domain
             aiger_add_and(a, var2aigerlit(var_id), aigerval, aigerval);
         }
     }
-    cert_write_aiger(a, o);
+    cert_write_aiger(a, o->certificate_file_name);
     aiger_reset(a);
 }
 
@@ -161,8 +158,8 @@ void cert_add_multiplexer_gate(aiger* a, unsigned *max_sym, unsigned output, uns
     aiger_add_and(a, output, negate(negation_of_output), negate(negation_of_output));
 }
 
-void cert_AIG_certificate(C2* c2) {
-    
+void cert_AIG_certificate(C2* c2, const char* filename) {
+    abortif(c2->state != C2_SAT, "Can only generate certificate in SAT state.");
     aiger* a = cert_setup_AIG(c2->qcnf, c2->options);
     
     unsigned max_sym = var2aigerlit(var_vector_count(c2->qcnf->vars));
@@ -278,7 +275,7 @@ void cert_AIG_certificate(C2* c2) {
     
     // TODO: implement "Close" rule, i.e. record the certificate for the dlvl>0 vars. Do we need to remember unique antecedents? Do we need to remember decisions and pure variables?
     
-    cert_write_aiger(a, c2->options);
+    cert_write_aiger(a, filename);
     int_vector_free(aigerlits);
     aiger_reset(a);
 }

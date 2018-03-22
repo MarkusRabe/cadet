@@ -233,8 +233,7 @@ C2* c2_from_qdimacs_and_header(Options* options, FILE* file, char* header, int l
             if (next_lit != 0 && !qcnf_var_exists(c2->qcnf, lit_to_var(next_lit))) {
                 c2_new_variable(c2, 0, 0, lit_to_var(next_lit));
             }
-            Clause* c = c2_add_lit(c2, next_lit);
-            if (c) {c2_rl_new_clause(c);}
+            c2_add_lit(c2, next_lit);
             skip_space(line, &pos);
         }
     } while (fgets(line, len, file));
@@ -463,6 +462,7 @@ unsigned qaiger_quantifier_level(char* name) {
 }
 
 C2* c2_from_qaiger(aiger* aig, Options* options) {
+    if (!options) {options = default_options();}
     assert (aiger_check(aig) == NULL);
     if (aig->num_bad > 0) {
         LOG_WARNING("QAIGER does not support bad outputs; conjoining them with outputs.");
@@ -650,6 +650,7 @@ C2* c2_from_qaiger(aiger* aig, Options* options) {
 }
 
 C2* c2_from_file(FILE* file, Options* options) {
+    if (!options) {options = default_options();}
     int len = 1000; // max 1kb for the first line
     char *line = malloc((size_t)len);
     

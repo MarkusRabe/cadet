@@ -43,40 +43,30 @@ int main(int argc, const char* argv[]) {
                     }
                     
                     options->certify_SAT = true;
-//                    options->certify_UNSAT = true;
                     options->certify_internally_UNSAT = false;
                     
                     options->certificate_file_name = argv[i+1];
                     
-                    if (strcmp(options->certificate_file_name, "stdout") != 0) {
+                    if (strcmp(options->certificate_file_name, "stdout") == 0) {
+                        log_silent = true;
+                    } else {
                         const char* ext = get_filename_ext(options->certificate_file_name);
                         if (! ext || strlen(ext) != 3) {
                             LOG_ERROR("Must give file extension aig or aag for certificates.\n");
                             print_usage(argv[0]);
                             return 0;
                         }
-                        if (strcmp(ext, "aig") == 0) {
-                            options->certificate_aiger_mode = aiger_binary_mode;
-                        } else if (strcmp(ext, "aag") == 0) {
-                            options->certificate_aiger_mode = aiger_ascii_mode;
-                        } else {
+                        if (strcmp(ext, "aig") != 0 && strcmp(ext, "aag") != 0) {
                             LOG_ERROR("File extension of certificate must be aig or aag.\n");
                             print_usage(argv[0]);
                             return 0;
                         }
-                    } else {
-                        options->certificate_aiger_mode = aiger_ascii_mode;
-                        log_silent = true;
                     }
                     
                     if (options->casesplits) {
                         LOG_WARNING("Case splits not compatible with certificates right now. Deactivating case splits.");
                         options->casesplits = false;
                     }
-//                    if (options->cegar) {
-//                        LOG_WARNING("CEGAR is not compatible with certificates right now. Deactivating CEGAR.");
-//                        options->cegar = false;
-//                    }
                     
                     i++;
                     break;
@@ -202,9 +192,6 @@ int main(int argc, const char* argv[]) {
         }
     }
     
-    if (options->certificate_aiger_mode == aiger_binary_mode && options->certificate_type == QBFCERT) {
-        LOG_WARNING("QBFCERT cannot read aiger files in binary mode. Use .aag file extension for certificate file.\n");
-    }
     if (log_qdimacs_compliant && debug_verbosity > VERBOSITY_LOW) {
         LOG_WARNING("Verbosity is medium or higher and comment prefix is set. May result in cluttered log.");
     }

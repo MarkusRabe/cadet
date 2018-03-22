@@ -9,8 +9,8 @@
 #ifndef __caqe__statistics__
 #define __caqe__statistics__
 
-#include <stdio.h>
 #include "vector.h"
+#include "int_vector.h"
 
 typedef struct {
     size_t calls_num;

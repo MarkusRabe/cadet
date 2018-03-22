@@ -9,6 +9,7 @@
 #ifndef qcnf_h
 #define qcnf_h
 
+#include "int_vector.h"
 #include "vector.h"
 #include "var_vector.h"
 #include "map.h"

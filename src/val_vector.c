@@ -7,15 +7,16 @@
 //
 
 #include "val_vector.h"
-
 #include "qcnf.h"
-
-#include "vector.h"
 #include "log.h"
 #include "stdbool.h"
 #include "util.h"
 
 #include <assert.h>
+
+#define VECTOR_NOT_FOUND (unsigned)-1
+#define INITIAL_SIZE 2
+#define INCREASE_FACTOR 2
 
 void val_vector_increase(val_vector* v) {
     v->size *= INCREASE_FACTOR;

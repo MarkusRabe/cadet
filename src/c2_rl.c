@@ -481,10 +481,10 @@ cadet_res c2_rl_run_c2(Options* o) {
         cadet_res res = c2_sat(solver);
         
         if (res == CADET_RESULT_SAT) {
-            V0("SAT");
+            V0("SAT\n");
         }
         if (res == CADET_RESULT_UNSAT) {
-            V0("UNSAT");
+            V0("UNSAT\n");
         }
         
         if (res == CADET_RESULT_SAT || res == CADET_RESULT_UNSAT) {

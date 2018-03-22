@@ -477,6 +477,7 @@ cadet_res c2_rl_run_c2(Options* o) {
         }
         
         C2* solver = c2_from_file(file, o);
+        fclose(file);
         cadet_res res = c2_sat(solver);
         
         if (res == CADET_RESULT_SAT) {

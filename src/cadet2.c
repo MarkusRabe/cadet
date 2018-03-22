@@ -19,6 +19,7 @@
 #include "satsolver.h"
 #include "c2_traces.h"
 #include "c2_rl.h"
+#include "mersenne_twister.h"
 
 #include <math.h>
 #include <stdint.h>
@@ -26,6 +27,8 @@
 
 
 C2* c2_init(Options* options) {
+    init_genrand((unsigned long)options->seed);
+    
     C2* c2 = malloc(sizeof(C2));
     c2->qcnf = qcnf_init();
     c2->options = options;
@@ -629,7 +632,7 @@ void c2_restart_heuristics(C2* c2) {
         c2->next_restart = c2->magic.initial_restart; // resets restart frequency
 //        c2_delete_learnt_clauses_greater_than(c2, c2->magic.keeping_clauses_threshold);
         c2->magic.keeping_clauses_threshold += 1;
-        V1("Major restart no %zu. Resetting all activity values to 0 and some random ones to 1.\n", c2->major_restarts);
+        V1("Major restart no %zu. Resetting all activity values to 0.\n", c2->major_restarts);
         for (unsigned i = 0; i < var_vector_count(c2->qcnf->vars); i++) {
             if (qcnf_var_exists(c2->qcnf, i)) {
                 c2_set_activity(c2, i, 0.0f);
@@ -677,7 +680,7 @@ cadet_res c2_sat(C2* c2) {
     if (c2->options->cegar_only) {
         cegar_solve_2QBF_by_cegar(c2, -1);
         assert(c2->state == C2_SAT || c2_is_in_conflcit(c2));
-        return c2_result(c2);
+        goto return_result;
     }
 
     while (c2->state == C2_READY) { // This loop controls the restarts

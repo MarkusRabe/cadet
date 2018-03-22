@@ -6,6 +6,7 @@
 #include "cadet2.h"
 #include "heap.h"
 #include "c2_rl.h"
+#include "mersenne_twister.h"
 //#include "qipasir.h"
 //#include "qipasir_parser.h"
 
@@ -23,7 +24,6 @@ int main(int argc, const char* argv[]) {
     // default
     Options* options = default_options();
     const char *file_name = NULL;
-    long seed = SEED;
     FILE* file;
     
     // scan for file name and flags
@@ -104,7 +104,7 @@ int main(int argc, const char* argv[]) {
                         print_usage(argv[0]);
                         return 1;
                     }
-                    seed = strtol(argv[i+1], NULL, 0);
+                    options->seed = strtol(argv[i+1], NULL, 0);
                     i++;
                     break;
                 
@@ -201,8 +201,6 @@ int main(int argc, const char* argv[]) {
             break;
         }
     }
-    
-    srand((unsigned int)seed);
     
     if (options->certificate_aiger_mode == aiger_binary_mode && options->certificate_type == QBFCERT) {
         LOG_WARNING("QBFCERT cannot read aiger files in binary mode. Use .aag file extension for certificate file.\n");

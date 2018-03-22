@@ -479,6 +479,13 @@ cadet_res c2_rl_run_c2(Options* o) {
         C2* solver = c2_from_file(file, o);
         cadet_res res = c2_sat(solver);
         
+        if (res == CADET_RESULT_SAT) {
+            V0("SAT");
+        }
+        if (res == CADET_RESULT_UNSAT) {
+            V0("UNSAT");
+        }
+        
         if (res == CADET_RESULT_SAT || res == CADET_RESULT_UNSAT) {
             if (float_vector_count(rl->rewards) > 0) {
                 rl_add_reward(float_vector_count(rl->rewards) - 1, completion_reward);

@@ -12,6 +12,7 @@
 Options* default_options() {
     Options* o = malloc(sizeof(Options));
 
+    o->seed = 0;
     o->easy_debugging = false;
 
     // Computational enginges

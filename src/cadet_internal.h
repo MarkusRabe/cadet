@@ -14,6 +14,7 @@
 #include "skolem.h"
 #include "casesplits.h"
 #include "conflict_analysis.h"
+#include "int_vector.h"
 
 typedef enum {
     C2_READY,
@@ -110,6 +111,8 @@ struct C2 {
 
 void c2_new_clause(C2*, Clause* c);
 bool c2_is_in_conflcit(C2*);
+void c2_simplify(C2*);
+int_vector* c2_refuting_assignment(C2*);
 
 // Case splits
 void c2_backtrack_casesplit(C2*);

@@ -158,7 +158,7 @@ void cert_add_multiplexer_gate(aiger* a, unsigned *max_sym, unsigned output, uns
     aiger_add_and(a, output, negate(negation_of_output), negate(negation_of_output));
 }
 
-void cert_AIG_certificate(C2* c2, const char* filename) {
+void c2_print_AIG_certificate(C2* c2, const char* filename) {
     abortif(c2->state != C2_SAT, "Can only generate certificate in SAT state.");
     aiger* a = cert_setup_AIG(c2->qcnf, c2->options);
     

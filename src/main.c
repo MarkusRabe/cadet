@@ -121,6 +121,8 @@ int main(int argc, const char* argv[]) {
                         i++;
                     } else if (strcmp(argv[i], "--case_splits") == 0) {
                         options->casesplits = ! options->casesplits;
+                    } else if (strcmp(argv[i], "--fresh_seed") == 0) {
+                        options->fresh_random_seed = true;
                     } else if (strcmp(argv[i], "--functional-synthesis") == 0) {
                         assert(!options->functional_synthesis);
                         options->functional_synthesis = true;

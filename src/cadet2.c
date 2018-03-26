@@ -29,7 +29,11 @@
 
 C2* c2_init(Options* options) {
     if (!options) {options = default_options();}
-    init_genrand((unsigned long)options->seed);
+    if (options->fresh_random_seed) {
+        init_genrand((unsigned long)time(NULL));
+    } else {
+        init_genrand((unsigned long)options->seed);
+    }
     
     C2* c2 = malloc(sizeof(C2));
     c2->qcnf = qcnf_init();

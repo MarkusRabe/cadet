@@ -21,6 +21,7 @@ typedef enum {
 typedef struct {
     
     unsigned long seed; // for the random number generator
+    bool fresh_random_seed;
     bool reinforcement_learning; // take decisions through stdin; trace state
     bool rl_advanced_rewards;
     bool reinforcement_learning_mock; // for testing reinforcement learning code

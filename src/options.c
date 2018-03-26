@@ -13,8 +13,10 @@ Options* default_options() {
     Options* o = malloc(sizeof(Options));
 
     o->seed = 0;
-    o->easy_debugging = false;
 
+    o->easy_debugging = false;
+    o->fresh_random_seed = false;
+    
     // Computational enginges
     o->cegar = false;
     o->cegar_only = false;
@@ -107,6 +109,7 @@ char* options_get_help() {
     "\t--miniscoping \t\tEnables miniscoping (default %d)\n"
     "\t--minimize \t\tConflict minimization (default %d) \n"
     "\t--pure_literals\t\tUse pure literal detection (default %d)\n"
+    "\t--fresh_seed\t\tUse a fresh random seed for every initialization of the solver (default false)\n"
 //    "\t--enhanced_pure_literals\tUse enhanced pure literal detection (default %d)\n"
 //    "\t--qbce\t\t\tBlocked clause elimination (default %d)\n"
 //    "\t--pg\t\t\tPlaisted Greenbaum completion (default %d).\n"

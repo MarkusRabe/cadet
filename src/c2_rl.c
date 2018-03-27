@@ -508,6 +508,8 @@ cadet_res c2_rl_run_c2(Options* o) {
         
         rl_print_auxilliary(solver);
         
+        fflush(stdout);
+        
         if (mock_file) {
             return c2_result(solver);
         }

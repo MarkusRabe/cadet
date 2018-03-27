@@ -109,6 +109,7 @@ struct C2 {
     struct C2_Magic_Values magic;
 };
 
+void c2_new_variable(C2*, bool is_universal, unsigned scope_id, unsigned var_id);
 void c2_new_clause(C2*, Clause* c);
 bool c2_is_in_conflcit(C2*);
 void c2_simplify(C2*);

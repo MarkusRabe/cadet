@@ -812,6 +812,7 @@ cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
 
 void c2_add_lit(C2* c2, Lit lit) {
     if (lit != 0) {
+        abortif(! qcnf_var_exists(c2->qcnf, lit_to_var(lit)), "Variable %u not known. Variables must be introduced through c2_new_var before usage.", lit_to_var(lit));
         qcnf_add_lit(c2->qcnf, lit);
         return;
     } else {
@@ -830,6 +831,10 @@ void c2_new_variable(C2* c2, bool is_universal, unsigned scope_id, unsigned var_
     }
     qcnf_new_var(c2->qcnf, is_universal, scope_id, var_id);
     skolem_new_variable(c2->skolem, var_id);
+}
+
+void c2_new_2QBF_variable(C2* c2, bool is_universal, unsigned var_id) {
+    c2_new_variable(c2, is_universal, 1, var_id);
 }
 
 void c2_new_clause(C2* c2, Clause* c) {

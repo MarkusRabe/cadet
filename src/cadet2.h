@@ -23,24 +23,46 @@ typedef enum {
     CADET_RESULT_UNKNOWN  = 30
 } cadet_res;
 
+
 C2* c2_init(Options* options);
 void c2_free(C2*);
 
-cadet_res c2_solve_qdimacs(FILE*, Options*);
 C2* c2_from_file(FILE*, Options*);
 C2* c2_from_qaiger(aiger*, Options*);
 
-aiger* c2_qaiger_quantifier_elimination(aiger*, char* filename, Options*);
+// Introduces a new variable with identifier var_id.
+void c2_new_2QBF_variable(C2*, bool is_universal, unsigned var_id);
 
-void c2_add_lit(C2*, int);
-void c2_new_variable(C2*, bool is_universal, unsigned scope_id, unsigned var_id);
+// Add new clauses (constraints) by the following command.
+// Negative numbers indicate negated variables.
+// '0' indicates end of clause.
+// Variables used here must be introduced through c2_new_2QBF_variable first.
+void c2_add_lit(C2*, int literal);
 
+// Assume the value of a variable.
+//  - assuming universals makes formulas easier to solve; after SAT results use c2_is_core to check if necessary
+//  - assuming existentials makes formulas harder to solve; after UNSAT results use c2_is_core to check if necessary
+// c2_is_core only works when clause minimization is switched off.
+void c2_assume(C2*, int literal);
+bool c2_is_core(C2*, int assumed_literal);
+
+// Solves the formula encoded in the solver and returns the result.
 cadet_res c2_sat(C2*);
+
+// Returns the result of the last solver call, and CADET_RESULT_UNKNOWN if not solved yet.
 cadet_res c2_result(C2*);
 
-int c2_val (C2* c2, int lit);
+// Returns the value of the literal of a universal variable; only available after CADET_RESULT_UNSAT result.
+int c2_val (C2* c2, int literal);
+
+// Prints the AIG certificate to the specified file.
 void c2_print_AIG_certificate(C2* c2, const char* filename);
 
+// Print solver statistics on stdout.
 void c2_print_statistics(C2*);
+
+// Composite calls:
+cadet_res c2_solve_qdimacs(FILE*, Options*); // reads from stdin or file; solves the problem and prints output
+aiger* c2_qaiger_quantifier_elimination(aiger*, char* filename, Options*); // not yet implemented
 
 #endif /* cadet2_h */

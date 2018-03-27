@@ -380,32 +380,35 @@ void rl_reward_clause(C2* solver, unsigned idx, float total_reward) {
         rl_add_reward(reward_idx, self_reward);
         V1("Rewarding clause %u at pos %u with %f\n", idx, reward_idx, self_reward);
         
+        // Count how many of the operands were learnt clauses, then distribute the remaining reward evenly
+        unsigned learnt_clause_operands = 0;
+        int_vector* resolution_operands = NULL;
         if (map_contains(solver->ca->resolution_graph, (int) idx)) {
-            int_vector* resolution_operands = map_get(solver->ca->resolution_graph, (int) idx);
-            
-            // Count how many of the operands were learnt clauses, then distribute the remaining reward evenly
-            unsigned learnt_clause_operands = 0;
+            resolution_operands = map_get(solver->ca->resolution_graph, (int) idx);
             for (unsigned i = 0; i < int_vector_count(resolution_operands); i++) {
                 unsigned operand_clause_idx = (unsigned) int_vector_get(resolution_operands, i);
                 if (!qcnf_is_original_clause(solver->qcnf, operand_clause_idx)) {
                     learnt_clause_operands += 1;
                 }
             }
-            if (learnt_clause_operands > 0) {
-                float reward_per_operand = remaining_reward / (float) learnt_clause_operands;
-                for (unsigned i = 0; i < int_vector_count(resolution_operands); i++) {
-                    unsigned operand_clause_idx = (unsigned) int_vector_get(resolution_operands, i);
-                    if (!qcnf_is_original_clause(solver->qcnf, operand_clause_idx)) {
-                        unsigned operand_reward_idx = (unsigned) map_get(rl->conflicts_in_reward_vector, (int) operand_clause_idx);
-                        assert(operand_reward_idx <= reward_idx);
-                        int_vector_add(clauses_to_reward, (int) operand_clause_idx);
-                        float_vector_add(clause_rewards_to_distribute, reward_per_operand);
-                    }
+        }
+        if (learnt_clause_operands > 0) {
+            float reward_per_operand = remaining_reward / (float) learnt_clause_operands;
+            for (unsigned i = 0; i < int_vector_count(resolution_operands); i++) {
+                unsigned operand_clause_idx = (unsigned) int_vector_get(resolution_operands, i);
+                if (!qcnf_is_original_clause(solver->qcnf, operand_clause_idx)) {
+                    unsigned operand_reward_idx = (unsigned) map_get(rl->conflicts_in_reward_vector, (int) operand_clause_idx);
+                    assert(operand_reward_idx <= reward_idx);
+                    int_vector_add(clauses_to_reward, (int) operand_clause_idx);
+                    float_vector_add(clause_rewards_to_distribute, reward_per_operand);
                 }
-            } else {
-                rl_add_reward(reward_idx, remaining_reward);
-                V1("Rewarding REMAINING for clause %u at pos %u with %f\n", idx, reward_idx, remaining_reward);
             }
+        } else {
+            rl_add_reward(reward_idx, remaining_reward);
+            V1("Rewarding REMAINING for clause %u at pos %u with %f\n", idx, reward_idx, remaining_reward);
+        }
+        if (resolution_operands) {
+            int_vector_free(resolution_operands);
         }
     }
     int_vector_free(clauses_to_reward);
@@ -416,7 +419,10 @@ void rl_mock_file(FILE* file) {
     mock_file = file;
 }
 
-void rl_action_rewards(C2* solver) {
+void rl_advanced_action_rewards(C2* solver) {
+    if (!solver->options->rl_advanced_rewards) {
+        return;
+    }
     cadet_res res = c2_result(solver);
     if (res == CADET_RESULT_UNSAT) {
         // Determine which parts of the formula/decisions were important to figure out the counterexample.
@@ -493,7 +499,7 @@ cadet_res c2_rl_run_c2(Options* o) {
             }
         }
         
-        rl_action_rewards(solver);
+        rl_advanced_action_rewards(solver);
         
         // Negative rewards for execution time
         for (unsigned i = 0; i < float_vector_count(rl->rewards); i++) {

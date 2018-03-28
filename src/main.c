@@ -7,8 +7,7 @@
 #include "heap.h"
 #include "c2_rl.h"
 #include "mersenne_twister.h"
-//#include "qipasir.h"
-//#include "qipasir_parser.h"
+#include "tests.h"
 
 #include <stdio.h>
 #include <stdbool.h>
@@ -123,6 +122,8 @@ int main(int argc, const char* argv[]) {
                         options->casesplits = ! options->casesplits;
                     } else if (strcmp(argv[i], "--fresh_seed") == 0) {
                         options->fresh_random_seed = true;
+                    } else if (strcmp(argv[i], "--random_decisions") == 0) {
+                        options->random_decisions = true;
                     } else if (strcmp(argv[i], "--functional-synthesis") == 0) {
                         assert(!options->functional_synthesis);
                         options->functional_synthesis = true;
@@ -159,6 +160,9 @@ int main(int argc, const char* argv[]) {
                         options->trace_for_profiling = true;
                     } else if (strcmp(argv[i], "--print_variable_names") == 0) {
                         options->variable_names = vector_init();
+                    } else if (strcmp(argv[i], "--selftest") == 0) {
+                        test_all();
+                        exit(0);
                     } else if (strcmp(argv[i], "--cegar") == 0) {
                         options->cegar = ! options->cegar;
                     } else if (strcmp(argv[i], "--cegar_only") == 0) {

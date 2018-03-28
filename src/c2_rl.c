@@ -211,7 +211,7 @@ int c2_rl_get_decision(C2* solver) {
     
     long ret = 0;
     if (solver->options->reinforcement_learning_mock) {
-        Var* v = c2_pick_most_active_notdeterministic_variable(solver);
+        Var* v = c2_pick_nondeterministic_variable(solver);
         if (v) {
             ret = v->var_id;
         }

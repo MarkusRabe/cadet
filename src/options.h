@@ -36,6 +36,7 @@ typedef struct {
     bool use_qbf_engine_also_for_propositional_problems;
     unsigned examples_max_num;
     bool functional_synthesis;
+    bool random_decisions;
     
     // Aiger interpretations
     const char* aiger_controllable_inputs;

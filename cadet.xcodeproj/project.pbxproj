@@ -59,8 +59,8 @@
 		28FF2EB7206C285100AEFB7F /* skolem_var_vector.c in Sources */ = {isa = PBXBuildFile; fileRef = 28EBA5521DE195DD003D21EB /* skolem_var_vector.c */; };
 		28FF2EB8206C285100AEFB7F /* var_vector.c in Sources */ = {isa = PBXBuildFile; fileRef = 28EBA5551DE19BFC003D21EB /* var_vector.c */; };
 		28FF2EB9206C285100AEFB7F /* val_vector.c in Sources */ = {isa = PBXBuildFile; fileRef = 287C3B191E3C2D5500F7096A /* val_vector.c */; };
-		28FF2EE8206C37F100AEFB7F /* tests.c in Sources */ = {isa = PBXBuildFile; fileRef = 28FF2EE6206C37EC00AEFB7F /* tests.c */; };
 		28FF2EEC206C39E200AEFB7F /* util.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A411DDAA9D000951212 /* util.c */; };
+		28FF2EF7206C4E8100AEFB7F /* tests.c in Sources */ = {isa = PBXBuildFile; fileRef = 28FF2EF5206C4E8000AEFB7F /* tests.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -192,7 +192,8 @@
 		28FA8D341E14F4E900A43B7B /* casesplits.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = casesplits.c; path = src/casesplits.c; sourceTree = "<group>"; };
 		28FEE64A1EDA304000A9D8CA /* skolem_conflict_analysis.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = skolem_conflict_analysis.c; path = src/skolem_conflict_analysis.c; sourceTree = "<group>"; };
 		28FF2E71206C277D00AEFB7F /* tests */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = tests; sourceTree = BUILT_PRODUCTS_DIR; };
-		28FF2EE6206C37EC00AEFB7F /* tests.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = tests.c; path = src/tests.c; sourceTree = "<group>"; };
+		28FF2EF5206C4E8000AEFB7F /* tests.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = tests.c; path = src/tests.c; sourceTree = "<group>"; };
+		28FF2EF6206C4E8100AEFB7F /* tests.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = tests.h; path = src/tests.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -363,7 +364,6 @@
 		28D2C3811DDAA95E000E9C51 = {
 			isa = PBXGroup;
 			children = (
-				28FF2EE6206C37EC00AEFB7F /* tests.c */,
 				28675A1C1DDAA9D000951212 /* main.c */,
 				28675A1B1DDAA9D000951212 /* log.h */,
 				28675A6B1DDAAB2600951212 /* log.c */,
@@ -381,6 +381,7 @@
 				28675A6A1DDAAA7900951212 /* aiger */,
 				28675A671DDAAA3700951212 /* satsolvers */,
 				28675A651DDAAA0600951212 /* datastructures */,
+				28FF2EF8206C4E8600AEFB7F /* tests */,
 				28D2C38B1DDAA95E000E9C51 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -403,6 +404,15 @@
 				28F2769A1E6FE45400B471CB /* qipasir_parser.c */,
 			);
 			name = qipasir;
+			sourceTree = "<group>";
+		};
+		28FF2EF8206C4E8600AEFB7F /* tests */ = {
+			isa = PBXGroup;
+			children = (
+				28FF2EF5206C4E8000AEFB7F /* tests.c */,
+				28FF2EF6206C4E8100AEFB7F /* tests.h */,
+			);
+			name = tests;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -536,6 +546,7 @@
 				28FF2EB4206C285100AEFB7F /* vector.c in Sources */,
 				28FF2EB5206C285100AEFB7F /* int_vector.c in Sources */,
 				28FF2E98206C285100AEFB7F /* skolem_conflict_analysis.c in Sources */,
+				28FF2EF7206C4E8100AEFB7F /* tests.c in Sources */,
 				28FF2EA1206C285100AEFB7F /* qipasir.c in Sources */,
 				28FF2E87206C285100AEFB7F /* statistics.c in Sources */,
 			);
@@ -545,7 +556,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				28FF2EE8206C37F100AEFB7F /* tests.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -24,6 +24,7 @@ Options* default_options() {
     o->functional_synthesis = false;
     o->casesplits = false;
     o->casesplits_cubes = false;
+    o->random_decisions = false;
 
     // Examples domain
     o->examples_max_num = 0; // 0 corresponds to not doing examples at all

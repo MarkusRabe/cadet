@@ -8,8 +8,8 @@
 
 static inline unsigned lit_to_var(int lit) { return lit < 0 ? (unsigned) -lit : (unsigned) lit; }
 
-int hash6432shift(void* k);
-int hash32shiftmult(int key);
+int hash6432shift(void* k) __attribute__((no_sanitize("undefined")));
+int hash32shiftmult(int key) __attribute__((no_sanitize("undefined")));
 
 int compare_pointers_natural_order(const void * a, const void * b);
 int compare_integers_natural_order(const void * a, const void * b);

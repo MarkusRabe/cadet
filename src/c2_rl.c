@@ -252,11 +252,6 @@ void c2_rl_print_rewards() {
     V1("Total reward %f over %u decisions; %u of which are positive.\n", total, float_vector_count(rl->rewards), positive_reward_num);
 }
 
-void rl_print_auxilliary(C2* solver) {
-    for (unsigned i = 0; i < float_vector_count(rl->rewards); i++) {
-//        asdf
-    }
-}
 
 int_vector* c2_rl_test_assumptions(Skolem* s, int_vector* universal_assumptions) {
     V1("Testing assumption of closed case\n");
@@ -511,8 +506,6 @@ cadet_res c2_rl_run_c2(Options* o) {
         }
         
         c2_rl_print_rewards();
-        
-        rl_print_auxilliary(solver);
         
         fflush(stdout);
         

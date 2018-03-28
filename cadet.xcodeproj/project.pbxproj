@@ -286,27 +286,6 @@
 			name = satsolvers;
 			sourceTree = "<group>";
 		};
-		28675A681DDAAA5600951212 /* cadet2 */ = {
-			isa = PBXGroup;
-			children = (
-				287C3B181E3C03A400F7096A /* cadet2 */,
-				286319512056665400808F7C /* qcnf */,
-				287C3B171E3C035500F7096A /* skolem */,
-				287C3B121E399C7A00F7096A /* casesplits.h */,
-				28FA8D341E14F4E900A43B7B /* casesplits.c */,
-				28C1C181202D3EB40094DB4E /* cegar.c */,
-				287BB7C11E0609B000AAE180 /* partitions.c */,
-				28A9631C205CD4FC00B32831 /* certify */,
-				28675A161DDAA9D000951212 /* conflict_analysis.h */,
-				28675A151DDAA9D000951212 /* conflict_analysis.c */,
-				287C3B0C1E37EF7B00F7096A /* examples.h */,
-				287C3B0B1E37EF7B00F7096A /* examples.c */,
-				28675A291DDAA9D000951212 /* partial_assignment.h */,
-				28675A281DDAA9D000951212 /* partial_assignment.c */,
-			);
-			name = cadet2;
-			sourceTree = "<group>";
-		};
 		28675A6A1DDAAA7900951212 /* aiger */ = {
 			isa = PBXGroup;
 			children = (
@@ -335,16 +314,17 @@
 		287C3B181E3C03A400F7096A /* cadet2 */ = {
 			isa = PBXGroup;
 			children = (
-				28675A101DDAA9D000951212 /* cadet2.h */,
 				28A9631F20642D6100B32831 /* cadet_internal.h */,
+				28675A101DDAA9D000951212 /* cadet2.h */,
 				28675A0F1DDAA9D000951212 /* cadet2.c */,
+				28675A151DDAA9D000951212 /* conflict_analysis.c */,
 				287C3B111E399C7A00F7096A /* c2_casesplits_control.c */,
+				28C1C181202D3EB40094DB4E /* cegar.c */,
+				287C3B121E399C7A00F7096A /* casesplits.h */,
+				28FA8D341E14F4E900A43B7B /* casesplits.c */,
 				287C3B0F1E396B7600F7096A /* c2_traces.h */,
-				287C3B0E1E396B7600F7096A /* c2_traces.c */,
 				28C1C17D20197A000094DB4E /* c2_rl.h */,
 				28C1C17E20197A000094DB4E /* c2_rl.c */,
-				28FA8D2F1E10ACBC00A43B7B /* c2_validate.h */,
-				28FA8D2E1E10ACBC00A43B7B /* c2_validate.c */,
 				28261B911F71872D006974DC /* c2_clause_minimization.c */,
 				28C6FD961F831DC3008D109C /* c2_simplify.c */,
 			);
@@ -365,21 +345,24 @@
 			isa = PBXGroup;
 			children = (
 				28675A1C1DDAA9D000951212 /* main.c */,
-				28675A1B1DDAA9D000951212 /* log.h */,
-				28675A6B1DDAAB2600951212 /* log.c */,
-				28675A3C1DDAA9D000951212 /* statistics.h */,
-				28675A3B1DDAA9D000951212 /* statistics.c */,
-				28675A421DDAA9D000951212 /* util.h */,
-				28675A411DDAA9D000951212 /* util.c */,
-				28675A181DDAA9D000951212 /* debug.h */,
-				28675A171DDAA9D000951212 /* debug.c */,
 				28675A251DDAA9D000951212 /* options.h */,
 				28675A241DDAA9D000951212 /* options.c */,
 				28675A261DDAA9D000951212 /* parse.c */,
-				28675A681DDAAA5600951212 /* cadet2 */,
+				287C3B181E3C03A400F7096A /* cadet2 */,
+				286319512056665400808F7C /* qcnf */,
+				287C3B171E3C035500F7096A /* skolem */,
+				28675A161DDAA9D000951212 /* conflict_analysis.h */,
+				287C3B0C1E37EF7B00F7096A /* examples.h */,
+				287C3B0B1E37EF7B00F7096A /* examples.c */,
+				28675A291DDAA9D000951212 /* partial_assignment.h */,
+				28675A281DDAA9D000951212 /* partial_assignment.c */,
+				287C3B0E1E396B7600F7096A /* c2_traces.c */,
+				287BB7C11E0609B000AAE180 /* partitions.c */,
+				28A9631C205CD4FC00B32831 /* certify */,
 				28F2769D1E6FFC2700B471CB /* qipasir */,
 				28675A6A1DDAAA7900951212 /* aiger */,
 				28675A671DDAAA3700951212 /* satsolvers */,
+				28FF2EFA206C615E00AEFB7F /* utils */,
 				28675A651DDAAA0600951212 /* datastructures */,
 				28FF2EF8206C4E8600AEFB7F /* tests */,
 				28D2C38B1DDAA95E000E9C51 /* Products */,
@@ -409,10 +392,27 @@
 		28FF2EF8206C4E8600AEFB7F /* tests */ = {
 			isa = PBXGroup;
 			children = (
+				28FA8D2F1E10ACBC00A43B7B /* c2_validate.h */,
+				28FA8D2E1E10ACBC00A43B7B /* c2_validate.c */,
 				28FF2EF5206C4E8000AEFB7F /* tests.c */,
 				28FF2EF6206C4E8100AEFB7F /* tests.h */,
 			);
 			name = tests;
+			sourceTree = "<group>";
+		};
+		28FF2EFA206C615E00AEFB7F /* utils */ = {
+			isa = PBXGroup;
+			children = (
+				28675A1B1DDAA9D000951212 /* log.h */,
+				28675A6B1DDAAB2600951212 /* log.c */,
+				28675A3C1DDAA9D000951212 /* statistics.h */,
+				28675A3B1DDAA9D000951212 /* statistics.c */,
+				28675A421DDAA9D000951212 /* util.h */,
+				28675A411DDAA9D000951212 /* util.c */,
+				28675A181DDAA9D000951212 /* debug.h */,
+				28675A171DDAA9D000951212 /* debug.c */,
+			);
+			name = utils;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */

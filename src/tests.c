@@ -17,7 +17,9 @@
 bool test_read_and_solve(char* file_name) {
     V0("Processing file \"%s\".\n", file_name);
     FILE* file = open_possibly_zipped_file(file_name);
-    c2_solve_qdimacs(file, NULL);
+    Options* o = default_options();
+    o->random_decisions = true;
+    c2_solve_qdimacs(file, o);
     return true;
 }
 

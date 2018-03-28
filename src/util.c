@@ -31,7 +31,7 @@ double get_seconds() {
     return (double) (tv.tv_usec) / 1000000 + (double) (tv.tv_sec);
 }
 
-int hash6432shift(void* k) {
+int hash6432shift(void* k) __attribute__((no_sanitize("undefined"))){
     assert(sizeof(unsigned long long) == 8);
     assert(sizeof(void*) == 8);
     long long key = (long long) k;
@@ -45,7 +45,7 @@ int hash6432shift(void* k) {
 }
 
 // From https://gist.github.com/badboy/6267743
-int hash32shiftmult(int key) {
+int hash32shiftmult(int key) __attribute__((no_sanitize("signed-integer-overflow"))){
     int c2 = 0x27d4eb2d; // a prime or an odd constant
     key = (key ^ 61) ^ (key >> 16);
     key = key + (key << 3);

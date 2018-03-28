@@ -7,63 +7,83 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		28261B921F71872D006974DC /* c2_clause_minimization.c in Sources */ = {isa = PBXBuildFile; fileRef = 28261B911F71872D006974DC /* c2_clause_minimization.c */; };
-		283FC1A21F693C16007DA702 /* float_vector.c in Sources */ = {isa = PBXBuildFile; fileRef = 283FC1A01F693C16007DA702 /* float_vector.c */; };
-		284EED5A1ED39BAF00581801 /* satsolver_lingeling_assumptions.c in Sources */ = {isa = PBXBuildFile; fileRef = 284EED591ED39BAF00581801 /* satsolver_lingeling_assumptions.c */; };
-		284EED781ED3B65600581801 /* lglib.c in Sources */ = {isa = PBXBuildFile; fileRef = 284EED731ED3B65600581801 /* lglib.c */; };
-		284EED791ED3B65600581801 /* lglopts.c in Sources */ = {isa = PBXBuildFile; fileRef = 284EED761ED3B65600581801 /* lglopts.c */; };
-		28577A721E6F87200082100B /* qipasir.c in Sources */ = {isa = PBXBuildFile; fileRef = 28577A701E6F87200082100B /* qipasir.c */; };
-		286319502056650500808F7C /* active_clause_iterator.c in Sources */ = {isa = PBXBuildFile; fileRef = 2863194F2056650500808F7C /* active_clause_iterator.c */; };
-		28675A451DDAA9D000951212 /* aiger_utils.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A071DDAA9D000951212 /* aiger_utils.c */; };
-		28675A461DDAA9D000951212 /* aiger.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A091DDAA9D000951212 /* aiger.c */; };
-		28675A471DDAA9D000951212 /* bit_vector.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A0B1DDAA9D000951212 /* bit_vector.c */; };
-		28675A491DDAA9D000951212 /* cadet2.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A0F1DDAA9D000951212 /* cadet2.c */; };
-		28675A4A1DDAA9D000951212 /* certify_SAT.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A111DDAA9D000951212 /* certify_SAT.c */; };
-		28675A4C1DDAA9D000951212 /* conflict_analysis.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A151DDAA9D000951212 /* conflict_analysis.c */; };
-		28675A4D1DDAA9D000951212 /* debug.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A171DDAA9D000951212 /* debug.c */; };
-		28675A4E1DDAA9D000951212 /* heap.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A191DDAA9D000951212 /* heap.c */; };
 		28675A4F1DDAA9D000951212 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A1C1DDAA9D000951212 /* main.c */; };
-		28675A501DDAA9D000951212 /* map.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A1D1DDAA9D000951212 /* map.c */; };
-		28675A541DDAA9D000951212 /* options.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A241DDAA9D000951212 /* options.c */; };
-		28675A551DDAA9D000951212 /* parse.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A261DDAA9D000951212 /* parse.c */; };
-		28675A561DDAA9D000951212 /* partial_assignment.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A281DDAA9D000951212 /* partial_assignment.c */; };
-		28675A571DDAA9D000951212 /* picosat.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A2A1DDAA9D000951212 /* picosat.c */; };
-		28675A581DDAA9D000951212 /* pqueue.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A2C1DDAA9D000951212 /* pqueue.c */; };
-		28675A591DDAA9D000951212 /* qcnf.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A2E1DDAA9D000951212 /* qcnf.c */; };
-		28675A5B1DDAA9D000951212 /* satsolver_cryptominisat.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 28675A331DDAA9D000951212 /* satsolver_cryptominisat.cpp */; };
-		28675A5C1DDAA9D000951212 /* satsolver_minisat.cc in Sources */ = {isa = PBXBuildFile; fileRef = 28675A341DDAA9D000951212 /* satsolver_minisat.cc */; };
-		28675A5D1DDAA9D000951212 /* satsolver_picosat.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A351DDAA9D000951212 /* satsolver_picosat.c */; };
-		28675A5E1DDAA9D000951212 /* set.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A371DDAA9D000951212 /* set.c */; };
-		28675A5F1DDAA9D000951212 /* skolem.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A391DDAA9D000951212 /* skolem.c */; };
-		28675A601DDAA9D000951212 /* statistics.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A3B1DDAA9D000951212 /* statistics.c */; };
-		28675A611DDAA9D000951212 /* undo_stack.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A3D1DDAA9D000951212 /* undo_stack.c */; };
-		28675A631DDAA9D000951212 /* util.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A411DDAA9D000951212 /* util.c */; };
-		28675A641DDAA9D000951212 /* vector.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A431DDAA9D000951212 /* vector.c */; };
-		28675A6C1DDAAB2600951212 /* log.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A6B1DDAAB2600951212 /* log.c */; };
-		287BB7C31E0609B000AAE180 /* partitions.c in Sources */ = {isa = PBXBuildFile; fileRef = 287BB7C11E0609B000AAE180 /* partitions.c */; };
-		287C3B0D1E37EF7B00F7096A /* examples.c in Sources */ = {isa = PBXBuildFile; fileRef = 287C3B0B1E37EF7B00F7096A /* examples.c */; };
-		287C3B101E396B7600F7096A /* c2_traces.c in Sources */ = {isa = PBXBuildFile; fileRef = 287C3B0E1E396B7600F7096A /* c2_traces.c */; };
-		287C3B131E399C7A00F7096A /* c2_casesplits_control.c in Sources */ = {isa = PBXBuildFile; fileRef = 287C3B111E399C7A00F7096A /* c2_casesplits_control.c */; };
-		287C3B161E3C01FE00F7096A /* skolem_var.c in Sources */ = {isa = PBXBuildFile; fileRef = 287C3B141E3C01FE00F7096A /* skolem_var.c */; };
-		287C3B1B1E3C2D5500F7096A /* val_vector.c in Sources */ = {isa = PBXBuildFile; fileRef = 287C3B191E3C2D5500F7096A /* val_vector.c */; };
-		28A9631E205CD52700B32831 /* certify_UNSAT.c in Sources */ = {isa = PBXBuildFile; fileRef = 28A9631D205CD52700B32831 /* certify_UNSAT.c */; };
-		28C1C17F20197A000094DB4E /* c2_rl.c in Sources */ = {isa = PBXBuildFile; fileRef = 28C1C17E20197A000094DB4E /* c2_rl.c */; };
-		28C1C182202D3EB40094DB4E /* cegar.c in Sources */ = {isa = PBXBuildFile; fileRef = 28C1C181202D3EB40094DB4E /* cegar.c */; };
-		28C6FD981F831DC3008D109C /* c2_simplify.c in Sources */ = {isa = PBXBuildFile; fileRef = 28C6FD961F831DC3008D109C /* c2_simplify.c */; };
-		28C6FD9B1F846390008D109C /* mersenne_twister.c in Sources */ = {isa = PBXBuildFile; fileRef = 28C6FD991F846390008D109C /* mersenne_twister.c */; };
-		28DA30F41DFFDD2600EABCA6 /* skolem_dependencies.c in Sources */ = {isa = PBXBuildFile; fileRef = 28DA30F21DFFDD2600EABCA6 /* skolem_dependencies.c */; };
-		28EBA5511DE19539003D21EB /* int_vector.c in Sources */ = {isa = PBXBuildFile; fileRef = 28EBA54F1DE19539003D21EB /* int_vector.c */; };
-		28EBA5541DE195DD003D21EB /* skolem_var_vector.c in Sources */ = {isa = PBXBuildFile; fileRef = 28EBA5521DE195DD003D21EB /* skolem_var_vector.c */; };
-		28EBA5571DE19BFC003D21EB /* var_vector.c in Sources */ = {isa = PBXBuildFile; fileRef = 28EBA5551DE19BFC003D21EB /* var_vector.c */; };
-		28F2769C1E6FE45400B471CB /* qipasir_parser.c in Sources */ = {isa = PBXBuildFile; fileRef = 28F2769A1E6FE45400B471CB /* qipasir_parser.c */; };
-		28F4A9531E29C0D30090BB67 /* satsolver_picosat_assumptions.c in Sources */ = {isa = PBXBuildFile; fileRef = 28F4A9511E29C0D30090BB67 /* satsolver_picosat_assumptions.c */; };
-		28FA8D301E10ACBC00A43B7B /* c2_validate.c in Sources */ = {isa = PBXBuildFile; fileRef = 28FA8D2E1E10ACBC00A43B7B /* c2_validate.c */; };
-		28FA8D361E14F4E900A43B7B /* casesplits.c in Sources */ = {isa = PBXBuildFile; fileRef = 28FA8D341E14F4E900A43B7B /* casesplits.c */; };
-		28FEE64B1EDA304000A9D8CA /* skolem_conflict_analysis.c in Sources */ = {isa = PBXBuildFile; fileRef = 28FEE64A1EDA304000A9D8CA /* skolem_conflict_analysis.c */; };
+		28FF2E86206C285100AEFB7F /* log.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A6B1DDAAB2600951212 /* log.c */; };
+		28FF2E87206C285100AEFB7F /* statistics.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A3B1DDAA9D000951212 /* statistics.c */; };
+		28FF2E89206C285100AEFB7F /* debug.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A171DDAA9D000951212 /* debug.c */; };
+		28FF2E8A206C285100AEFB7F /* options.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A241DDAA9D000951212 /* options.c */; };
+		28FF2E8B206C285100AEFB7F /* parse.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A261DDAA9D000951212 /* parse.c */; };
+		28FF2E8C206C285100AEFB7F /* cadet2.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A0F1DDAA9D000951212 /* cadet2.c */; };
+		28FF2E8D206C285100AEFB7F /* c2_casesplits_control.c in Sources */ = {isa = PBXBuildFile; fileRef = 287C3B111E399C7A00F7096A /* c2_casesplits_control.c */; };
+		28FF2E8E206C285100AEFB7F /* c2_traces.c in Sources */ = {isa = PBXBuildFile; fileRef = 287C3B0E1E396B7600F7096A /* c2_traces.c */; };
+		28FF2E8F206C285100AEFB7F /* c2_rl.c in Sources */ = {isa = PBXBuildFile; fileRef = 28C1C17E20197A000094DB4E /* c2_rl.c */; };
+		28FF2E90206C285100AEFB7F /* c2_validate.c in Sources */ = {isa = PBXBuildFile; fileRef = 28FA8D2E1E10ACBC00A43B7B /* c2_validate.c */; };
+		28FF2E91206C285100AEFB7F /* c2_clause_minimization.c in Sources */ = {isa = PBXBuildFile; fileRef = 28261B911F71872D006974DC /* c2_clause_minimization.c */; };
+		28FF2E92206C285100AEFB7F /* c2_simplify.c in Sources */ = {isa = PBXBuildFile; fileRef = 28C6FD961F831DC3008D109C /* c2_simplify.c */; };
+		28FF2E93206C285100AEFB7F /* qcnf.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A2E1DDAA9D000951212 /* qcnf.c */; };
+		28FF2E94206C285100AEFB7F /* active_clause_iterator.c in Sources */ = {isa = PBXBuildFile; fileRef = 2863194F2056650500808F7C /* active_clause_iterator.c */; };
+		28FF2E95206C285100AEFB7F /* skolem.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A391DDAA9D000951212 /* skolem.c */; };
+		28FF2E96206C285100AEFB7F /* skolem_var.c in Sources */ = {isa = PBXBuildFile; fileRef = 287C3B141E3C01FE00F7096A /* skolem_var.c */; };
+		28FF2E97206C285100AEFB7F /* skolem_dependencies.c in Sources */ = {isa = PBXBuildFile; fileRef = 28DA30F21DFFDD2600EABCA6 /* skolem_dependencies.c */; };
+		28FF2E98206C285100AEFB7F /* skolem_conflict_analysis.c in Sources */ = {isa = PBXBuildFile; fileRef = 28FEE64A1EDA304000A9D8CA /* skolem_conflict_analysis.c */; };
+		28FF2E99206C285100AEFB7F /* casesplits.c in Sources */ = {isa = PBXBuildFile; fileRef = 28FA8D341E14F4E900A43B7B /* casesplits.c */; };
+		28FF2E9A206C285100AEFB7F /* cegar.c in Sources */ = {isa = PBXBuildFile; fileRef = 28C1C181202D3EB40094DB4E /* cegar.c */; };
+		28FF2E9B206C285100AEFB7F /* partitions.c in Sources */ = {isa = PBXBuildFile; fileRef = 287BB7C11E0609B000AAE180 /* partitions.c */; };
+		28FF2E9C206C285100AEFB7F /* certify_SAT.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A111DDAA9D000951212 /* certify_SAT.c */; };
+		28FF2E9D206C285100AEFB7F /* certify_UNSAT.c in Sources */ = {isa = PBXBuildFile; fileRef = 28A9631D205CD52700B32831 /* certify_UNSAT.c */; };
+		28FF2E9E206C285100AEFB7F /* conflict_analysis.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A151DDAA9D000951212 /* conflict_analysis.c */; };
+		28FF2E9F206C285100AEFB7F /* examples.c in Sources */ = {isa = PBXBuildFile; fileRef = 287C3B0B1E37EF7B00F7096A /* examples.c */; };
+		28FF2EA0206C285100AEFB7F /* partial_assignment.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A281DDAA9D000951212 /* partial_assignment.c */; };
+		28FF2EA1206C285100AEFB7F /* qipasir.c in Sources */ = {isa = PBXBuildFile; fileRef = 28577A701E6F87200082100B /* qipasir.c */; };
+		28FF2EA2206C285100AEFB7F /* qipasir_parser.c in Sources */ = {isa = PBXBuildFile; fileRef = 28F2769A1E6FE45400B471CB /* qipasir_parser.c */; };
+		28FF2EA3206C285100AEFB7F /* aiger_utils.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A071DDAA9D000951212 /* aiger_utils.c */; };
+		28FF2EA4206C285100AEFB7F /* aiger.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A091DDAA9D000951212 /* aiger.c */; };
+		28FF2EA5206C285100AEFB7F /* lglib.c in Sources */ = {isa = PBXBuildFile; fileRef = 284EED731ED3B65600581801 /* lglib.c */; };
+		28FF2EA6206C285100AEFB7F /* lglopts.c in Sources */ = {isa = PBXBuildFile; fileRef = 284EED761ED3B65600581801 /* lglopts.c */; };
+		28FF2EA7206C285100AEFB7F /* picosat.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A2A1DDAA9D000951212 /* picosat.c */; };
+		28FF2EA8206C285100AEFB7F /* satsolver_cryptominisat.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 28675A331DDAA9D000951212 /* satsolver_cryptominisat.cpp */; };
+		28FF2EA9206C285100AEFB7F /* satsolver_minisat.cc in Sources */ = {isa = PBXBuildFile; fileRef = 28675A341DDAA9D000951212 /* satsolver_minisat.cc */; };
+		28FF2EAA206C285100AEFB7F /* satsolver_picosat.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A351DDAA9D000951212 /* satsolver_picosat.c */; };
+		28FF2EAB206C285100AEFB7F /* satsolver_picosat_assumptions.c in Sources */ = {isa = PBXBuildFile; fileRef = 28F4A9511E29C0D30090BB67 /* satsolver_picosat_assumptions.c */; };
+		28FF2EAC206C285100AEFB7F /* satsolver_lingeling_assumptions.c in Sources */ = {isa = PBXBuildFile; fileRef = 284EED591ED39BAF00581801 /* satsolver_lingeling_assumptions.c */; };
+		28FF2EAD206C285100AEFB7F /* mersenne_twister.c in Sources */ = {isa = PBXBuildFile; fileRef = 28C6FD991F846390008D109C /* mersenne_twister.c */; };
+		28FF2EAE206C285100AEFB7F /* undo_stack.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A3D1DDAA9D000951212 /* undo_stack.c */; };
+		28FF2EAF206C285100AEFB7F /* pqueue.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A2C1DDAA9D000951212 /* pqueue.c */; };
+		28FF2EB0206C285100AEFB7F /* bit_vector.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A0B1DDAA9D000951212 /* bit_vector.c */; };
+		28FF2EB1206C285100AEFB7F /* heap.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A191DDAA9D000951212 /* heap.c */; };
+		28FF2EB2206C285100AEFB7F /* map.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A1D1DDAA9D000951212 /* map.c */; };
+		28FF2EB3206C285100AEFB7F /* set.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A371DDAA9D000951212 /* set.c */; };
+		28FF2EB4206C285100AEFB7F /* vector.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A431DDAA9D000951212 /* vector.c */; };
+		28FF2EB5206C285100AEFB7F /* int_vector.c in Sources */ = {isa = PBXBuildFile; fileRef = 28EBA54F1DE19539003D21EB /* int_vector.c */; };
+		28FF2EB6206C285100AEFB7F /* float_vector.c in Sources */ = {isa = PBXBuildFile; fileRef = 283FC1A01F693C16007DA702 /* float_vector.c */; };
+		28FF2EB7206C285100AEFB7F /* skolem_var_vector.c in Sources */ = {isa = PBXBuildFile; fileRef = 28EBA5521DE195DD003D21EB /* skolem_var_vector.c */; };
+		28FF2EB8206C285100AEFB7F /* var_vector.c in Sources */ = {isa = PBXBuildFile; fileRef = 28EBA5551DE19BFC003D21EB /* var_vector.c */; };
+		28FF2EB9206C285100AEFB7F /* val_vector.c in Sources */ = {isa = PBXBuildFile; fileRef = 287C3B191E3C2D5500F7096A /* val_vector.c */; };
+		28FF2EE8206C37F100AEFB7F /* tests.c in Sources */ = {isa = PBXBuildFile; fileRef = 28FF2EE6206C37EC00AEFB7F /* tests.c */; };
+		28FF2EEC206C39E200AEFB7F /* util.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A411DDAA9D000951212 /* util.c */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		28FF2EEA206C39DB00AEFB7F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 28D2C3821DDAA95E000E9C51 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 28D2C3891DDAA95E000E9C51;
+			remoteInfo = cadet;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
 		28D2C3881DDAA95E000E9C51 /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+		28FF2E6F206C277D00AEFB7F /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = /usr/share/man/man1/;
@@ -171,10 +191,19 @@
 		28FA8D2F1E10ACBC00A43B7B /* c2_validate.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = c2_validate.h; path = src/c2_validate.h; sourceTree = "<group>"; };
 		28FA8D341E14F4E900A43B7B /* casesplits.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = casesplits.c; path = src/casesplits.c; sourceTree = "<group>"; };
 		28FEE64A1EDA304000A9D8CA /* skolem_conflict_analysis.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = skolem_conflict_analysis.c; path = src/skolem_conflict_analysis.c; sourceTree = "<group>"; };
+		28FF2E71206C277D00AEFB7F /* tests */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = tests; sourceTree = BUILT_PRODUCTS_DIR; };
+		28FF2EE6206C37EC00AEFB7F /* tests.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = tests.c; path = src/tests.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		28D2C3871DDAA95E000E9C51 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		28FF2E6E206C277D00AEFB7F /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -334,6 +363,7 @@
 		28D2C3811DDAA95E000E9C51 = {
 			isa = PBXGroup;
 			children = (
+				28FF2EE6206C37EC00AEFB7F /* tests.c */,
 				28675A1C1DDAA9D000951212 /* main.c */,
 				28675A1B1DDAA9D000951212 /* log.h */,
 				28675A6B1DDAAB2600951212 /* log.c */,
@@ -359,6 +389,7 @@
 			isa = PBXGroup;
 			children = (
 				28D2C38A1DDAA95E000E9C51 /* cadet */,
+				28FF2E71206C277D00AEFB7F /* tests */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -394,6 +425,24 @@
 			productReference = 28D2C38A1DDAA95E000E9C51 /* cadet */;
 			productType = "com.apple.product-type.tool";
 		};
+		28FF2E70206C277D00AEFB7F /* tests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 28FF2E77206C277D00AEFB7F /* Build configuration list for PBXNativeTarget "tests" */;
+			buildPhases = (
+				28FF2E6D206C277D00AEFB7F /* Sources */,
+				28FF2E6E206C277D00AEFB7F /* Frameworks */,
+				28FF2E6F206C277D00AEFB7F /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				28FF2EEB206C39DB00AEFB7F /* PBXTargetDependency */,
+			);
+			name = tests;
+			productName = tests;
+			productReference = 28FF2E71206C277D00AEFB7F /* tests */;
+			productType = "com.apple.product-type.tool";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -405,6 +454,10 @@
 				TargetAttributes = {
 					28D2C3891DDAA95E000E9C51 = {
 						CreatedOnToolsVersion = 8.1;
+						ProvisioningStyle = Automatic;
+					};
+					28FF2E70206C277D00AEFB7F = {
+						CreatedOnToolsVersion = 9.2;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -422,6 +475,7 @@
 			projectRoot = "";
 			targets = (
 				28D2C3891DDAA95E000E9C51 /* cadet */,
+				28FF2E70206C277D00AEFB7F /* tests */,
 			);
 		};
 /* End PBXProject section */
@@ -431,63 +485,79 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				28F4A9531E29C0D30090BB67 /* satsolver_picosat_assumptions.c in Sources */,
-				28EBA5571DE19BFC003D21EB /* var_vector.c in Sources */,
-				284EED791ED3B65600581801 /* lglopts.c in Sources */,
-				28C6FD9B1F846390008D109C /* mersenne_twister.c in Sources */,
-				28675A6C1DDAAB2600951212 /* log.c in Sources */,
-				28675A5E1DDAA9D000951212 /* set.c in Sources */,
-				28FA8D301E10ACBC00A43B7B /* c2_validate.c in Sources */,
-				287C3B1B1E3C2D5500F7096A /* val_vector.c in Sources */,
-				283FC1A21F693C16007DA702 /* float_vector.c in Sources */,
-				28F2769C1E6FE45400B471CB /* qipasir_parser.c in Sources */,
-				287BB7C31E0609B000AAE180 /* partitions.c in Sources */,
-				287C3B101E396B7600F7096A /* c2_traces.c in Sources */,
-				28675A501DDAA9D000951212 /* map.c in Sources */,
-				28675A471DDAA9D000951212 /* bit_vector.c in Sources */,
-				284EED781ED3B65600581801 /* lglib.c in Sources */,
-				28FA8D361E14F4E900A43B7B /* casesplits.c in Sources */,
-				28C6FD981F831DC3008D109C /* c2_simplify.c in Sources */,
-				28675A4C1DDAA9D000951212 /* conflict_analysis.c in Sources */,
-				287C3B161E3C01FE00F7096A /* skolem_var.c in Sources */,
-				28675A491DDAA9D000951212 /* cadet2.c in Sources */,
-				28675A4D1DDAA9D000951212 /* debug.c in Sources */,
-				284EED5A1ED39BAF00581801 /* satsolver_lingeling_assumptions.c in Sources */,
-				28675A601DDAA9D000951212 /* statistics.c in Sources */,
-				287C3B131E399C7A00F7096A /* c2_casesplits_control.c in Sources */,
-				28EBA5511DE19539003D21EB /* int_vector.c in Sources */,
-				28675A541DDAA9D000951212 /* options.c in Sources */,
-				28675A5F1DDAA9D000951212 /* skolem.c in Sources */,
-				28675A641DDAA9D000951212 /* vector.c in Sources */,
-				28A9631E205CD52700B32831 /* certify_UNSAT.c in Sources */,
-				28675A561DDAA9D000951212 /* partial_assignment.c in Sources */,
-				28675A581DDAA9D000951212 /* pqueue.c in Sources */,
-				28675A4E1DDAA9D000951212 /* heap.c in Sources */,
-				28FEE64B1EDA304000A9D8CA /* skolem_conflict_analysis.c in Sources */,
-				28675A551DDAA9D000951212 /* parse.c in Sources */,
-				28675A4A1DDAA9D000951212 /* certify_SAT.c in Sources */,
-				28EBA5541DE195DD003D21EB /* skolem_var_vector.c in Sources */,
-				28675A571DDAA9D000951212 /* picosat.c in Sources */,
-				28675A5D1DDAA9D000951212 /* satsolver_picosat.c in Sources */,
-				28675A5B1DDAA9D000951212 /* satsolver_cryptominisat.cpp in Sources */,
+				28FF2EB8206C285100AEFB7F /* var_vector.c in Sources */,
+				28FF2EA7206C285100AEFB7F /* picosat.c in Sources */,
+				28FF2EA4206C285100AEFB7F /* aiger.c in Sources */,
+				28FF2EA2206C285100AEFB7F /* qipasir_parser.c in Sources */,
+				28FF2E90206C285100AEFB7F /* c2_validate.c in Sources */,
+				28FF2EB7206C285100AEFB7F /* skolem_var_vector.c in Sources */,
+				28FF2EAD206C285100AEFB7F /* mersenne_twister.c in Sources */,
+				28FF2EB3206C285100AEFB7F /* set.c in Sources */,
+				28FF2E8D206C285100AEFB7F /* c2_casesplits_control.c in Sources */,
+				28FF2EAF206C285100AEFB7F /* pqueue.c in Sources */,
+				28FF2E96206C285100AEFB7F /* skolem_var.c in Sources */,
+				28FF2E86206C285100AEFB7F /* log.c in Sources */,
+				28FF2E8E206C285100AEFB7F /* c2_traces.c in Sources */,
+				28FF2E89206C285100AEFB7F /* debug.c in Sources */,
+				28FF2EAE206C285100AEFB7F /* undo_stack.c in Sources */,
+				28FF2EA9206C285100AEFB7F /* satsolver_minisat.cc in Sources */,
+				28FF2E93206C285100AEFB7F /* qcnf.c in Sources */,
+				28FF2E8B206C285100AEFB7F /* parse.c in Sources */,
+				28FF2EA3206C285100AEFB7F /* aiger_utils.c in Sources */,
+				28FF2EA6206C285100AEFB7F /* lglopts.c in Sources */,
+				28FF2EB0206C285100AEFB7F /* bit_vector.c in Sources */,
+				28FF2E8F206C285100AEFB7F /* c2_rl.c in Sources */,
+				28FF2E99206C285100AEFB7F /* casesplits.c in Sources */,
+				28FF2E9C206C285100AEFB7F /* certify_SAT.c in Sources */,
+				28FF2EAB206C285100AEFB7F /* satsolver_picosat_assumptions.c in Sources */,
+				28FF2EA5206C285100AEFB7F /* lglib.c in Sources */,
+				28FF2E91206C285100AEFB7F /* c2_clause_minimization.c in Sources */,
+				28FF2EB9206C285100AEFB7F /* val_vector.c in Sources */,
+				28FF2EB1206C285100AEFB7F /* heap.c in Sources */,
+				28FF2E9F206C285100AEFB7F /* examples.c in Sources */,
+				28FF2EAC206C285100AEFB7F /* satsolver_lingeling_assumptions.c in Sources */,
+				28FF2EB2206C285100AEFB7F /* map.c in Sources */,
+				28FF2E94206C285100AEFB7F /* active_clause_iterator.c in Sources */,
+				28FF2EEC206C39E200AEFB7F /* util.c in Sources */,
+				28FF2E95206C285100AEFB7F /* skolem.c in Sources */,
+				28FF2E9D206C285100AEFB7F /* certify_UNSAT.c in Sources */,
+				28FF2E97206C285100AEFB7F /* skolem_dependencies.c in Sources */,
+				28FF2EA0206C285100AEFB7F /* partial_assignment.c in Sources */,
+				28FF2E9B206C285100AEFB7F /* partitions.c in Sources */,
+				28FF2EAA206C285100AEFB7F /* satsolver_picosat.c in Sources */,
+				28FF2E92206C285100AEFB7F /* c2_simplify.c in Sources */,
+				28FF2E8C206C285100AEFB7F /* cadet2.c in Sources */,
 				28675A4F1DDAA9D000951212 /* main.c in Sources */,
-				28577A721E6F87200082100B /* qipasir.c in Sources */,
-				28261B921F71872D006974DC /* c2_clause_minimization.c in Sources */,
-				28DA30F41DFFDD2600EABCA6 /* skolem_dependencies.c in Sources */,
-				286319502056650500808F7C /* active_clause_iterator.c in Sources */,
-				28675A461DDAA9D000951212 /* aiger.c in Sources */,
-				28675A611DDAA9D000951212 /* undo_stack.c in Sources */,
-				28C1C17F20197A000094DB4E /* c2_rl.c in Sources */,
-				28675A451DDAA9D000951212 /* aiger_utils.c in Sources */,
-				28675A631DDAA9D000951212 /* util.c in Sources */,
-				28675A591DDAA9D000951212 /* qcnf.c in Sources */,
-				28C1C182202D3EB40094DB4E /* cegar.c in Sources */,
-				287C3B0D1E37EF7B00F7096A /* examples.c in Sources */,
-				28675A5C1DDAA9D000951212 /* satsolver_minisat.cc in Sources */,
+				28FF2E9E206C285100AEFB7F /* conflict_analysis.c in Sources */,
+				28FF2EB6206C285100AEFB7F /* float_vector.c in Sources */,
+				28FF2E9A206C285100AEFB7F /* cegar.c in Sources */,
+				28FF2E8A206C285100AEFB7F /* options.c in Sources */,
+				28FF2EA8206C285100AEFB7F /* satsolver_cryptominisat.cpp in Sources */,
+				28FF2EB4206C285100AEFB7F /* vector.c in Sources */,
+				28FF2EB5206C285100AEFB7F /* int_vector.c in Sources */,
+				28FF2E98206C285100AEFB7F /* skolem_conflict_analysis.c in Sources */,
+				28FF2EA1206C285100AEFB7F /* qipasir.c in Sources */,
+				28FF2E87206C285100AEFB7F /* statistics.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		28FF2E6D206C277D00AEFB7F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				28FF2EE8206C37F100AEFB7F /* tests.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		28FF2EEB206C39DB00AEFB7F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 28D2C3891DDAA95E000E9C51 /* cadet */;
+			targetProxy = 28FF2EEA206C39DB00AEFB7F /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		28D2C38F1DDAA95E000E9C51 /* Debug */ = {
@@ -530,7 +600,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.12;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				MTL_ENABLE_DEBUG_INFO = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
@@ -571,7 +641,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.12;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				SDKROOT = macosx;
 			};
@@ -584,9 +654,13 @@
 				CLANG_WARN_SUSPICIOUS_IMPLICIT_CONVERSION = YES;
 				GCC_NO_COMMON_BLOCKS = NO;
 				GCC_TREAT_INCOMPATIBLE_POINTER_TYPE_WARNINGS_AS_ERRORS = YES;
+				GCC_WARN_ABOUT_MISSING_FIELD_INITIALIZERS = YES;
 				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
 				GCC_WARN_INITIALIZER_NOT_FULLY_BRACKETED = YES;
 				GCC_WARN_PEDANTIC = YES;
+				GCC_WARN_SHADOW = NO;
+				GCC_WARN_UNKNOWN_PRAGMAS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
@@ -599,10 +673,58 @@
 				GCC_NO_COMMON_BLOCKS = NO;
 				GCC_OPTIMIZATION_LEVEL = 3;
 				GCC_TREAT_INCOMPATIBLE_POINTER_TYPE_WARNINGS_AS_ERRORS = YES;
+				GCC_WARN_ABOUT_MISSING_FIELD_INITIALIZERS = YES;
 				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
 				GCC_WARN_INITIALIZER_NOT_FULLY_BRACKETED = YES;
 				GCC_WARN_PEDANTIC = YES;
+				GCC_WARN_SHADOW = NO;
+				GCC_WARN_UNKNOWN_PRAGMAS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+		28FF2E75206C277D00AEFB7F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_ANALYZER_SECURITY_INSECUREAPI_RAND = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CODE_SIGN_STYLE = Automatic;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRIP_INSTALLED_PRODUCT = YES;
+			};
+			name = Debug;
+		};
+		28FF2E76206C277D00AEFB7F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_ANALYZER_SECURITY_INSECUREAPI_RAND = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CODE_SIGN_STYLE = Automatic;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				MACOSX_DEPLOYMENT_TARGET = 10.13;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRIP_INSTALLED_PRODUCT = YES;
 			};
 			name = Release;
 		};
@@ -623,6 +745,15 @@
 			buildConfigurations = (
 				28D2C3921DDAA95E000E9C51 /* Debug */,
 				28D2C3931DDAA95E000E9C51 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		28FF2E77206C277D00AEFB7F /* Build configuration list for PBXNativeTarget "tests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				28FF2E75206C277D00AEFB7F /* Debug */,
+				28FF2E76206C277D00AEFB7F /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

@@ -654,14 +654,14 @@ C2* c2_from_file(FILE* file, Options* options) {
     int len = 1000; // max 1kb for the first line
     char *line = malloc((size_t)len);
     
-    abortif(!fgets(line, len, file), "Could not read first line");
+    abortif(!cautious_readline(line, len, file), "Could not read first line");
     
     int line_num = 1;
     
     // Skip comment lines
     while (line[0] == 'c') {
         line_num++;
-        abortif(!fgets(line, len, file), "Expected header after comments ending in line %d", line_num);
+        abortif(!cautious_readline(line, len, file), "Expected header after comments ending in line %d", line_num);
     }
     
     char* qcnf_header_start = "p cnf ";

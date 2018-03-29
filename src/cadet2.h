@@ -61,8 +61,11 @@ void c2_print_AIG_certificate(C2* c2, const char* filename);
 // Print solver statistics on stdout.
 void c2_print_statistics(C2*);
 
-// Composite calls:
-cadet_res c2_solve_qdimacs(FILE*, Options*); // reads from stdin or file; solves the problem and prints output
+
+// Reads from stdin if file_name is NULL and from specified file otherwise.
+// Then solves the problem and prints output. 
+cadet_res c2_solve_qdimacs(const char* filename, Options*);
+
 aiger* c2_qaiger_quantifier_elimination(aiger*, char* filename, Options*); // not yet implemented
 
 #endif /* cadet2_h */

@@ -23,7 +23,6 @@ int main(int argc, const char* argv[]) {
     // default
     Options* options = default_options();
     char *file_name = NULL;
-    FILE* file;
     
     // scan for file name and flags
     for (int i = 1; i < argc; i++) {
@@ -193,7 +192,7 @@ int main(int argc, const char* argv[]) {
             }
         } else {
             // expect file name as last argument
-            char* file_name = malloc(strlen(argv[i]) + 1);
+            file_name = malloc(strlen(argv[i]) + 1);
             strcpy(file_name, argv[i]);
             break;
         }
@@ -203,14 +202,6 @@ int main(int argc, const char* argv[]) {
         LOG_WARNING("Verbosity is medium or higher and comment prefix is set. May result in cluttered log.");
     }
     
-    if (file_name == NULL) {
-        V0("Reading from stdin\n");
-        file = stdin;
-    } else {
-        V0("Processing file \"%s\".\n", file_name);
-        file = open_possibly_zipped_file(file_name);
-    }
-    
     V0("CADET %s\n", VERSION);
     
 //    void* solver = create_solver_from_qdimacs(file);
@@ -218,8 +209,7 @@ int main(int argc, const char* argv[]) {
 //    return res == 0 ? 30 : res; // unknown result according to ipasir is not the same as unknown result otherwise.
     
     if (!options->reinforcement_learning) {
-        cadet_res res = c2_solve_qdimacs(file, options);
-        close_possibly_zipped_file(file_name, file);
+        cadet_res res = c2_solve_qdimacs(file_name, options);
         return res;
     } else {
         if (options->cegar) {

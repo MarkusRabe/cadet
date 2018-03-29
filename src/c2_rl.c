@@ -463,6 +463,7 @@ cadet_res c2_rl_run_c2(Options* o) {
             file_name = mock_file;
         } else {
             file_name = c2_rl_readline();
+            LOG_PRINTF("\n");
         }
         // scan for end, should be terminated with newline
         char *end = file_name;
@@ -475,10 +476,9 @@ cadet_res c2_rl_run_c2(Options* o) {
         }
         abortif(i >= maxlen, "File name too long.");
         FILE* file = open_possibly_zipped_file(file_name);
-        LOG_PRINTF("\n");
-        
         C2* solver = c2_from_file(file, o);
         close_possibly_zipped_file(file_name, file);
+        
         cadet_res res = c2_sat(solver);
         
         if (res == CADET_RESULT_SAT) {

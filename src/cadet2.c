@@ -758,9 +758,18 @@ int_vector* c2_refuting_assignment(C2* c2) {
 /**
  * c2_solve_qdimacs is the traditional entry point to C2. It reads the qdimacs, then solves, then prints and checks the result after calling c2_sat.
  */
-cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
+cadet_res c2_solve_qdimacs(const char* file_name, Options* options) {
     if (!options) {options = default_options();}
-    C2* c2 = c2_from_file(f, options);
+    FILE* file = NULL;
+    if (file_name == NULL) {
+        V0("Reading from stdin\n");
+        file = stdin;
+    } else {
+        V0("Processing file \"%s\".\n", file_name);
+        file = open_possibly_zipped_file(file_name);
+    }
+    C2* c2 = c2_from_file(file, options);
+    close_possibly_zipped_file(file_name, file);
 
     V1("Maximal variable index: %u\n", var_vector_count(c2->qcnf->vars));
     V1("Number of clauses: %u\n", vector_count(c2->qcnf->all_clauses));

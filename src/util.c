@@ -7,6 +7,7 @@
 #include <string.h>
 #include <assert.h>
 #include <stdint.h>
+#include <errno.h>
 
 int compare_integers_abs(const void * a, const void * b) {
     int x = abs(* ((int*) a));
@@ -90,12 +91,47 @@ FILE* open_possibly_zipped_file(const char* file_name) {
 }
 
 void close_possibly_zipped_file(const char* file_name, FILE* file) {
-    const char* ext = get_filename_ext(file_name);
-    size_t extlen = strlen(ext);
-    V4("Detected file name extension %s\n", ext);
-    if ( (extlen == 2 && strcmp("gz", ext) == 0) || (extlen == 4 && strcmp("gzip", ext) == 0) ) {
-        pclose(file);
-    } else {
-        fclose(file);
+    if (file_name) {
+        const char* ext = get_filename_ext(file_name);
+        size_t extlen = strlen(ext);
+        V4("Detected file name extension %s\n", ext);
+        if ( (extlen == 2 && strcmp("gz", ext) == 0) || (extlen == 4 && strcmp("gzip", ext) == 0) ) {
+            pclose(file);
+        } else {
+            fclose(file);
+        }
+    } // file_name == NULL idicates stdin
+}
+
+
+int ms_sleep(unsigned int ms) {
+    int result = 0;
+    struct timespec ts_remaining = {
+        ms / 1000,
+        (ms % 1000) * 1000000L
+    };
+    
+    do {
+        struct timespec ts_sleep = ts_remaining;
+        result = nanosleep(&ts_sleep, &ts_remaining);
     }
+    while (EINTR == result);
+    
+    if (result) {
+        perror("nanosleep() failed");
+        result = -1;
+    }
+    return result;
+}
+
+
+char* cautious_readline(char * target, int n, FILE* file) {
+    char* result = 0;
+    unsigned i = 0;
+    while (((result = fgets(target, n, file)) == NULL) && i < 100) {
+        ms_sleep(1);
+        LOG_WARNING("Reading line failed; waiting a millisecond before next try.");
+        i += 1;
+    }
+    return result;
 }

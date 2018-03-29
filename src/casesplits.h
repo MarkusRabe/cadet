@@ -37,13 +37,12 @@ typedef struct Casesplits Casesplits;
 struct Case {
     int_vector* universal_assumptions;
     int_vector* decisions; // can be an assignment to dlvl>0 vars (for CEGAR) or decisions to be fed to skolem
-    QCNF* qcnf;
+    int_vector* unique_consequences;
     char type; // 0 indicates cegar round, 1 indicates case split
     // type listed last, as this reduces memory footprint of this struct by 7 bytes.
 };
 
 struct Casesplits {
-    QCNF* qcnf;
     Skolem* skolem;
     
     // dlvl0 interface

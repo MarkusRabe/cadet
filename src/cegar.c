@@ -12,12 +12,12 @@
 
 #include <assert.h>
 
-bool cegar_var_needs_to_be_set(Casesplits* d, unsigned var_id) {
-    abortif(int_vector_get(d->is_used_in_lemma, var_id) == 0, "Variable not used in CEGAR lemma?");
-    int satval = satsolver_deref(d->exists_solver, (int) var_id);
+bool cegar_var_needs_to_be_set(Casesplits* cs, unsigned var_id) {
+    abortif(int_vector_get(cs->is_used_in_lemma, var_id) == 0, "Variable not used in CEGAR lemma?");
+    int satval = satsolver_deref(cs->exists_solver, (int) var_id);
     abortif(satval == 0, "CEGAR lemma variable not set in SAT solver");
     
-    Var* v = var_vector_get(d->qcnf->vars, var_id);
+    Var* v = var_vector_get(cs->skolem->qcnf->vars, var_id);
     vector* occs = satval > 0 ? &v->pos_occs : &v->neg_occs;
     int_vector* additional_assignments_var = int_vector_init();
     for (unsigned i = 0; i < vector_count(occs); i++) {
@@ -32,16 +32,16 @@ bool cegar_var_needs_to_be_set(Casesplits* d, unsigned var_id) {
             if (var_id == lit_to_var(occ)) {
                 continue;
             }
-            if (satsolver_deref(d->exists_solver, occ) == -1 || int_vector_get(d->is_used_in_lemma, lit_to_var(occ)) == 0) {
+            if (satsolver_deref(cs->exists_solver, occ) == -1 || int_vector_get(cs->is_used_in_lemma, lit_to_var(occ)) == 0) {
                 continue;
             }
             
-            if (satsolver_deref(d->exists_solver, occ) == 1 || int_vector_contains_sorted(d->additional_assignment, occ) || int_vector_contains_sorted(additional_assignments_var, occ)) {
+            if (satsolver_deref(cs->exists_solver, occ) == 1 || int_vector_contains_sorted(cs->additional_assignment, occ) || int_vector_contains_sorted(additional_assignments_var, occ)) {
                 c_satisfied_without = true;
                 break;
             } else {
-                assert(satsolver_deref(d->exists_solver, occ) == 0);
-                if (can_be_satisfied_by_unset == 0 && ! int_vector_contains_sorted(d->additional_assignment, -occ) && ! int_vector_contains_sorted(additional_assignments_var, - occ)) {
+                assert(satsolver_deref(cs->exists_solver, occ) == 0);
+                if (can_be_satisfied_by_unset == 0 && ! int_vector_contains_sorted(cs->additional_assignment, -occ) && ! int_vector_contains_sorted(additional_assignments_var, - occ)) {
                     c_satisfied_without = true;
                     can_be_satisfied_by_unset = occ;
                 }
@@ -53,16 +53,16 @@ bool cegar_var_needs_to_be_set(Casesplits* d, unsigned var_id) {
             return true;
         }
         if (can_be_satisfied_by_unset != 0) {
-            d->cegar_stats.additional_assignments_num += 1;
+            cs->cegar_stats.additional_assignments_num += 1;
             int_vector_add_sorted(additional_assignments_var, can_be_satisfied_by_unset);
         }
     }
-    int_vector_add_all_sorted(d->additional_assignment, additional_assignments_var);
+    int_vector_add_all_sorted(cs->additional_assignment, additional_assignments_var);
     if (int_vector_count(additional_assignments_var) > 0) {
-        d->cegar_stats.successful_minimizations_by_additional_assignments += 1;
+        cs->cegar_stats.successful_minimizations_by_additional_assignments += 1;
     }
     int_vector_free(additional_assignments_var);
-    d->cegar_stats.successful_minimizations += 1;
+    cs->cegar_stats.successful_minimizations += 1;
     return false;
 }
 

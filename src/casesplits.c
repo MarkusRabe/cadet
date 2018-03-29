@@ -14,7 +14,6 @@
 
 Casesplits* casesplits_init(QCNF* qcnf) {
     Casesplits* cs = malloc(sizeof(Casesplits));
-    cs->qcnf = qcnf;
     cs->skolem = NULL;
     cs->closed_cases = vector_init();
     
@@ -80,25 +79,24 @@ void cegar_remember_original_satlit(Casesplits* cs, unsigned var_id) {
 }
 
 void casesplits_update_interface(Casesplits* cs, Skolem* skolem) {
+    assert(cs->skolem == NULL || cs->skolem == skolem);
+    cs->skolem = skolem;
     
     // initialize vector of bits saying we need this variable in the blocking clause
     int_vector_reset(cs->is_used_in_lemma);
-    for (unsigned i = 0; i < var_vector_count(cs->qcnf->vars); i++) {
+    for (unsigned i = 0; i < var_vector_count(cs->skolem->qcnf->vars); i++) {
         int_vector_add(cs->is_used_in_lemma, 1);
     }
-    
-    assert(cs->skolem == NULL || cs->skolem == skolem);
-    cs->skolem = skolem;
     
     if (cs->exists_solver) {satsolver_free(cs->exists_solver);}
     cs->exists_solver = satsolver_init();
     
-    const unsigned max_var_id = var_vector_count(cs->qcnf->vars);
+    const unsigned max_var_id = var_vector_count(cs->skolem->qcnf->vars);
     satsolver_set_max_var(cs->exists_solver, (int) max_var_id);
     
     // set up satsolver for existentials
-    for (unsigned i = 0; i < vector_count(cs->qcnf->all_clauses); i++) {
-        Clause* c = vector_get(cs->qcnf->all_clauses, i);
+    for (unsigned i = 0; i < vector_count(cs->skolem->qcnf->all_clauses); i++) {
+        Clause* c = vector_get(cs->skolem->qcnf->all_clauses, i);
         if (! c->original) {
             continue;
         }
@@ -116,8 +114,8 @@ void casesplits_update_interface(Casesplits* cs, Skolem* skolem) {
     // determine interface variables; variables that are deterministic and occur in clauses together with nondeterministic variables.
     int_vector* old_interface = cs->interface_vars;
     cs->interface_vars = int_vector_init();
-    for (unsigned i = 0; i < vector_count(cs->qcnf->all_clauses); i++) {
-        Clause* c = vector_get(cs->qcnf->all_clauses, i);
+    for (unsigned i = 0; i < vector_count(cs->skolem->qcnf->all_clauses); i++) {
+        Clause* c = vector_get(cs->skolem->qcnf->all_clauses, i);
         if (! c->original || c->blocked) {
             continue;
         }
@@ -163,7 +161,7 @@ void casesplits_update_interface(Casesplits* cs, Skolem* skolem) {
 void case_free(Case* c) {
     if (c->universal_assumptions) {int_vector_free(c->universal_assumptions);}
     if (c->decisions) {int_vector_free(c->decisions);}
-    if (c->qcnf) {qcnf_free(c->qcnf);}
+    if (c->unique_consequences) {int_vector_free(c->unique_consequences);}
     free(c);
 }
 
@@ -185,7 +183,7 @@ Case* case_init() {
     c->type = 0;
     c->universal_assumptions = NULL;
     c->decisions = NULL;
-    c->qcnf = NULL;
+    c->unique_consequences = NULL;
     return c;
 }
 
@@ -322,8 +320,8 @@ void casesplits_encode_last_case(Casesplits* cs) {
         casesplits_close_heuristics(cs, c->universal_assumptions);
         
 #ifdef DEBUG
-        for (unsigned i = 0; i < var_vector_count(c->qcnf->vars); i++) {
-            abortif(qcnf_var_exists(c->qcnf, i) && ! skolem_is_deterministic(cs->skolem, i), "A variable remained deterministic after casesplit replay.");
+        for (unsigned i = 0; i < var_vector_count(cs->skolem->qcnf->vars); i++) {
+            abortif(qcnf_var_exists(cs->skolem->qcnf, i) && ! skolem_is_deterministic(cs->skolem, i), "A variable remained deterministic after casesplit replay.");
         }
 #endif
         
@@ -332,12 +330,12 @@ void casesplits_encode_last_case(Casesplits* cs) {
     }
 }
 
-void casesplits_completed_case_split(Casesplits* cs, int_vector* universal_assumptions, int_vector* decisions, QCNF* clauses) {
+void casesplits_completed_case_split(Casesplits* cs, int_vector* universal_assumptions, int_vector* decisions) {
     Case* c = case_init();
     c->type = 1; // function case
     c->universal_assumptions = universal_assumptions;
     c->decisions = decisions;
-    c->qcnf = clauses;
+    c->unique_consequences = int_vector_copy(cs->skolem->unique_consequence);
     vector_add(cs->closed_cases, c);
 }
 
@@ -398,8 +396,7 @@ void casesplits_record_case(Casesplits* cs) {
     
     casesplits_completed_case_split(cs,
                                     int_vector_copy(cs->skolem->universals_assumptions),
-                                    determinizations_with_polarity,
-                                    qcnf_copy(cs->qcnf));
+                                    determinizations_with_polarity);
 }
 
 void casesplits_steal_cases(Casesplits* new_cs, Casesplits* old_cs) {
@@ -411,15 +408,15 @@ void casesplits_steal_cases(Casesplits* new_cs, Casesplits* old_cs) {
             // objects will not be deallocated during free of old_cs below.
             c->universal_assumptions = NULL;
             c->decisions = NULL;
-            assert(c->qcnf == NULL);
+            assert(c->unique_consequences == NULL);
         } else {
             assert(c->type == 1);
             // We passed these objects on to the new casesplits object, so make sure these
             // objects will not be deallocated during free of old_cs below.
-            casesplits_completed_case_split(new_cs, c->universal_assumptions, c->decisions, c->qcnf);
+            casesplits_completed_case_split(new_cs, c->universal_assumptions, c->decisions);
             c->universal_assumptions = NULL;
             c->decisions = NULL;
-            c->qcnf = NULL;
+            c->unique_consequences = NULL;
         }
         casesplits_encode_last_case(new_cs);
     }

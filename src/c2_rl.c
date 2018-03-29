@@ -388,6 +388,7 @@ void rl_reward_clause(C2* solver, unsigned idx, float total_reward) {
             }
         }
         if (learnt_clause_operands > 0) {
+            assert(resolution_operands);
             float reward_per_operand = remaining_reward / (float) learnt_clause_operands;
             for (unsigned i = 0; i < int_vector_count(resolution_operands); i++) {
                 unsigned operand_clause_idx = (unsigned) int_vector_get(resolution_operands, i);
@@ -401,9 +402,6 @@ void rl_reward_clause(C2* solver, unsigned idx, float total_reward) {
         } else {
             rl_add_reward(reward_idx, remaining_reward);
             V1("Rewarding REMAINING for clause %u at pos %u with %f\n", idx, reward_idx, remaining_reward);
-        }
-        if (resolution_operands) {
-            int_vector_free(resolution_operands);
         }
     }
     int_vector_free(clauses_to_reward);

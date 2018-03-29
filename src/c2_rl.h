@@ -29,6 +29,6 @@ void rl_unmute();
 
 int_vector* c2_rl_necessary_learnt_clauses(C2*);
 cadet_res c2_rl_run_c2(Options*);
-void rl_mock_file(FILE*);
+void rl_mock_file(char*);
 
 #endif /* c2_rl_h */

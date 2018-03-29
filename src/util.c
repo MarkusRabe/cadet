@@ -74,7 +74,7 @@ FILE* open_possibly_zipped_file(const char* file_name) {
         char* unzip_tool_name = "zcat ";
 #endif
 #ifdef _WIN32
-        abort(); // please use a proper operating system
+        abortif(true, "Opening zipped files in Windows is not supported.");
 #endif
         
         char* cmd = malloc(strlen(unzip_tool_name) + strlen(file_name) + 5);
@@ -87,4 +87,15 @@ FILE* open_possibly_zipped_file(const char* file_name) {
         abortif(!file, "Cannot open file \"%s\", does not exist?", file_name);
     }
     return file;
+}
+
+void close_possibly_zipped_file(const char* file_name, FILE* file) {
+    const char* ext = get_filename_ext(file_name);
+    size_t extlen = strlen(ext);
+    V4("Detected file name extension %s\n", ext);
+    if ( (extlen == 2 && strcmp("gz", ext) == 0) || (extlen == 4 && strcmp("gzip", ext) == 0) ) {
+        pclose(file);
+    } else {
+        fclose(file);
+    }
 }

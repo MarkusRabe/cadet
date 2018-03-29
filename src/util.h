@@ -19,5 +19,6 @@ double get_seconds();
 
 const char* get_filename_ext(const char* filename);
 FILE* open_possibly_zipped_file(const char* file_name);
+void close_possibly_zipped_file(const char* file_name, FILE* file);
 
 #endif

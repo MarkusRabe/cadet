@@ -761,7 +761,6 @@ int_vector* c2_refuting_assignment(C2* c2) {
 cadet_res c2_solve_qdimacs(FILE* f, Options* options) {
     if (!options) {options = default_options();}
     C2* c2 = c2_from_file(f, options);
-    if (f != stdin) {fclose(f);}
 
     V1("Maximal variable index: %u\n", var_vector_count(c2->qcnf->vars));
     V1("Number of clauses: %u\n", vector_count(c2->qcnf->all_clauses));

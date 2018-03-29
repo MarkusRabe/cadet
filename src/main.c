@@ -22,7 +22,7 @@ int main(int argc, const char* argv[]) {
 
     // default
     Options* options = default_options();
-    const char *file_name = NULL;
+    char *file_name = NULL;
     FILE* file;
     
     // scan for file name and flags
@@ -193,7 +193,8 @@ int main(int argc, const char* argv[]) {
             }
         } else {
             // expect file name as last argument
-            file_name = argv[i];
+            char* file_name = malloc(strlen(argv[i]) + 1);
+            strcpy(file_name, argv[i]);
             break;
         }
     }
@@ -217,7 +218,9 @@ int main(int argc, const char* argv[]) {
 //    return res == 0 ? 30 : res; // unknown result according to ipasir is not the same as unknown result otherwise.
     
     if (!options->reinforcement_learning) {
-        return c2_solve_qdimacs(file,options);
+        cadet_res res = c2_solve_qdimacs(file, options);
+        close_possibly_zipped_file(file_name, file);
+        return res;
     } else {
         if (options->cegar) {
             LOG_WARNING("Switching off CEGAR for reinforcement learning.\n");
@@ -232,7 +235,7 @@ int main(int argc, const char* argv[]) {
 //            options->minimize_learnt_clauses = false;
 //        }
         if (options->reinforcement_learning_mock) {
-            rl_mock_file(file);
+            rl_mock_file(file_name);
         }
         return c2_rl_run_c2(options);
     }

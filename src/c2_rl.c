@@ -31,7 +31,7 @@ typedef struct {
 } RL;
 
 RL* rl = NULL;
-FILE* mock_file = NULL;
+char* mock_file = NULL;
 
 void rl_init() {
     assert(rl == NULL);
@@ -410,8 +410,8 @@ void rl_reward_clause(C2* solver, unsigned idx, float total_reward) {
     clauses_to_reward = NULL;
 }
 
-void rl_mock_file(FILE* file) {
-    mock_file = file;
+void rl_mock_file(char* file_name) {
+    mock_file = file_name;
 }
 
 void rl_advanced_action_rewards(C2* solver) {
@@ -458,27 +458,27 @@ cadet_res c2_rl_run_c2(Options* o) {
     while (true) {
         rl_init();
         
-        FILE* file = NULL;
+        char *file_name = NULL;
         if (mock_file) {
-            file = mock_file;
+            file_name = mock_file;
         } else {
-            char *file_name = c2_rl_readline();
-            // scan for end, should be terminated with newline
-            char *end = file_name;
-            int i = 0; int maxlen = 1000;
-            while (i < maxlen) {
-                if (*end == '\n') *end = '\0';
-                if (*end == '\0') break;
-                end += 1;
-                i += 1;
-            }
-            abortif(i >= maxlen, "File name too long.");
-            file = open_possibly_zipped_file(file_name);
-            LOG_PRINTF("\n");
+            file_name = c2_rl_readline();
         }
+        // scan for end, should be terminated with newline
+        char *end = file_name;
+        int i = 0; int maxlen = 1000;
+        while (i < maxlen) {
+            if (*end == '\n') *end = '\0';
+            if (*end == '\0') break;
+            end += 1;
+            i += 1;
+        }
+        abortif(i >= maxlen, "File name too long.");
+        FILE* file = open_possibly_zipped_file(file_name);
+        LOG_PRINTF("\n");
         
         C2* solver = c2_from_file(file, o);
-        fclose(file);
+        close_possibly_zipped_file(file_name, file);
         cadet_res res = c2_sat(solver);
         
         if (res == CADET_RESULT_SAT) {

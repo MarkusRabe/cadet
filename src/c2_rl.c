@@ -507,11 +507,11 @@ cadet_res c2_rl_run_c2(Options* o) {
         
         fflush(stdout);
         
-        if (mock_file) {
-            return c2_result(solver);
-        }
         rl_free();
         c2_free(solver);
+        if (mock_file) {
+            return res;
+        }
     }
     return CADET_RESULT_UNKNOWN;
 }

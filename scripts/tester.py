@@ -541,7 +541,7 @@ if __name__ == "__main__":
         ARGS.instances = None
         # ARGS.certify = False
         categories = ['test_files']
-        configs = ['--debugging', '--debugging --sat_by_qbf', '--debugging --cegar', '--debugging --case_splits', '--debugging --cegar --case_splits', '--debugging --cegar --case_splits --sat_by_qbf', '', '--cegar', '--case_splits', '--cegar --case_splits', '--rl --rl_mock', '--rl --rl_mock --debugging', '--rl --rl_mock --debugging --minimize', '--rl --rl_mock --sat_by_qbf']
+        configs = ['--debugging', '--debugging --sat_by_qbf', '--debugging --cegar', '--debugging --case_splits', '--debugging --cegar --case_splits', '--debugging --cegar --case_splits --sat_by_qbf', '', '--cegar', '--case_splits', '--cegar --case_splits', '--rl --rl_mock', '--rl --rl_mock --debugging', '--rl --rl_mock --debugging --minimize', '--rl --rl_mock --sat_by_qbf', '--rl --rl_mock --sat_by_qbf --random_decisions', '--rl --rl_mock --sat_by_qbf --random_decisions --rl_advanced_rewards']
     
     if ARGS.config:
         configs = []

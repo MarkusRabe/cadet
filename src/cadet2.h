@@ -32,6 +32,7 @@ C2* c2_from_qaiger(aiger*, Options*);
 
 // Introduces a new variable with identifier var_id.
 void c2_new_2QBF_variable(C2*, bool is_universal, unsigned var_id);
+unsigned c2_fresh_variable(C2*, bool is_universal);
 
 // Add new clauses (constraints) by the following command.
 // Negative numbers indicate negated variables.
@@ -60,7 +61,6 @@ void c2_print_AIG_certificate(C2* c2, const char* filename);
 
 // Print solver statistics on stdout.
 void c2_print_statistics(C2*);
-
 
 // Reads from stdin if file_name is NULL and from specified file otherwise.
 // Then solves the problem and prints output. 

@@ -863,7 +863,14 @@ void c2_new_variable(C2* c2, bool is_universal, unsigned scope_id, unsigned var_
 }
 
 void c2_new_2QBF_variable(C2* c2, bool is_universal, unsigned var_id) {
+    abortif(qcnf_var_exists(c2->qcnf, var_id), "Variable %u exists already.", var_id);
     c2_new_variable(c2, is_universal, 1, var_id);
+}
+
+unsigned c2_fresh_variable(C2* c2, bool is_universal) {
+    unsigned var_id = var_vector_count(c2->qcnf->vars);
+    c2_new_2QBF_variable(c2, is_universal, var_id);
+    return var_id;
 }
 
 void c2_new_clause(C2* c2, Clause* c) {

@@ -15,7 +15,8 @@
 
 typedef enum {
     QBFCERT,
-    CAQECERT
+    CAQECERT,
+    QAIGER
 } certificate_type;
 
 typedef struct {

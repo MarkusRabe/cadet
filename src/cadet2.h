@@ -57,7 +57,7 @@ cadet_res c2_result(C2*);
 int c2_val (C2* c2, int literal);
 
 // Prints the AIG certificate to the specified file.
-void c2_print_AIG_certificate(C2* c2, const char* filename);
+void c2_write_AIG_certificate(C2* c2, const char* filename);
 
 // Print solver statistics on stdout.
 void c2_print_statistics(C2*);

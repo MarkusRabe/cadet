@@ -801,7 +801,7 @@ cadet_res c2_solve_qdimacs(const char* file_name, Options* options) {
                 printf("s cnf 1\n");
             }
             if (c2->options->certify_SAT) {
-                c2_print_AIG_certificate(c2, options->certificate_file_name);
+                c2_write_AIG_certificate(c2, options->certificate_file_name);
             }
             break;
         case CADET_RESULT_UNSAT:

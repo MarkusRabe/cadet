@@ -1,6 +1,6 @@
 #!/bin/bash
 
-./../cadet --cegar -c tmp.aig $1
+./../cadet -c tmp.aig $1
 
 #aigtoaig tmp.aag tmp.aig
 

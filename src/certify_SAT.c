@@ -174,6 +174,7 @@ void cert_encode_case(C2* c2, aiger* a, unsigned *max_sym, int_vector* aigerlits
     // Certificate all remaining cases by writing out the unique consequences of the dlvl>0 variables
     for (unsigned i = 0; i < int_vector_count(c->decisions); i++) {
         Lit decision_lit = int_vector_get(c->decisions, i);
+        assert(decision_lit != 0);
         unsigned var_id = lit_to_var(decision_lit);
         if (! qcnf_var_exists(c2->qcnf, var_id) || qcnf_is_universal(c2->qcnf, var_id)) {
             continue;
@@ -186,21 +187,68 @@ void cert_encode_case(C2* c2, aiger* a, unsigned *max_sym, int_vector* aigerlits
 }
 
 
+unsigned cert_encode_new_aigerlits_for_case(C2* c2, aiger* a, unsigned* max_sym, int_vector* aigerlits, int_vector* alt_aigerlits) {
+    
+    // Create a copy of all existentials with dlvl>0; connect them with a mux
+    
+    // Introduce signal that will be the condtition of the MUXs of this case
+    unsigned case_selector = inc(max_sym);
+    
+    for (unsigned var_id = 0; var_id < var_vector_count(c2->qcnf->vars); var_id++) {
+        if (! qcnf_var_exists(c2->qcnf, var_id)
+            || (skolem_is_deterministic(c2->skolem, var_id)
+                && skolem_get_decision_lvl(c2->skolem, var_id) == 0)) {
+                continue;
+            }
+        unsigned new_aigerlit = inc(max_sym);
+        unsigned alt_aigerlit = inc(max_sym);
+        unsigned old_aigerlit = (unsigned) int_vector_get(aigerlits, var_id);
+        
+        cert_add_multiplexer_gate(a, max_sym, old_aigerlit, case_selector, new_aigerlit, alt_aigerlit);
+        
+        int_vector_set(aigerlits, var_id, (int) new_aigerlit);
+        int_vector_set(alt_aigerlits, var_id, (int) alt_aigerlit);
+    }
+    return case_selector;
+}
+
+
 // Assumes c2 to be in SAT state and that dlvl 0 is fully propagated; and that dlvl is not propagated depending on restrictions to universals (i.e. after completed case_splits)
 void c2_write_AIG_certificate(C2* c2, const char* filename) {
     abortif(c2->state != C2_SAT, "Can only generate certificate in SAT state.");
     abortif(int_vector_count(c2->skolem->universals_assumptions) > 0, "Current state of C2 must not depend on universal assumptions");
     
-    aiger* a = cert_setup_AIG(c2->qcnf, c2->options);
-    unsigned max_sym = var2aigerlit(var_vector_count(c2->qcnf->vars));
+    aiger* a = aiger_init();
+    
     int_vector* aigerlits = int_vector_init(); // maps var_id to the current aiger_lit representing it
+    for (unsigned i = 0 ; i < var_vector_count(c2->qcnf->vars); i++) {int_vector_add(aigerlits, 0);}
+    
+    // taking the logarithm of the maximum var_id
+    int log_of_var_num = 0;
+    unsigned var_num_copy = var_vector_count(c2->qcnf->vars);
+    while (var_num_copy >>= 1) log_of_var_num++;
+    
+    // Reserve aigerlits for the original variables; needed for QBFCERT compatibility
     for (unsigned i = 0; i < var_vector_count(c2->qcnf->vars); i++) {
-        Var* v = var_vector_get(c2->qcnf->vars, i);
-        int_vector_add(aigerlits, (int) var2aigerlit(v->var_id)); // sets it to 0(=true), if variable does not exist
+        if (qcnf_var_exists(c2->qcnf, i) && qcnf_is_original(c2->qcnf, i)) {
+            unsigned al = var2aigerlit(i);
+            int_vector_set(aigerlits, i, (int) al);
+            
+            char* name = malloc(sizeof(char) * (size_t) log_of_var_num + 2);
+            sprintf(name, "%d", i); // TODO: use QAIGER compatible names
+            if (qcnf_is_universal(c2->qcnf, i)) {
+                aiger_add_input(a, al, name);
+            } else {
+                aiger_add_output(a, al, name);
+            }
+        }
     }
     
+    unsigned max_sym = var2aigerlit(var_vector_count(c2->qcnf->vars));
+    assert(max_sym == var2aigerlit(a->maxvar + 1));
+    
     // Certificate for the dlvl0 variables
-    for (unsigned i = 1; i < var_vector_count(c2->qcnf->vars); i++) {
+    for (unsigned i = 0; i < var_vector_count(c2->qcnf->vars); i++) {
         if (! qcnf_var_exists(c2->qcnf, i) || qcnf_is_universal(c2->qcnf, i)) {
             continue;
         }
@@ -213,27 +261,41 @@ void c2_write_AIG_certificate(C2* c2, const char* filename) {
                 c2_validate_var(c2, i);
                 
                 if (sv.pure_pos) {
-                    cert_encode_unique_antecedents(c2, a, aigerlits, c2->skolem->unique_consequence, &max_sym,   (Lit) i);
+                    cert_encode_unique_antecedents(c2, a, aigerlits, c2->skolem->unique_consequence,
+                                                   &max_sym,   (Lit) i);
                 } else if (sv.pure_neg) {
-                    cert_encode_unique_antecedents(c2, a, aigerlits, c2->skolem->unique_consequence, &max_sym, - (Lit) i);
+                    cert_encode_unique_antecedents(c2, a, aigerlits, c2->skolem->unique_consequence,
+                                                   &max_sym, - (Lit) i);
                 } else {
                     int val = skolem_get_decision_val(c2->skolem, i);
                     abortif(val < -1 || val > 1, "");
                     if (val == 1) {
-                        cert_encode_unique_antecedents(c2, a, aigerlits, c2->skolem->unique_consequence, &max_sym, - (Lit) i);
+                        cert_encode_unique_antecedents(c2, a, aigerlits, c2->skolem->unique_consequence,
+                                                       &max_sym, - (Lit) i);
                     } else if (val == -1) {
-                        cert_encode_unique_antecedents(c2, a, aigerlits, c2->skolem->unique_consequence, &max_sym,   (Lit) i);
+                        cert_encode_unique_antecedents(c2, a, aigerlits, c2->skolem->unique_consequence,
+                                                       &max_sym,   (Lit) i);
                     } else {
                         Var* v = var_vector_get(c2->qcnf->vars, i);
                         bool pos_occs_smaller = vector_count(&v->pos_occs) < vector_count(&v->neg_occs);
-                        cert_encode_unique_antecedents(c2, a, aigerlits, c2->skolem->unique_consequence, &max_sym, (pos_occs_smaller ? 1 : -1) * (Lit) v->var_id);
+                        cert_encode_unique_antecedents(c2, a, aigerlits, c2->skolem->unique_consequence,
+                                                       &max_sym, (pos_occs_smaller ? 1 : -1) * (Lit) v->var_id);
                     }
                 }
             }
         }
     }
     
+    int_vector* alt_aigerlits = int_vector_init();
+    for (unsigned i = 0 ; i < var_vector_count(c2->qcnf->vars); i++) {int_vector_add(alt_aigerlits, 0);}
+    
+    // For every case, encode the function in a new set of symbols and connnect to the existing symbols with a MUX
     for (unsigned i = 0; i < vector_count(c2->cs->closed_cases); i++) {
+        unsigned case_selector = 1;
+        if (i + 1 < vector_count(c2->cs->closed_cases)) { // i.e. this is not the last case
+            case_selector = cert_encode_new_aigerlits_for_case(c2, a, &max_sym, aigerlits, alt_aigerlits);
+        }
+        
         Case* c = vector_get(c2->cs->closed_cases, i);
         if (c->type == 0) {  // CEGAR assignment
             NOT_IMPLEMENTED();
@@ -261,28 +323,15 @@ void c2_write_AIG_certificate(C2* c2, const char* filename) {
                 cert_add_multiplexer_gate(a, &max_sym, aiger_lit, cube_lit, aiger_val, new_aiger_lit);
             }
         } else {  // certificate is an actual function, closed case split
+            
+            // TODO: encode both sides for conflicted vars.
             cert_encode_case(c2, a, &max_sym, aigerlits, c);
         }
+        
         // TODO: For each case, define output and leave ITE-else-case open as new symbol. the other variables should be defined in the last domain-case.
     }
     
-    // TODO: if then else?
-    // TODO: encode both sides for conflicted vars.
     
-    // taking the logarithm of the maximum var_id
-    int log_of_var_num = 0;
-    unsigned var_num_copy = var_vector_count(c2->qcnf->vars);
-    while (var_num_copy >>= 1) log_of_var_num++;
-    // Mark existentials as outputs
-    for (unsigned i = 0; i < var_vector_count(c2->qcnf->vars); i++) {
-        if (qcnf_var_exists(c2->qcnf, i) && qcnf_is_original(c2->qcnf, i)) {
-            char* name = malloc(sizeof(char) * (size_t) log_of_var_num + 2);
-            sprintf(name, "%d", i);
-            if (! qcnf_is_universal(c2->qcnf, i)) {
-                aiger_add_output(a, (unsigned) int_vector_get(aigerlits, i), name);
-            }
-        }
-    }
     
     cert_write_aiger(a, filename, c2->options);
     int_vector_free(aigerlits);

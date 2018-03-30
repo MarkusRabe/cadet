@@ -162,6 +162,7 @@ void case_free(Case* c) {
     if (c->universal_assumptions) {int_vector_free(c->universal_assumptions);}
     if (c->decisions) {int_vector_free(c->decisions);}
     if (c->unique_consequences) {int_vector_free(c->unique_consequences);}
+    if (c->potentially_conflicted_variables) {int_vector_free(c->potentially_conflicted_variables);}
     free(c);
 }
 
@@ -184,6 +185,7 @@ Case* case_init() {
     c->universal_assumptions = NULL;
     c->decisions = NULL;
     c->unique_consequences = NULL;
+    c->potentially_conflicted_variables = NULL;
     return c;
 }
 
@@ -245,7 +247,6 @@ void casesplits_record_conflicts(Skolem* s, int_vector* decision_sequence) {
     }
     V2("max satlit %d\n", satsolver_get_max_var(s->skolem));
     s->record_conflicts = false;
-    skolem_encode_global_conflict_check(s);
 }
 
 int_vector* casesplits_test_assumptions(Casesplits* cs, int_vector* universal_assumptions) {
@@ -299,6 +300,8 @@ void casesplits_encode_last_case(Casesplits* cs) {
         // Encode the disjunction over the potentially conflicted variables.
         // This excludes all solutions for which this Skolem function works
         casesplits_record_conflicts(cs->skolem, c->decisions);
+        c->potentially_conflicted_variables = int_vector_copy(cs->skolem->potentially_conflicted_variables);
+        skolem_encode_global_conflict_check(cs->skolem);
         int_vector* necessary_assumptions = casesplits_test_assumptions(cs, c->universal_assumptions);
         abortif(necessary_assumptions == NULL, "Case split was not successfully closed");
         for (unsigned i = 0; i < int_vector_count(necessary_assumptions); i++) {

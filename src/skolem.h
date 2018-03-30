@@ -82,7 +82,8 @@ struct Skolem {
     int_vector* unique_consequence; // contains lit indexed by clause_id
     
     // Stores all the variables that are potentially conflicted
-    int_vector* potential_conflicts_satlits; // contains satlits that represent that represent a potential conflict
+    int_vector* potential_conflicts_satlits; // contains satlits that represent a potential conflict
+    int_vector* potentially_conflicted_variables; // contains the var_ids of the potential conflicts; needed for certification
     int_vector* decision_indicator_satlits; // contains var_id of temporary vars; required e.g. for functional synthesis
     int_vector* decisions;
     int_vector* determinization_order; // stores all determinizations in the order they happened

@@ -330,6 +330,7 @@ int_vector* c2_rl_necessary_learnt_clauses(C2* solver) {
 
     Case* last_case = vector_get(solver->cs->closed_cases, vector_count(solver->cs->closed_cases) - 1);
     casesplits_record_conflicts(replay, last_case->decisions);
+    skolem_encode_global_conflict_check(replay);
     int_vector* necessary_assumptions = c2_rl_test_assumptions(replay, universal_assumptions);
 #ifdef DEBUG
     for (unsigned i = 0; i < int_vector_count(necessary_assumptions); i++) {

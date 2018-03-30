@@ -24,12 +24,16 @@ void cert_write_aiger(aiger* a, const char* filename, Options* o) {
     const char* err = aiger_check(a);
     abortif(err, "%s", err);
     
+    int write_success = 0;
     if (!filename || strcmp(filename, "stdout") == 0) {
-        aiger_write_to_file(a, aiger_ascii_mode, stdout);
+        write_success = aiger_write_to_file(a, aiger_ascii_mode, stdout);
+        
     } else {
-        int write_success = aiger_open_and_write_to_file(a, filename);
-        abortif(!write_success, "Could not write to file for aiger certificate (file name '%s').", filename);
+        write_success = aiger_open_and_write_to_file(a, filename);
+        
     }
+    abortif(!write_success, "Could not write to file for aiger certificate (file name '%s').", filename);
+    V1("Wrote AIG certificate to %s\n", filename);
 }
 
 aiger* cert_setup_AIG(QCNF* qcnf, Options* o) {
@@ -261,6 +265,9 @@ void c2_write_AIG_certificate(C2* c2, const char* filename) {
         }
         // TODO: For each case, define output and leave ITE-else-case open as new symbol. the other variables should be defined in the last domain-case.
     }
+    
+    // TODO: if then else?
+    // TODO: encode both sides for conflicted vars.
     
     // taking the logarithm of the maximum var_id
     int log_of_var_num = 0;

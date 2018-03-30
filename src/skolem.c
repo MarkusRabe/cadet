@@ -52,6 +52,7 @@ Skolem* skolem_init(QCNF* qcnf, Options* o) {
     s->determinicity_queue = pqueue_init(); // worklist_init(qcnf_compare_variables_by_occ_num);
     s->pure_var_queue = pqueue_init();
     s->potential_conflicts_satlits = int_vector_init();
+    s->potentially_conflicted_variables = int_vector_init();
     s->unique_consequence = int_vector_init();
     s->stack = stack_init(skolem_undo);
     
@@ -103,6 +104,7 @@ void skolem_free(Skolem* s) {
     pqueue_free(s->pure_var_queue);
     vector_free(s->clauses_to_check);
     int_vector_free(s->potential_conflicts_satlits);
+    int_vector_free(s->potentially_conflicted_variables);
     int_vector_free(s->unique_consequence);
     int_vector_free(s->decisions);
     int_vector_free(s->universals_assumptions);
@@ -272,6 +274,7 @@ bool skolem_is_conflicted(Skolem* s) {
     return s->conflict_var_id != 0;
 }
 bool skolem_is_potentially_conflicted(Skolem* s){
+    assert(int_vector_count(s->potentially_conflicted_variables) == int_vector_count(s->potential_conflicts_satlits));
     return int_vector_count(s->potential_conflicts_satlits) != 0;
 }
 bool skolem_can_propagate(Skolem* s) {
@@ -285,6 +288,8 @@ bool skolem_has_empty_domain(Skolem* s) {
 void skolem_add_potentially_conflicted(Skolem* s, unsigned var_id) {
     
     stack_push_op(s->stack, SKOLEM_OP_POTENTIALLY_CONFLICTED_VAR, (void*) (size_t) var_id);
+    
+    int_vector_add(s->potentially_conflicted_variables, (int) var_id);
     
     // don't need an additional satlit in case one side is a constant
     int poslit = skolem_get_satsolver_lit(s,   (Lit) var_id);
@@ -960,6 +965,7 @@ void skolem_propagate_partial_over_clause_for_lit(Skolem* s, Clause* c, Lit lit,
 }
 
 void skolem_encode_global_conflict_check(Skolem* s) {
+    assert(int_vector_count(s->potentially_conflicted_variables) == int_vector_count(s->potential_conflicts_satlits));
     
     if (s->options->functional_synthesis) {
         for (unsigned i = 0; i < int_vector_count(s->decision_indicator_satlits); i++) {
@@ -981,6 +987,7 @@ unsigned skolem_global_conflict_check(Skolem* s, unsigned var_id) {
     if (s->record_conflicts) {
         return 0;
     }
+    assert(int_vector_count(s->potentially_conflicted_variables) == 1);
     assert(int_vector_count(s->potential_conflicts_satlits) == 1); // otherwise we cannot determine properly which variable was conflicted
     
     V4("Global conflit check for var %u\n", var_id);
@@ -1028,6 +1035,7 @@ unsigned skolem_global_conflict_check(Skolem* s, unsigned var_id) {
         satsolver_clause_finished(s->skolem);
         
         int_vector_reset(s->potential_conflicts_satlits);
+        int_vector_reset(s->potentially_conflicted_variables);
     }
     return s->conflict_var_id;
 }
@@ -1128,7 +1136,10 @@ void skolem_undo(void* parent, char type, void* obj) {
             assert(obj);
             if (int_vector_count(s->potential_conflicts_satlits) > 0) {
                 int_vector_pop(s->potential_conflicts_satlits);
+                int_vector_pop(s->potentially_conflicted_variables);
             }
+            assert(   int_vector_count(s->potentially_conflicted_variables)
+                   == int_vector_count(s->potential_conflicts_satlits));
             break;
             
         case SKOLEM_OP_DECISION_LVL:

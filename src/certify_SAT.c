@@ -104,14 +104,11 @@ Lit cert_get_unique_consequence(int_vector* ucs, Clause* c) {
 
 void cert_encode_unique_antecedents(C2* c2, aiger* a, int_vector* aigerlits, int_vector* unique_consequences, unsigned *max_sym, Lit lit) {
     assert(lit);
-    
     unsigned var_id = lit_to_var(lit);
-    Var* v = var_vector_get(c2->qcnf->vars, var_id);
-    vector* occs = lit > 0 ? &v->pos_occs : &v->neg_occs;
+    vector* occs = qcnf_get_occs_of_lit(c2->qcnf, lit);
+    unsigned aigerlit = (unsigned) int_vector_get(aigerlits, var_id);
     
-    unsigned aigerlit = (unsigned) int_vector_get(aigerlits, v->var_id);
-    
-    unsigned disjunction;
+    unsigned disjunction = 0;
     if (lit < 0) {
         disjunction = aigerlit;
     } else {
@@ -138,24 +135,55 @@ void cert_encode_unique_antecedents(C2* c2, aiger* a, int_vector* aigerlits, int
                 }
             }
             
-            aiger_add_and(a, conjunction, 1, 1); // define leftover conjunction symbol as true
+            aiger_add_and(a, conjunction, aiger_true, aiger_true); // define leftover conjunction symbol as true
         }
     }
-    aiger_add_and(a, disjunction, 1, 1); // define leftover disjunction symbol as false
+    aiger_add_and(a, disjunction, aiger_true, aiger_true); // define leftover disjunction symbol as false
+}
+
+
+void cert_encode_multi_input_AND_gate(aiger* a, unsigned *max_sym, unsigned output_aigerlit, int_vector* input_aigerlits) {
+    assert(!is_negated(output_aigerlit));
+    unsigned cur_outputlit = output_aigerlit;
+    for (unsigned i = 0; i < int_vector_count(input_aigerlits); i++) {
+        unsigned input_aigerlit = (unsigned) int_vector_get(input_aigerlits, i);
+        unsigned next_outputlit = inc(max_sym);
+        aiger_add_and(a, cur_outputlit, next_outputlit, input_aigerlit);
+        cur_outputlit = next_outputlit;
+    }
+    aiger_add_and(a, cur_outputlit, 1, 1); // empty AND is true
+}
+
+void cert_encode_multi_input_OR_gate(aiger* a, unsigned *max_sym, unsigned output_aigerlit, int_vector* input_aigerlits) {
+    unsigned negated_outputlit = 0;
+    if (is_negated(output_aigerlit)) {
+        negated_outputlit = negate(output_aigerlit);
+    } else {
+        negated_outputlit = inc(max_sym);
+        aiger_add_and(a, output_aigerlit, negate(negated_outputlit), negate(negated_outputlit));
+    }
+    int_vector* negated_inputlits = int_vector_init();
+    for (unsigned i = 0; i < int_vector_count(input_aigerlits); i++) {
+        int_vector_add(negated_inputlits, (int) negate((unsigned) int_vector_get(input_aigerlits, i)));
+    }
+    cert_encode_multi_input_AND_gate(a, max_sym, negated_outputlit, negated_inputlits);
+    int_vector_free(negated_inputlits);
 }
 
 // Returns an aiger lit that is true iff the cube is satisfied.
-unsigned cert_encode_cube(C2* c2, aiger* a, unsigned *max_sym, int_vector* aigerlits, int_vector* cube) {
-    unsigned outputlit = 1; // define empty conjunction as true
+unsigned cert_encode_c2_cube(C2* c2, aiger* a, unsigned *max_sym, int_vector* aigerlits, int_vector* cube) {
+    int_vector* cube_aigerlits = int_vector_init();
     for (unsigned i = 0; i < int_vector_count(cube); i++) {
         Lit l = int_vector_get(cube, i);
         assert(skolem_get_decision_lvl(c2->skolem, lit_to_var(l)) == 0); // Currently restricted to dlvl0 cubes
-        unsigned next_outputlit = inc(max_sym);
-        aiger_add_and(a, next_outputlit, outputlit, mapped_lit2aigerlit(aigerlits, l));
-        outputlit = next_outputlit;
+        int_vector_add(cube_aigerlits, (int) mapped_lit2aigerlit(aigerlits, l));
     }
+    unsigned outputlit = inc(max_sym);
+    cert_encode_multi_input_AND_gate(a, max_sym, outputlit, cube_aigerlits);
+    int_vector_free(cube_aigerlits);
     return outputlit;
 }
+
 
 void cert_add_multiplexer_gate(aiger* a, unsigned *max_sym, unsigned output, unsigned selector, unsigned if_signal, unsigned else_signal) {
     unsigned if_component = inc(max_sym);
@@ -168,22 +196,8 @@ void cert_add_multiplexer_gate(aiger* a, unsigned *max_sym, unsigned output, uns
 }
 
 
-void cert_encode_case(C2* c2, aiger* a, unsigned *max_sym, int_vector* aigerlits, Case* c) {
-    assert(c->type == 1);  // encodes a function
-    
-    // Certificate all remaining cases by writing out the unique consequences of the dlvl>0 variables
-    for (unsigned i = 0; i < int_vector_count(c->decisions); i++) {
-        Lit decision_lit = int_vector_get(c->decisions, i);
-        assert(decision_lit != 0);
-        unsigned var_id = lit_to_var(decision_lit);
-        if (! qcnf_var_exists(c2->qcnf, var_id) || qcnf_is_universal(c2->qcnf, var_id)) {
-            continue;
-        }
-        if (skolem_is_deterministic(c2->skolem, var_id) && skolem_get_decision_lvl(c2->skolem, var_id) == 0) {
-            continue;
-        }
-        cert_encode_unique_antecedents(c2, a, aigerlits, c->unique_consequences, max_sym, - decision_lit);
-    }
+bool cert_is_dlvl_zero_var(C2* c2, unsigned var_id) {
+    return (skolem_is_deterministic(c2->skolem, var_id) && skolem_get_decision_lvl(c2->skolem, var_id) == 0);
 }
 
 
@@ -195,11 +209,9 @@ unsigned cert_encode_new_aigerlits_for_case(C2* c2, aiger* a, unsigned* max_sym,
     unsigned case_selector = inc(max_sym);
     
     for (unsigned var_id = 0; var_id < var_vector_count(c2->qcnf->vars); var_id++) {
-        if (! qcnf_var_exists(c2->qcnf, var_id)
-            || (skolem_is_deterministic(c2->skolem, var_id)
-                && skolem_get_decision_lvl(c2->skolem, var_id) == 0)) {
-                continue;
-            }
+        if (! qcnf_var_exists(c2->qcnf, var_id) || cert_is_dlvl_zero_var(c2, var_id)) {
+            continue;
+        }
         unsigned new_aigerlit = inc(max_sym);
         unsigned alt_aigerlit = inc(max_sym);
         unsigned old_aigerlit = (unsigned) int_vector_get(aigerlits, var_id);
@@ -210,6 +222,58 @@ unsigned cert_encode_new_aigerlits_for_case(C2* c2, aiger* a, unsigned* max_sym,
         int_vector_set(alt_aigerlits, var_id, (int) alt_aigerlit);
     }
     return case_selector;
+}
+
+
+void cert_move_alt_satlits_to_satlits(C2* c2, aiger* a, unsigned* max_sym, int_vector* aigerlits, int_vector* alt_aigerlits) {
+    for (unsigned var_id = 0; var_id < var_vector_count(c2->qcnf->vars); var_id++) {
+        if (! qcnf_var_exists(c2->qcnf, var_id) || cert_is_dlvl_zero_var(c2, var_id)) {
+            continue;
+        }
+        int_vector_set(aigerlits, var_id, int_vector_get(alt_aigerlits, var_id));
+    }
+}
+
+
+void cert_encode_case(C2* c2, aiger* a, unsigned *max_sym, int_vector* aigerlits, Case* c, unsigned case_selector) {
+    assert(c->type == 1);  // encodes a function
+    
+    int_vector_sort(c->potentially_conflicted_variables, compare_integers_natural_order);
+    int_vector* conflict_aigerlits = int_vector_init();
+    
+    // Certificate all remaining cases by writing out the unique consequences of the dlvl>0 variables
+    for (unsigned i = 0; i < int_vector_count(c->decisions); i++) {
+        Lit decision_lit = int_vector_get(c->decisions, i);
+        assert(decision_lit != 0);
+        unsigned var_id = lit_to_var(decision_lit);
+        if (! qcnf_var_exists(c2->qcnf, var_id) || cert_is_dlvl_zero_var(c2, var_id)) {
+            continue;
+        }
+        assert(!qcnf_is_universal(c2->qcnf, var_id));
+        cert_encode_unique_antecedents(c2, a, aigerlits, c->unique_consequences, max_sym, - decision_lit);
+        
+        
+        // encode other side as well for conflicted variables
+        if (int_vector_contains_sorted(c->potentially_conflicted_variables, (int) var_id)) {
+            unsigned aigerlit = (unsigned) int_vector_get(aigerlits, var_id);
+            unsigned anti_aigerlit = inc(max_sym);
+            int_vector_set(aigerlits, var_id, (int) anti_aigerlit);
+            
+            unsigned conflict_aigerlit = inc(max_sym);
+            aiger_add_and(a, conflict_aigerlit, aigerlit, anti_aigerlit);
+            int_vector_add(conflict_aigerlits, (int) conflict_aigerlit);
+            
+            // encode the other side of the decision lit
+            cert_encode_unique_antecedents(c2, a, aigerlits, c->unique_consequences, max_sym,   decision_lit);
+            
+            // reset the aigerlit to actual
+            int_vector_set(aigerlits, var_id, (int) aigerlit);
+        }
+    }
+    if (case_selector != aiger_true) {
+        cert_encode_multi_input_OR_gate(a, max_sym, negate(case_selector), conflict_aigerlits);
+    }
+    int_vector_free(conflict_aigerlits);
 }
 
 
@@ -249,49 +313,37 @@ void c2_write_AIG_certificate(C2* c2, const char* filename) {
     
     // Certificate for the dlvl0 variables
     for (unsigned i = 0; i < var_vector_count(c2->qcnf->vars); i++) {
-        if (! qcnf_var_exists(c2->qcnf, i) || qcnf_is_universal(c2->qcnf, i)) {
+        if (! qcnf_var_exists(c2->qcnf, i) || ! cert_is_dlvl_zero_var(c2, i) || qcnf_is_universal(c2->qcnf, i)) {
             continue;
         }
-        if (skolem_is_deterministic(c2->skolem, i) && skolem_get_decision_lvl(c2->skolem, i) == 0) {
-            if (skolem_get_constant_value(c2->skolem, (Lit) i) != 0) {
-                unsigned aiger_constant = skolem_get_constant_value(c2->skolem, (Lit) i) > 0 ? 1 : 0;
-                aiger_add_and(a, mapped_lit2aigerlit(aigerlits, (Lit) i), aiger_constant, aiger_constant);
+        if (skolem_get_constant_value(c2->skolem, (Lit) i) != 0) {
+            unsigned aiger_constant = skolem_get_constant_value(c2->skolem, (Lit) i) > 0 ? 1 : 0;
+            aiger_add_and(a, mapped_lit2aigerlit(aigerlits, (Lit) i), aiger_constant, aiger_constant);
+        } else {
+            skolem_var sv = skolem_get_info(c2->skolem, i);
+            c2_validate_var(c2, i);
+            
+            abortif(skolem_get_decision_val(c2->skolem, i) != 0, "dlvl0 variable is marked as decision variable");
+            
+            int polarity = 1;
+            if (sv.pure_pos) {
+                polarity = 1;
+            } else if (sv.pure_neg) {
+                polarity = -1;
             } else {
-                skolem_var sv = skolem_get_info(c2->skolem, i);
-                c2_validate_var(c2, i);
-                
-                if (sv.pure_pos) {
-                    cert_encode_unique_antecedents(c2, a, aigerlits, c2->skolem->unique_consequence,
-                                                   &max_sym,   (Lit) i);
-                } else if (sv.pure_neg) {
-                    cert_encode_unique_antecedents(c2, a, aigerlits, c2->skolem->unique_consequence,
-                                                   &max_sym, - (Lit) i);
-                } else {
-                    int val = skolem_get_decision_val(c2->skolem, i);
-                    abortif(val < -1 || val > 1, "");
-                    if (val == 1) {
-                        cert_encode_unique_antecedents(c2, a, aigerlits, c2->skolem->unique_consequence,
-                                                       &max_sym, - (Lit) i);
-                    } else if (val == -1) {
-                        cert_encode_unique_antecedents(c2, a, aigerlits, c2->skolem->unique_consequence,
-                                                       &max_sym,   (Lit) i);
-                    } else {
-                        Var* v = var_vector_get(c2->qcnf->vars, i);
-                        bool pos_occs_smaller = vector_count(&v->pos_occs) < vector_count(&v->neg_occs);
-                        cert_encode_unique_antecedents(c2, a, aigerlits, c2->skolem->unique_consequence,
-                                                       &max_sym, (pos_occs_smaller ? 1 : -1) * (Lit) v->var_id);
-                    }
-                }
+                Var* v = var_vector_get(c2->qcnf->vars, i);
+                bool pos_occs_smaller = vector_count(&v->pos_occs) < vector_count(&v->neg_occs);
+                polarity = pos_occs_smaller ? 1 : -1;
             }
+            cert_encode_unique_antecedents(c2, a, aigerlits, c2->skolem->unique_consequence, &max_sym, polarity * (Lit) i);
         }
     }
     
-    int_vector* alt_aigerlits = int_vector_init();
-    for (unsigned i = 0 ; i < var_vector_count(c2->qcnf->vars); i++) {int_vector_add(alt_aigerlits, 0);}
+    int_vector* alt_aigerlits = int_vector_copy(aigerlits);
     
     // For every case, encode the function in a new set of symbols and connnect to the existing symbols with a MUX
     for (unsigned i = 0; i < vector_count(c2->cs->closed_cases); i++) {
-        unsigned case_selector = 1;
+        unsigned case_selector = aiger_true;
         if (i + 1 < vector_count(c2->cs->closed_cases)) { // i.e. this is not the last case
             case_selector = cert_encode_new_aigerlits_for_case(c2, a, &max_sym, aigerlits, alt_aigerlits);
         }
@@ -300,7 +352,7 @@ void c2_write_AIG_certificate(C2* c2, const char* filename) {
         if (c->type == 0) {  // CEGAR assignment
             NOT_IMPLEMENTED();
             assert(c->decisions);
-            unsigned cube_lit = cert_encode_cube(c2, a, &max_sym, aigerlits, c->universal_assumptions);
+            unsigned cube_lit = cert_encode_c2_cube(c2, a, &max_sym, aigerlits, c->universal_assumptions);
             
             for (unsigned j = 0; j < int_vector_count(c->decisions); j++) {
                 Lit l = int_vector_get(c->decisions, j);
@@ -314,24 +366,23 @@ void c2_write_AIG_certificate(C2* c2, const char* filename) {
                 assert(  !skolem_is_deterministic(c2->skolem, var_id)
                        || skolem_get_decision_lvl(c2->skolem, var_id) > 0);
                 assert(l != 0);
-                unsigned aiger_val = l > 0 ? 1 : 0;
+                unsigned aiger_val = l > 0 ? aiger_true : aiger_false;
                 unsigned aiger_lit = (unsigned) int_vector_get(aigerlits, var_id);
-                assert(aiger_lit != 0);
+                assert(aiger_lit != aiger_false);
                 assert(aiger_lit <= max_sym);
                 unsigned new_aiger_lit = inc(&max_sym);
                 int_vector_set(aigerlits, var_id, (int) new_aiger_lit);
                 cert_add_multiplexer_gate(a, &max_sym, aiger_lit, cube_lit, aiger_val, new_aiger_lit);
             }
         } else {  // certificate is an actual function, closed case split
-            
-            // TODO: encode both sides for conflicted vars.
-            cert_encode_case(c2, a, &max_sym, aigerlits, c);
+            cert_encode_case(c2, a, &max_sym, aigerlits, c, case_selector);
         }
         
+//        if (i + 1 < vector_count(c2->cs->closed_cases)) { // i.e. this is not the last case
+        cert_move_alt_satlits_to_satlits(c2, a, &max_sym, aigerlits, alt_aigerlits);
+//        }
         // TODO: For each case, define output and leave ITE-else-case open as new symbol. the other variables should be defined in the last domain-case.
     }
-    
-    
     
     cert_write_aiger(a, filename, c2->options);
     int_vector_free(aigerlits);

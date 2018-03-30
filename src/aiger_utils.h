@@ -9,10 +9,11 @@
 #ifndef aiger_utils_h
 #define aiger_utils_h
 
-#include <stdio.h>
+#include <stdbool.h>
 
 int aiger_lit2lit(unsigned aigerlit);
 unsigned inc(unsigned* sym);
+bool is_negated(unsigned signal);
 unsigned negate(unsigned signal);
 unsigned var2aigerlit(unsigned var_id);
 

@@ -19,6 +19,10 @@ unsigned inc(unsigned* sym) {
     return *sym;
 }
 
+bool is_negated(unsigned signal) {
+    return signal % 2; // negation is encoded in the last bit
+}
+
 unsigned negate(unsigned signal) {
     return signal ^ 1; // flipping the last bit with xor
 }

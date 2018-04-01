@@ -1,6 +1,14 @@
 #!/usr/bin/env python
 
-import sys, os, re, argparse, random, signal, multiprocessing, Queue, threading
+import sys
+import os
+import re
+import argparse
+import random
+import signal
+import multiprocessing
+import Queue
+import threading
 import numpy as np
 import itertools
 
@@ -70,7 +78,7 @@ def compute_average(results):
     memory /= len(results)
     return seconds, memory
 
-def print_result(name,config,expected,result,return_value,seconds,memory):
+def print_result(name, config, expected, result, return_value, seconds, memory):
     if return_value == SATISFIABLE:
         return_value = "SAT"
     elif return_value == UNSATISFIABLE:
@@ -157,7 +165,8 @@ def worker_loop(job_queue, result_queue, process_id):
         # except KeyboardInterrupt:
             # print 'Worker process {} got interrupted'.format(process_id)
     # print 'thread {} ended'.format(thread_id)
-    
+
+
 def run_testcases(threads, runs=1):
     global interrupted, testcases
     all_testcases = getTestCases()
@@ -221,7 +230,8 @@ def run_testcases(threads, runs=1):
         worker.terminate()
         worker.join()
 
-def profile_entry(testcase,output,seconds,memory,return_value):
+
+def profile_entry(testcase, output, seconds, memory, return_value):
     
     quantifiers = None
     existential_variables = None
@@ -264,13 +274,6 @@ def profile_entry(testcase,output,seconds,memory,return_value):
         elif 'Restarts:' in line:
             restarts = int(parse_num.match(line).groups(1)[0])
     
-    # Composite values
-    # successful_local_determinicity_checks = propagations - pure_variables - propagations_of_constants
-    # variables = existential_variables + universal_variables
-    # learnt_clauses_timings =
-    # average_learnt_clause_size =
-    # initial_average_clause_size =
-    
     p = {'name':testcase,
         'seconds':seconds,
         'memory':memory,
@@ -289,13 +292,11 @@ def profile_entry(testcase,output,seconds,memory,return_value):
         'restarts':restarts
         }
     
-    # p.successful_local_determinicity_checks = successful_local_determinicity_checks
-    # p.variables = variables
-    
     profiling_db.update({testcase:p})
-
+    
     for attribute, value in p.items():
         print('  {} : {}'.format(attribute, value))
+
 
 def run_testcase(testcase_input):
     testcase, expected, config = testcase_input
@@ -406,6 +407,7 @@ def run_testcase(testcase_input):
         call('rm ' + cert_file + ' ' + cert_file2, ARGS.timeout)
     return testcase, config, expected, result, return_value, seconds, memory
 
+
 def getTestCases():
     
     test_cases = {}
@@ -413,14 +415,6 @@ def getTestCases():
     if ARGS.directory:
         test_cases['directory'] = []
         for (dirpath, dirnames, filenames) in os.walk(ARGS.directory):
-            # print('dirpath' + dirpath + '\n')
-            # for dn in dirnames:
-                # print('  dn: ' + dn + '\n')
-            # file_count = 0
-#             for fn in filenames:
-#                 file_count += 1
-#             print("Detected {} files".format(file_count))
-#             exit(1)
             omitted_files = 0
             detected_files = 0
             for filename in filenames:
@@ -461,6 +455,7 @@ def getTestCases():
         test_cases[category] = last_category
         return test_cases
 
+
 def get_benchmark_result(testcase, time_output):
     wall_clock_re = re.compile(r"[^\d]*(\d+):(\d+\.\d+)")
     wall_clock_long_re = re.compile(r"[^\d]*(\d+):(\d+):(\d+)")
@@ -489,6 +484,7 @@ def get_benchmark_result(testcase, time_output):
         
     return float(seconds), float(memory) / 1024.0
 
+
 if __name__ == "__main__":
     print('')
     parser = argparse.ArgumentParser()
@@ -498,20 +494,24 @@ if __name__ == "__main__":
                         help='Show additional runtime information (tool output)')
     parser.add_argument('-t', '--test', dest='test', action='store_true',
                         help='Run on a subset of test benchmarks')
-    parser.add_argument('--average', action='store', nargs='?', const=5, type=int, metavar='rounds',
+    parser.add_argument('--average', action='store', nargs='?', const=5, type=int, 
+                        metavar='rounds',
                         help='Run the tests multiple times and take the average')
     parser.add_argument('--timeout', dest='timeout', action='store', type=int, default=10,
                         help='Timeout in seconds (default: 10)')
-    parser.add_argument('--csv', dest='csv', action='store', nargs='?', const='tester.csv', metavar='file_name', type=argparse.FileType('w'),
+    parser.add_argument('--csv', dest='csv', action='store', nargs='?', const='tester.csv',
+                        metavar='file_name', type=argparse.FileType('w'),
                         help='Write CSV to file (default: tester.csv)')
-    parser.add_argument('--threads', dest='threads', action='store', nargs='?', type=int, metavar='num', default=1,
+    parser.add_argument('--threads', dest='threads', action='store', nargs='?', type=int,
+                        metavar='num', default=1,
                         help='Number of threads to use (default: {})'.format(multiprocessing.cpu_count()))
-    parser.add_argument('--tool', dest='tool', action='store', default=os.path.join(BASE_PATH, './cadet -v 1'), 
-                        help='provide an alternative tool name, E.g. depqbf depqbf5.0 rareqs caqe qesto quantor ...')
-    # parser.add_argument('--config', dest='configs', action='store', default='',
-                        # help='provide a list of configurations in which to run each file')
+    parser.add_argument('--tool', dest='tool', action='store', 
+                        default=os.path.join(BASE_PATH, './cadet -v 1'), 
+                        help='Define which tool is tested (default "./cadet -v 1").')
     parser.add_argument('--config', metavar='C', type=str, nargs='*', 
-                        help='provide a list of command line configurations to run the tool in; to avoid interpreting them as options for this tester script, try e.g. " --cegar" instead')
+                        help='provide a list of command line configurations to run \
+                        the tool in; to avoid interpreting them as options for this \
+                        tester script, try e.g. " --cegar" instead')
     parser.add_argument('--bloqqer', dest='use_bloqqer', action='store_true', 
                         help='Use bloqqer to preprocess the formulas.')
     parser.add_argument('--preprocessor', dest='preprocessor', action='store', default=None, 
@@ -528,7 +528,8 @@ if __name__ == "__main__":
     instances_file = open('integration-tests/instances.txt', 'r').read()
     all_categories = re.findall(r'\[([A-Za-z0-9_-]+)\]', instances_file)
     for cat in all_categories:
-        parser.add_argument('--{}'.format(cat), dest=cat, action='store_true', help='Run the {} formulas'.format(cat))
+        parser.add_argument('--{}'.format(cat), dest=cat, action='store_true', 
+                            help='Run the {} formulas'.format(cat))
     
     ARGS = parser.parse_args()
     
@@ -541,20 +542,18 @@ if __name__ == "__main__":
         ARGS.instances = None
         # ARGS.certify = False
         categories = ['test_files']
-        configs = ['--debugging', 
-                   '--debugging --sat_by_qbf', 
-                   '--debugging --cegar', 
-                   '--debugging --case_splits', 
-                   '--debugging --cegar --case_splits', 
-                   '--debugging --cegar --case_splits --sat_by_qbf', 
-                   '', 
-                   '--cegar', '--case_splits', 
-                   '--cegar --case_splits', 
-                   '--rl --rl_mock', 
-                   '--rl --rl_mock --debugging', 
-                   '--rl --rl_mock --debugging --minimize', 
-                   '--rl --rl_mock --sat_by_qbf', 
-                   '--rl --rl_mock --sat_by_qbf --random_decisions', 
+        configs = ['',
+                   '--cegar',
+                   '--case_splits',
+                   '--cegar --case_splits',
+                   '--debugging --sat_by_qbf -c cert.aag',
+                   '--debugging --sat_by_qbf --case_splits -c cert.aag',
+                   '--debugging --sat_by_qbf --cegar',
+                   '--debugging --sat_by_qbf --cegar --case_splits',
+                   '--rl --rl_mock --sat_by_qbf',
+                   '--rl --rl_mock --sat_by_qbf --debugging',
+                   '--rl --rl_mock --sat_by_qbf --debugging --minimize',
+                   '--rl --rl_mock --sat_by_qbf --random_decisions',
                    '--rl --rl_mock --sat_by_qbf --random_decisions --rl_advanced_rewards']
     
     if ARGS.config:
@@ -593,12 +592,6 @@ if __name__ == "__main__":
     
     # Run the tests
     run_testcases(ARGS.threads)
-    
-    # if ARGS.profile:
-#         for key, data in profiling_db.items():
-#             print(key)
-#             for attribute, value in data.items():
-#                 print('{} : {}'.format(attribute, value))
     
     print_stats()
     

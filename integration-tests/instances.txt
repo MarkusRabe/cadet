@@ -76,7 +76,6 @@ integration-tests/4_UNSAT.dimacs | 20
 integration-tests/5_SAT.dimacs | 10
 integration-tests/qaiger/equiv.qaig | 10
 integration-tests/stmt27rrr.qdimacs | 20
-integration-tests/eequery_query04_1344n.qdimacs.txt | 10
 integration-tests/adder2.qdimacs | 20
 
 

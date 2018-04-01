@@ -395,7 +395,7 @@ def run_testcase(testcase_input):
         
         if 's UNSATISFIABLE' not in cert_output:
             print('CERTIFICATE FAILED for {}'.format(str(testcase)))
-            code = TEST_FAILED
+            result = TEST_FAILED
             if ARGS.verbose:
                 print('Cert Output:\n' + cert_output)
                 print('Cert Error:\n' + cert_error)

@@ -208,7 +208,7 @@ Var* c2_pick_nondeterministic_variable(C2* c2) {
 void c2_backtrack_to_decision_lvl(C2 *c2, unsigned backtracking_lvl) {
     assert(backtracking_lvl <= c2->skolem->decision_lvl);
     if (backtracking_lvl == c2->skolem->decision_lvl) {
-        V4("No backtracking happening.");
+        V4("No backtracking happening.\n");
         return;
     }
     if (c2->state == C2_UNSAT) {

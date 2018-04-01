@@ -210,6 +210,7 @@ void cert_encode_case(C2* c2, aiger* a, unsigned *max_sym, int_vector* aigerlits
         assert(decision_lit != 0);
         unsigned var_id = lit_to_var(decision_lit);
         if (! qcnf_var_exists(c2->qcnf, var_id) || cert_is_dlvl_zero_var(c2, var_id)) {
+            assert(!int_vector_contains_sorted(c->potentially_conflicted_variables, (int) var_id));
             continue;
         }
         assert(!qcnf_is_universal(c2->qcnf, var_id));
@@ -222,8 +223,7 @@ void cert_encode_case(C2* c2, aiger* a, unsigned *max_sym, int_vector* aigerlits
             unsigned anti_aigerlit = inc(max_sym);
             int_vector_set(aigerlits, var_id, (int) anti_aigerlit);
             
-            unsigned conflict_aigerlit = inc(max_sym);
-            aiger_add_and(a, conflict_aigerlit, aigerlit, negate(anti_aigerlit));
+            unsigned conflict_aigerlit = aigeru_AND(a, max_sym, aigerlit, negate(anti_aigerlit));
             int_vector_add(conflict_aigerlits, (int) conflict_aigerlit);
             
             // encode the other side of the decision lit
@@ -286,6 +286,9 @@ void cert_encode_case(C2* c2, aiger* a, unsigned *max_sym, int_vector* aigerlits
 //}
 
 bool cert_validate(aiger* a, QCNF* qcnf) {
+    V1("Validating Skolem function with %u gates.\n", a->num_ands);
+    Stats* timer = statistics_init(1000);  // 1 ms resolution
+    statistics_start_timer(timer);
     
     SATSolver* checker = satsolver_init();
     satsolver_set_max_var(checker, (int) a->maxvar);
@@ -349,8 +352,10 @@ bool cert_validate(aiger* a, QCNF* qcnf) {
     satsolver_clause_finished(checker);
     
     sat_res res = satsolver_sat(checker);
+    statistics_stop_and_record_timer(timer);
+    V1("Validation took %f s\n", timer->accumulated_value);
     if (res != SATSOLVER_UNSAT) {
-        LOG_ERROR("Certificate invalid!");
+        LOG_ERROR("Validation failed!");
         V1("Violating assignment to universals:");
         for (unsigned i = 0; i < var_vector_count(qcnf->vars); i++) {
             if (qcnf_var_exists(qcnf, i) && qcnf_is_universal(qcnf, i)) {
@@ -369,9 +374,8 @@ bool cert_validate(aiger* a, QCNF* qcnf) {
         }
         V0("\n");
 //        aiger_write_to_file(a, aiger_ascii_mode, stdout);
-    } else {
-        V1("Certificate verified!\n");
     }
+    statistics_free(timer);
     satsolver_free(checker);
     return res == SATSOLVER_UNSAT;
 }

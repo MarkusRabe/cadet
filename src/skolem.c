@@ -170,7 +170,7 @@ void skolem_new_clause(Skolem* s, Clause* c) {
             }
             satsolver_clause_finished(s->skolem);
         } else {
-            V1("Added deterministic clause.\n");
+            V2("Added deterministic clause.\n");
             for (unsigned i = 0; i < c->size; i++) {
                 satsolver_assume(s->skolem, skolem_get_satsolver_lit(s, - c->occs[i]));
             }
@@ -183,7 +183,7 @@ void skolem_new_clause(Skolem* s, Clause* c) {
                 s->conflict_var_id = lit_to_var(lastlit);
                 stack_push_op(s->stack, SKOLEM_OP_SKOLEM_CONFLICT, NULL);
             } else {
-                V1("Deterministic clause that was added is consistent.\n");
+                V2("Deterministic clause that was added is consistent.\n");
                 if (debug_verbosity >= VERBOSITY_MEDIUM) {
                     qcnf_print_clause(c, stdout);
                 }

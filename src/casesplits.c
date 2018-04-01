@@ -140,7 +140,7 @@ void casesplits_update_interface(Casesplits* cs, Skolem* skolem) {
         cegar_remember_original_satlit(cs, interface_var);
     }
     
-    V1("Deterministic vars: %u\n", int_vector_count(cs->skolem->determinization_order));
+    V1("Total of %u deterministic vars\n", int_vector_count(cs->skolem->determinization_order));
     V1("Interface vars: (%u in total) ... ", int_vector_count(cs->interface_vars));
     if (debug_verbosity >= VERBOSITY_HIGH || (debug_verbosity >= VERBOSITY_LOW && int_vector_count(cs->interface_vars) < 20)) {
         int_vector_print(cs->interface_vars);
@@ -301,6 +301,7 @@ void casesplits_encode_last_case(Casesplits* cs) {
         // This excludes all solutions for which this Skolem function works
         casesplits_record_conflicts(cs->skolem, c->decisions);
         c->potentially_conflicted_variables = int_vector_copy(cs->skolem->potentially_conflicted_variables);
+        c->unique_consequences = int_vector_copy(cs->skolem->unique_consequence);
         skolem_encode_global_conflict_check(cs->skolem);
         int_vector* necessary_assumptions = casesplits_test_assumptions(cs, c->universal_assumptions);
         abortif(necessary_assumptions == NULL, "Case split was not successfully closed");
@@ -338,7 +339,8 @@ void casesplits_completed_case_split(Casesplits* cs, int_vector* universal_assum
     c->type = 1; // function case
     c->universal_assumptions = universal_assumptions;
     c->decisions = decisions;
-    c->unique_consequences = int_vector_copy(cs->skolem->unique_consequence);
+    assert(c->unique_consequences == NULL);
+    assert(c->potentially_conflicted_variables == NULL);
     vector_add(cs->closed_cases, c);
 }
 

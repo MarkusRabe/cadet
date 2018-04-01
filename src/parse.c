@@ -540,7 +540,7 @@ C2* c2_from_qaiger(aiger* aig, Options* options) {
     ////// CLAUSES //////
     
     // bads
-    unsigned bads_qcnf_var = (unsigned) aiger_lit2lit( 2 * (aig->maxvar + 1) );
+    unsigned bads_qcnf_var = (unsigned) aiger_lit2lit( 2 * (aig->maxvar + 1), 0);
     options_set_variable_name(options, bads_qcnf_var, "BADS");
     
     c2_new_variable(c2, false, 1, bads_qcnf_var);
@@ -550,37 +550,37 @@ C2* c2_from_qaiger(aiger* aig, Options* options) {
     
     for (size_t i = 0; i < aig->num_outputs; i++) {
         aiger_symbol o = aig->outputs[i];
-        c2_add_lit(c2, - aiger_lit2lit(o.lit));
+        c2_add_lit(c2, - aiger_lit2lit(o.lit, 0));
         c2_add_lit(c2, (Lit) bads_qcnf_var);
         c2_add_lit(c2, 0);
         
         if (options->print_name_mapping) {
-            V0("bad %d\n", aiger_lit2lit(o.lit));
+            V0("bad %d\n", aiger_lit2lit(o.lit, 0));
         }
     }
     for (size_t i = 0; i < aig->num_bad; i++) {
         aiger_symbol b = aig->bad[i];
-        c2_add_lit(c2, - aiger_lit2lit(b.lit));
+        c2_add_lit(c2, - aiger_lit2lit(b.lit, 0));
         c2_add_lit(c2, (Lit) bads_qcnf_var);
         c2_add_lit(c2, 0);
         
         if (options->print_name_mapping) {
-            V0("bad %d\n", aiger_lit2lit(b.lit));
+            V0("bad %d\n", aiger_lit2lit(b.lit, 0));
         }
     }
     for (size_t i = 0; i < aig->num_outputs; i++) {
         aiger_symbol o = aig->outputs[i];
-        c2_add_lit(c2, aiger_lit2lit(o.lit));
+        c2_add_lit(c2, aiger_lit2lit(o.lit, 0));
     }
     for (size_t i = 0; i < aig->num_bad; i++) {
         aiger_symbol b = aig->bad[i];
-        c2_add_lit(c2, aiger_lit2lit(b.lit));
+        c2_add_lit(c2, aiger_lit2lit(b.lit, 0));
     }
     c2_add_lit(c2, - (Lit) bads_qcnf_var);
     c2_add_lit(c2, 0);
     
     // constraints
-    unsigned constraints_qcnf_var = (unsigned) aiger_lit2lit( 2 * (aig->maxvar + 2) );
+    unsigned constraints_qcnf_var = (unsigned) aiger_lit2lit( 2 * (aig->maxvar + 2), 0);
 //    int_vector_add(c2->qcnf->universals_constraints, (int) constraints_qcnf_var);
     options_set_variable_name(options, constraints_qcnf_var, "CONSTRAINTS");
     
@@ -591,15 +591,15 @@ C2* c2_from_qaiger(aiger* aig, Options* options) {
     
     for (size_t i = 0; i < aig->num_constraints; i++) {
         aiger_symbol c = aig->constraints[i];
-        c2_add_lit(c2, aiger_lit2lit(c.lit));
+        c2_add_lit(c2, aiger_lit2lit(c.lit, 0));
         c2_add_lit(c2, - (Lit) constraints_qcnf_var);
         c2_add_lit(c2, 0);
         if (options->print_name_mapping)
-            V0("constraint %d\n", aiger_lit2lit(c.lit));
+            V0("constraint %d\n", aiger_lit2lit(c.lit, 0));
     }
     for (size_t i = 0; i < aig->num_constraints; i++) {
         aiger_symbol c = aig->constraints[i];
-        c2_add_lit(c2, - aiger_lit2lit(c.lit));
+        c2_add_lit(c2, - aiger_lit2lit(c.lit, 0));
     }
     c2_add_lit(c2, (Lit) constraints_qcnf_var);
     c2_add_lit(c2, 0);
@@ -620,28 +620,28 @@ C2* c2_from_qaiger(aiger* aig, Options* options) {
         
         // create and gate with with three clauses
         if (a.rhs0 != 1) {
-            c2_add_lit(c2, - aiger_lit2lit(a.lhs));
+            c2_add_lit(c2, - aiger_lit2lit(a.lhs, 0));
             if (a.rhs0 != 0) {
-                c2_add_lit(c2, aiger_lit2lit(a.rhs0));
+                c2_add_lit(c2, aiger_lit2lit(a.rhs0, 0));
             } // else lit is literally false
             c2_add_lit(c2, 0);
         } // else lit is true and thus clause is satisfied.
         
         if (a.rhs1 != 1) {
-            c2_add_lit(c2,  - aiger_lit2lit(a.lhs));
+            c2_add_lit(c2,  - aiger_lit2lit(a.lhs, 0));
             if (a.rhs1 != 0) {
-                c2_add_lit(c2,  aiger_lit2lit(a.rhs1));
+                c2_add_lit(c2,  aiger_lit2lit(a.rhs1, 0));
             } // else lit is literally false
             c2_add_lit(c2, 0);
         } // else lit is true and thus clause is satisfied.
         
         if (a.rhs0 != 0 && a.rhs1 != 0) {
-            c2_add_lit(c2, aiger_lit2lit(a.lhs));
+            c2_add_lit(c2, aiger_lit2lit(a.lhs, 0));
             if (a.rhs0 != 1) { // lit is literally false
-                c2_add_lit(c2,  - aiger_lit2lit(a.rhs0));
+                c2_add_lit(c2,  - aiger_lit2lit(a.rhs0, 0));
             }
             if (a.rhs1 != 1) { // lit is literally false
-                c2_add_lit(c2,  - aiger_lit2lit(a.rhs1));
+                c2_add_lit(c2,  - aiger_lit2lit(a.rhs1, 0));
             }
             c2_add_lit(c2, 0);
         }

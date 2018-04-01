@@ -61,11 +61,6 @@ int main(int argc, const char* argv[]) {
                         }
                     }
                     
-                    if (options->casesplits) {
-                        LOG_WARNING("Case splits not compatible with certificates right now. Deactivating case splits.");
-                        options->casesplits = false;
-                    }
-                    
                     i++;
                     break;
                     
@@ -126,14 +121,6 @@ int main(int argc, const char* argv[]) {
                     } else if (strcmp(argv[i], "--functional-synthesis") == 0) {
                         assert(!options->functional_synthesis);
                         options->functional_synthesis = true;
-                        if (options->cegar) {
-                            V0("Functional synthesis currently incompatible with CEGAR. Deactivating CEGAR.\n");
-                            options->cegar = false;
-                        }
-                        if (options->casesplits) {
-                            V0("Functional synthesis currently incompatible with case splits. Deactivating case splits.\n");
-                            options->casesplits = false;
-                        }
                     } else if (strcmp(argv[i], "--minimize") == 0) {
                         options->minimize_learnt_clauses = ! options->minimize_learnt_clauses;
                     } else if (strcmp(argv[i], "--miniscoping") == 0) {

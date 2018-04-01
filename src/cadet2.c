@@ -697,7 +697,6 @@ cadet_res c2_sat(C2* c2) {
         goto return_result;
     }
     
-    V1("Deterministic vars on dlvl 0: %u \n", int_vector_count(c2->skolem->determinization_order));
     if (debug_verbosity >= VERBOSITY_HIGH) {skolem_print_deterministic_vars(c2->skolem);}
     if (c2->options->miniscoping) {c2_analysis_determine_number_of_partitions(c2);}
     casesplits_update_interface(c2->cs, c2->skolem);
@@ -801,7 +800,7 @@ cadet_res c2_solve_qdimacs(const char* file_name, Options* options) {
                 printf("s cnf 1\n");
             }
             if (c2->options->certify_SAT) {
-                c2_write_AIG_certificate(c2, options->certificate_file_name);
+                c2_write_AIG_certificate(c2);
             }
             break;
         case CADET_RESULT_UNSAT:

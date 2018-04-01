@@ -281,6 +281,7 @@ int satsolver_deref(SATSolver* solver, int lit) {
         LOG_PRINTF("assert(picosat_deref(s,%d) == %d);\n",pico_lit, res);
     }
 #endif
+    assert(res == -1 || res == 0 || res == 1);
     return res;
 }
 

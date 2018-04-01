@@ -223,7 +223,7 @@ void cert_encode_case(C2* c2, aiger* a, unsigned *max_sym, int_vector* aigerlits
             int_vector_set(aigerlits, var_id, (int) anti_aigerlit);
             
             unsigned conflict_aigerlit = inc(max_sym);
-            aiger_add_and(a, conflict_aigerlit, aigerlit, anti_aigerlit);
+            aiger_add_and(a, conflict_aigerlit, aigerlit, negate(anti_aigerlit));
             int_vector_add(conflict_aigerlits, (int) conflict_aigerlit);
             
             // encode the other side of the decision lit
@@ -360,7 +360,7 @@ bool cert_validate(aiger* a, QCNF* qcnf) {
         }
         V0("\n");
         
-        V1("Violating assignment to existentials:");
+        V0("Violating assignment to existentials:");
         for (unsigned i = 0; i < var_vector_count(qcnf->vars); i++) {
             if (qcnf_var_exists(qcnf, i) && qcnf_is_existential(qcnf, i)) {
                 int val = satsolver_deref(checker, (int) i);
@@ -368,7 +368,7 @@ bool cert_validate(aiger* a, QCNF* qcnf) {
             }
         }
         V0("\n");
-        aiger_write_to_file(a, aiger_ascii_mode, stdout);
+//        aiger_write_to_file(a, aiger_ascii_mode, stdout);
     } else {
         V1("Certificate verified!\n");
     }

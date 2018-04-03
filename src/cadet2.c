@@ -567,9 +567,10 @@ cadet_res c2_result(C2* c2) {
             assert(! skolem_has_empty_domain(c2->skolem));
             return CADET_RESULT_UNSAT;
         case C2_READY:
+        case C2_ABORT_RL:
             return CADET_RESULT_UNKNOWN;
         default:
-            LOG_ERROR("CAllED c2_result in state %d", c2->state);
+            LOG_ERROR("CALLED c2_result in state %d", c2->state);
             abort();
     }
 }

@@ -120,6 +120,9 @@ void cert_encode_unique_antecedents(C2* c2, aiger* a, int_vector* aigerlits, int
     
     for (unsigned i = 0; i < vector_count(occs); i++) {
         Clause* c = vector_get(occs, i);
+        if (c->is_cube) {
+            continue;
+        }
         if (cert_get_unique_consequence(unique_consequences, c) == lit) {
             unsigned conjunction = inc(max_sym);
             unsigned next_disjunction = inc(max_sym);
@@ -209,13 +212,14 @@ void cert_encode_case(C2* c2, aiger* a, unsigned *max_sym, int_vector* aigerlits
         Lit decision_lit = int_vector_get(c->decisions, i);
         assert(decision_lit != 0);
         unsigned var_id = lit_to_var(decision_lit);
-        if (! qcnf_var_exists(c2->qcnf, var_id) || cert_is_dlvl_zero_var(c2, var_id)) {
-            assert(!int_vector_contains_sorted(c->potentially_conflicted_variables, (int) var_id));
+        if (! qcnf_var_exists(c2->qcnf, var_id)) {   //  || cert_is_dlvl_zero_var(c2, var_id) // not skipping dlvl0 variables as variables can move into dlvl0 after this case was finished
+//            assert(!int_vector_contains_sorted(c->potentially_conflicted_variables, (int) var_id));
             continue;
         }
-        assert(!qcnf_is_universal(c2->qcnf, var_id));
-        cert_encode_unique_antecedents(c2, a, aigerlits, c->unique_consequences, max_sym, - decision_lit);
-        
+        if (! cert_is_dlvl_zero_var(c2, var_id)) {
+            assert(!qcnf_is_universal(c2->qcnf, var_id));
+            cert_encode_unique_antecedents(c2, a, aigerlits, c->unique_consequences, max_sym, - decision_lit);
+        }
         
         // encode other side as well for conflicted variables
         if (int_vector_contains_sorted(c->potentially_conflicted_variables, (int) var_id)) {
@@ -450,6 +454,11 @@ void c2_write_AIG_certificate(C2* c2) {
         unsigned case_selector = aiger_true;
         if (i + 1 < vector_count(c2->cs->closed_cases)) { // i.e. this is not the last case
             case_selector = cert_encode_new_aigerlits_for_case(c2, a, &max_sym, aigerlits, alt_aigerlits);
+            
+            // for debbuging purposes
+            char* s = malloc(sizeof(char) * 100);
+            sprintf(s, "case %u", i + 1);
+            aiger_add_output(a, case_selector, s);
         }
         
         Case* c = vector_get(c2->cs->closed_cases, i);

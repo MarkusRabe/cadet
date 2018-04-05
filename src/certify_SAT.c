@@ -382,22 +382,8 @@ static void cert_define_aiger_outputs(aiger *a, int_vector *aigerlits, C2 *c2, i
     }
 }
 
-// Assumes c2 to be in SAT state and that dlvl 0 is fully propagated; and that dlvl is not propagated depending on restrictions to universals (i.e. after completed case_splits)
-void c2_write_AIG_certificate(C2* c2) {
-    abortif(c2->state != C2_SAT, "Can only generate certificate in SAT state.");
-    abortif(int_vector_count(c2->skolem->universals_assumptions) > 0, "Current state of C2 must not depend on universal assumptions");
-    
-    aiger* a = aiger_init();
-    
-    int_vector* aigerlits = int_vector_init(); // maps var_id to the current aiger_lit representing it
-    for (unsigned i = 0 ; i < var_vector_count(c2->qcnf->vars); i++) {int_vector_add(aigerlits, AIGERLIT_UNDEFINED);}
-    
-    // taking the logarithm of the maximum var_id
-    int log_of_var_num = 0;
-    unsigned var_num_copy = var_vector_count(c2->qcnf->vars);
-    while (var_num_copy >>= 1) log_of_var_num++;
-    
-    // Assign input names
+
+static void cert_define_aiger_inputs(aiger *a, int_vector *aigerlits, C2 *c2, int log_of_var_num) {
     for (unsigned i = 0; i < var_vector_count(c2->qcnf->vars); i++) {
         unsigned al = var2aigerlit(i);
         if (qcnf_var_exists(c2->qcnf, i) && qcnf_is_original(c2->qcnf, i) && qcnf_is_universal(c2->qcnf, i)) {
@@ -420,6 +406,24 @@ void c2_write_AIG_certificate(C2* c2) {
             aiger_add_output(a, al, name);
         }
     }
+}
+
+// Assumes c2 to be in SAT state and that dlvl 0 is fully propagated; and that dlvl is not propagated depending on restrictions to universals (i.e. after completed case_splits)
+void c2_write_AIG_certificate(C2* c2) {
+    abortif(c2->state != C2_SAT, "Can only generate certificate in SAT state.");
+    abortif(int_vector_count(c2->skolem->universals_assumptions) > 0, "Current state of C2 must not depend on universal assumptions");
+    
+    aiger* a = aiger_init();
+    
+    int_vector* aigerlits = int_vector_init(); // maps var_id to the current aiger_lit representing it
+    for (unsigned i = 0 ; i < var_vector_count(c2->qcnf->vars); i++) {int_vector_add(aigerlits, AIGERLIT_UNDEFINED);}
+    
+    // taking the logarithm of the maximum var_id
+    int log_of_var_num = 0;
+    unsigned var_num_copy = var_vector_count(c2->qcnf->vars);
+    while (var_num_copy >>= 1) log_of_var_num++;
+    
+    cert_define_aiger_inputs(a, aigerlits, c2, log_of_var_num);
     
     unsigned max_sym = var2aigerlit(var_vector_count(c2->qcnf->vars));
     assert(c2->options->certificate_type != QBFCERT || max_sym == var2aigerlit(a->maxvar + 1));
@@ -430,6 +434,7 @@ void c2_write_AIG_certificate(C2* c2) {
     // For every case, encode the function in a new set of symbols and connnect to the existing symbols with a MUX
     unsigned case_selector = aiger_false;
     int_vector* out_aigerlits = NULL;
+    assert(vector_count(c2->cs->closed_cases) > 0);
     for (unsigned i = 0; i < vector_count(c2->cs->closed_cases); i++) {
         unsigned case_is_valid_signal = aiger_false;
         Case* c = vector_get(c2->cs->closed_cases, i);
@@ -449,6 +454,7 @@ void c2_write_AIG_certificate(C2* c2) {
         
         if (i == 0) { // the first case
             out_aigerlits = int_vector_copy(aigerlits);
+            
             for (unsigned var_id = 0; var_id < int_vector_count(aigerlits); var_id++) {
                 if (qcnf_var_exists(c2->qcnf, var_id) && ! cert_is_dlvl_zero_var(c2, var_id)) {
                     int_vector_set(aigerlits, var_id, AIGERLIT_UNDEFINED);
@@ -458,11 +464,12 @@ void c2_write_AIG_certificate(C2* c2) {
             case_selector = aigeru_AND(a, &max_sym, negate(case_selector), case_is_valid_signal);
             assert(case_selector != aiger_false);
             cert_encode_new_aigerlits_for_case(c2, a, &max_sym, case_selector, aigerlits, out_aigerlits);
+            
         }
     }
     
-    // Assign outputs
     cert_define_aiger_outputs(a, out_aigerlits, c2, log_of_var_num);
+    
     
     bool valid = cert_validate(a, c2->qcnf, out_aigerlits);
     cert_write_aiger(a, c2->options);

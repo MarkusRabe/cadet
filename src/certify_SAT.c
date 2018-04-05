@@ -334,6 +334,53 @@ bool cert_validate(aiger* a, QCNF* qcnf, int_vector* aigerlits) {
 //}
 
 
+static void cert_dlvl0_definitions(aiger *a, int_vector *aigerlits, C2 *c2, unsigned int *max_sym) {
+    for (unsigned i = 0; i < int_vector_count(c2->skolem->determinization_order); i++) {
+        unsigned var_id = (unsigned) int_vector_get(c2->skolem->determinization_order, i);
+        if (! qcnf_var_exists(c2->qcnf, var_id) || ! cert_is_dlvl_zero_var(c2, var_id) || qcnf_is_universal(c2->qcnf, var_id)) {
+            continue;
+        }
+        int val = skolem_get_constant_value(c2->skolem, (Lit) var_id);
+        if (val != 0) {
+            unsigned aiger_constant = val > 0 ? aiger_true : aiger_false;
+            int_vector_set(aigerlits, var_id, (int) aiger_constant);
+        } else {
+            skolem_var sv = skolem_get_info(c2->skolem, var_id);
+            c2_validate_var(c2, var_id);
+            abortif(skolem_get_decision_val(c2->skolem, var_id) != 0, "dlvl0 variable is marked as decision variable");
+            int polarity = 1;
+            if (sv.pure_pos) {
+                polarity = 1;
+            } else if (sv.pure_neg) {
+                polarity = -1;
+            } else {
+                Var* v = var_vector_get(c2->qcnf->vars, var_id);
+                bool pos_occs_smaller = vector_count(&v->pos_occs) < vector_count(&v->neg_occs);
+                polarity = pos_occs_smaller ? 1 : -1;
+            }
+            cert_encode_unique_antecedents(c2, a, aigerlits, c2->skolem->unique_consequence, max_sym, polarity * (Lit) var_id);
+        }
+    }
+}
+
+static void cert_define_aiger_outputs(aiger *a, int_vector *aigerlits, C2 *c2, int log_of_var_num) {
+    for (unsigned i = 0; i < var_vector_count(c2->qcnf->vars); i++) {
+        if (qcnf_var_exists(c2->qcnf, i)
+            && qcnf_is_original(c2->qcnf, i)
+            && qcnf_is_existential(c2->qcnf, i)) {
+            
+            unsigned al = (unsigned) int_vector_get(aigerlits, i);
+            char* name = malloc(sizeof(char) * (size_t) log_of_var_num + 2);
+            if (c2->options->certificate_type == QAIGER) {
+                sprintf(name, "2 %d", i);
+            } else {
+                sprintf(name, "%d", i);
+            }
+            aiger_add_output(a, al, name);
+        }
+    }
+}
+
 // Assumes c2 to be in SAT state and that dlvl 0 is fully propagated; and that dlvl is not propagated depending on restrictions to universals (i.e. after completed case_splits)
 void c2_write_AIG_certificate(C2* c2) {
     abortif(c2->state != C2_SAT, "Can only generate certificate in SAT state.");
@@ -377,33 +424,7 @@ void c2_write_AIG_certificate(C2* c2) {
     assert(c2->options->certificate_type != QBFCERT || max_sym == var2aigerlit(a->maxvar + 1));
     
     // Certificate for the dlvl0 variables
-    
-    for (unsigned i = 0; i < int_vector_count(c2->skolem->determinization_order); i++) {
-        unsigned var_id = (unsigned) int_vector_get(c2->skolem->determinization_order, i);
-        if (! qcnf_var_exists(c2->qcnf, var_id) || ! cert_is_dlvl_zero_var(c2, var_id) || qcnf_is_universal(c2->qcnf, var_id)) {
-            continue;
-        }
-        int val = skolem_get_constant_value(c2->skolem, (Lit) var_id);
-        if (val != 0) {
-            unsigned aiger_constant = val > 0 ? aiger_true : aiger_false;
-            int_vector_set(aigerlits, var_id, (int) aiger_constant);
-        } else {
-            skolem_var sv = skolem_get_info(c2->skolem, var_id);
-            c2_validate_var(c2, var_id);
-            abortif(skolem_get_decision_val(c2->skolem, var_id) != 0, "dlvl0 variable is marked as decision variable");
-            int polarity = 1;
-            if (sv.pure_pos) {
-                polarity = 1;
-            } else if (sv.pure_neg) {
-                polarity = -1;
-            } else {
-                Var* v = var_vector_get(c2->qcnf->vars, var_id);
-                bool pos_occs_smaller = vector_count(&v->pos_occs) < vector_count(&v->neg_occs);
-                polarity = pos_occs_smaller ? 1 : -1;
-            }
-            cert_encode_unique_antecedents(c2, a, aigerlits, c2->skolem->unique_consequence, &max_sym, polarity * (Lit) var_id);
-        }
-    }
+    cert_dlvl0_definitions(a, aigerlits, c2, &max_sym);
     
     // For every case, encode the function in a new set of symbols and connnect to the existing symbols with a MUX
     unsigned case_selector = aiger_false;
@@ -449,21 +470,7 @@ void c2_write_AIG_certificate(C2* c2) {
     }
     
     // Assign outputs
-    for (unsigned i = 0; i < var_vector_count(c2->qcnf->vars); i++) {
-        if (qcnf_var_exists(c2->qcnf, i)
-            && qcnf_is_original(c2->qcnf, i)
-            && qcnf_is_existential(c2->qcnf, i)) {
-            
-            unsigned al = (unsigned) int_vector_get(aigerlits, i);
-            char* name = malloc(sizeof(char) * (size_t) log_of_var_num + 2);
-            if (c2->options->certificate_type == QAIGER) {
-                sprintf(name, "2 %d", i);
-            } else {
-                sprintf(name, "%d", i);
-            }
-            aiger_add_output(a, al, name);
-        }
-    }
+    cert_define_aiger_outputs(a, aigerlits, c2, log_of_var_num);
     
     bool valid = cert_validate(a, c2->qcnf, aigerlits);
     cert_write_aiger(a, c2->options);

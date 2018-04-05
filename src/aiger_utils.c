@@ -126,12 +126,6 @@ unsigned aigeru_AND(aiger* a, unsigned* max_sym, unsigned i1, unsigned i2) {
 }
 
 unsigned aigeru_multiOR(aiger* a, unsigned* max_sym, int_vector* input_aigerlits) {
-    if (int_vector_count(input_aigerlits) == 0) {
-        return aiger_true;
-    }
-    if (int_vector_count(input_aigerlits) == 1) {
-        return (unsigned) int_vector_get(input_aigerlits, 0);
-    }
     unsigned outputlit = aiger_false;
     for (unsigned i = 0; i < int_vector_count(input_aigerlits); i++) {
         outputlit = aigeru_OR(a, max_sym, outputlit, (unsigned) int_vector_get(input_aigerlits, i));

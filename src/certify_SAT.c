@@ -153,15 +153,16 @@ bool cert_is_dlvl_zero_var(C2* c2, unsigned var_id) {
 
 // Connect the copies of the signals for dlvl>0 variables with MUXs.
 // Variable case_selector is the condtition of the MUXs of this case.
-void cert_encode_new_aigerlits_for_case(C2* c2, aiger* a, unsigned* max_sym, unsigned case_selector, int_vector* aigerlits, int_vector* alt_aigerlits) {
+void cert_encode_new_aigerlits_for_case(C2* c2, aiger* a, unsigned* max_sym, unsigned case_selector, int_vector* aigerlits, int_vector* out_aigerlits) {
     for (unsigned var_id = 0; var_id < var_vector_count(c2->qcnf->vars); var_id++) {
         if (! qcnf_var_exists(c2->qcnf, var_id) || cert_is_dlvl_zero_var(c2, var_id)) {
             continue;
         }
         unsigned aigerlit = (unsigned) int_vector_get(aigerlits, var_id);
-        unsigned old_aigerlit = (unsigned) int_vector_get(alt_aigerlits, var_id);
+        unsigned old_aigerlit = (unsigned) int_vector_get(out_aigerlits, var_id);
         unsigned new_aigerlit = aigeru_MUX(a, max_sym, case_selector, aigerlit, old_aigerlit);
-        int_vector_set(aigerlits, var_id, (int) new_aigerlit);
+        int_vector_set(out_aigerlits, var_id, (int) new_aigerlit);
+        int_vector_set(aigerlits, var_id, AIGERLIT_UNDEFINED);
     }
 }
 
@@ -428,53 +429,45 @@ void c2_write_AIG_certificate(C2* c2) {
     
     // For every case, encode the function in a new set of symbols and connnect to the existing symbols with a MUX
     unsigned case_selector = aiger_false;
+    int_vector* out_aigerlits = NULL;
     for (unsigned i = 0; i < vector_count(c2->cs->closed_cases); i++) {
-        int_vector* alt_aigerlits = int_vector_copy(aigerlits);
-        for (unsigned j = 0; j < int_vector_count(alt_aigerlits); j++) {
-            if (qcnf_var_exists(c2->qcnf, j)) {
-                if (!cert_is_dlvl_zero_var(c2, j)) {
-                    int_vector_set(aigerlits, j, AIGERLIT_UNDEFINED);
-                } else {
-                    assert(int_vector_get(aigerlits, j) != AIGERLIT_UNDEFINED);
-                }
-            }
-        }
-        
         unsigned case_is_valid_signal = aiger_false;
-        
         Case* c = vector_get(c2->cs->closed_cases, i);
         if (c->type == 0) {  // CEGAR assignment
             NOT_IMPLEMENTED();
-            //            case_encode_cegar();
+            // case_encode_cegar();
         } else {  // certificate is an actual function, closed case split
             case_is_valid_signal = cert_encode_case(c2, a, &max_sym, aigerlits, c);
         }
         assert(case_is_valid_signal != aiger_false);
         
-        if (i > 0) { // i.e. this is not the first case
+//#ifdef DEBUG
+//        char* s = malloc(sizeof(char) * 100);
+//        sprintf(s, "case %u", i + 1);
+//        aiger_add_output(a, case_is_valid_signal, s);
+//#endif
+        
+        if (i == 0) { // the first case
+            out_aigerlits = int_vector_copy(aigerlits);
+            for (unsigned var_id = 0; var_id < int_vector_count(aigerlits); var_id++) {
+                if (qcnf_var_exists(c2->qcnf, var_id) && ! cert_is_dlvl_zero_var(c2, var_id)) {
+                    int_vector_set(aigerlits, var_id, AIGERLIT_UNDEFINED);
+                }
+            }
+        } else { // not the first case
             case_selector = aigeru_AND(a, &max_sym, negate(case_selector), case_is_valid_signal);
             assert(case_selector != aiger_false);
-            cert_encode_new_aigerlits_for_case(c2, a, &max_sym, case_selector, aigerlits, alt_aigerlits);
-            
-#ifdef DEBUG
-//            char* s = malloc(sizeof(char) * 100);
-//            sprintf(s, "case %u", i + 1);
-//            aiger_add_output(a, case_selector, s);
-            
-            for (unsigned j = 0; j < int_vector_count(aigerlits); j++) {
-                assert(! qcnf_var_exists(c2->qcnf, j) || int_vector_get(aigerlits, j) != AIGERLIT_UNDEFINED);
-            }
-#endif
+            cert_encode_new_aigerlits_for_case(c2, a, &max_sym, case_selector, aigerlits, out_aigerlits);
         }
-        int_vector_free(alt_aigerlits);
     }
     
     // Assign outputs
-    cert_define_aiger_outputs(a, aigerlits, c2, log_of_var_num);
+    cert_define_aiger_outputs(a, out_aigerlits, c2, log_of_var_num);
     
-    bool valid = cert_validate(a, c2->qcnf, aigerlits);
+    bool valid = cert_validate(a, c2->qcnf, out_aigerlits);
     cert_write_aiger(a, c2->options);
     abortif(!valid, "Certificate invalid!");
     int_vector_free(aigerlits);
+    int_vector_free(out_aigerlits);
     aiger_reset(a);
 }

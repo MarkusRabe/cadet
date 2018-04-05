@@ -52,15 +52,42 @@ unsigned aigeru_multiAND(aiger* a, unsigned* max_sym, int_vector* input_aigerlit
 
 void aigeru_add_multiAND(aiger* a, unsigned* max_sym, unsigned output_aigerlit, int_vector* input_aigerlits) {
     assert(!is_negated(output_aigerlit));
-    unsigned cur_outputlit = output_aigerlit;
-    for (unsigned i = 0; i < int_vector_count(input_aigerlits); i++) {
-        unsigned input_aigerlit = (unsigned) int_vector_get(input_aigerlits, i);
-        unsigned next_outputlit = inc(max_sym);
-        aiger_add_and(a, cur_outputlit, next_outputlit, input_aigerlit);
-        cur_outputlit = next_outputlit;
+    if (int_vector_count(input_aigerlits) == 0) {
+        aiger_add_and(a, output_aigerlit, aiger_true, aiger_true); // empty AND is true
+        return;
     }
-    aiger_add_and(a, cur_outputlit, 1, 1); // empty AND is true
+    unsigned cur_output = aiger_true;
+    for (unsigned i = 0; i < int_vector_count(input_aigerlits) - 1; i++) {
+        unsigned input_aigerlit = (unsigned) int_vector_get(input_aigerlits, i);
+        cur_output = aigeru_AND(a, max_sym, cur_output, input_aigerlit);
+    }
+    unsigned last_lit = (unsigned) int_vector_get(input_aigerlits, int_vector_count(input_aigerlits) - 1);
+    aiger_add_and(a, output_aigerlit, cur_output, last_lit);
 }
+
+//void aigeru_add_multiAND(aiger* a, unsigned* max_sym, unsigned output_aigerlit, int_vector* input_aigerlits) {
+//    assert(!is_negated(output_aigerlit));
+//    if (int_vector_count(input_aigerlits) == 0) {
+//        aiger_add_and(a, output_aigerlit, aiger_true, aiger_true); // empty AND is true
+//        return;
+//    }
+//    if (int_vector_count(input_aigerlits) == 1) {
+//        unsigned last_lit = (unsigned) int_vector_get(input_aigerlits, 0);
+//        aiger_add_and(a, output_aigerlit, last_lit, last_lit); // empty AND is true
+//        return;
+//    }
+//    assert(int_vector_count(input_aigerlits) >= 2); // can define a proper AND
+//    unsigned cur_outputlit = output_aigerlit;
+//    for (unsigned i = 0; i < int_vector_count(input_aigerlits) - 2; i++) {
+//        unsigned input_aigerlit = (unsigned) int_vector_get(input_aigerlits, i);
+//        unsigned next_outputlit = inc(max_sym);
+//        aiger_add_and(a, cur_outputlit, next_outputlit, input_aigerlit);
+//        cur_outputlit = next_outputlit;
+//    }
+//    unsigned last_lit = (unsigned) int_vector_get(input_aigerlits, int_vector_count(input_aigerlits) - 1);
+//    unsigned second_to_last_lit = (unsigned) int_vector_get(input_aigerlits, int_vector_count(input_aigerlits) - 2);
+//    aiger_add_and(a, cur_outputlit, last_lit, second_to_last_lit);
+//}
 
 void aigeru_add_OR(aiger* a, unsigned* max_sym, unsigned output_aigerlit, unsigned i1, unsigned i2) {
     unsigned negated_outputlit = 0;
@@ -74,20 +101,41 @@ void aigeru_add_OR(aiger* a, unsigned* max_sym, unsigned output_aigerlit, unsign
 }
 
 unsigned aigeru_OR(aiger* a, unsigned* max_sym, unsigned i1, unsigned i2) {
-    unsigned negated_outputlit = inc(max_sym);
-    aiger_add_and(a, negated_outputlit, negate(i1), negate(i2));
-    return negate(negated_outputlit);
+    return negate(aigeru_AND(a, max_sym, negate(i1), negate(i2)));
 }
 
 unsigned aigeru_AND(aiger* a, unsigned* max_sym, unsigned i1, unsigned i2) {
+    if (i1 == aiger_true) {
+        return i2;
+    }
+    if (i2 == aiger_true) {
+        return i1;
+    }
+    if (i1 == aiger_false || i2 == aiger_false) {
+        return aiger_false;
+    }
+    if (i1 == i2) {
+        return i1;
+    }
+    if (i1 == negate(i2)) {
+        return aiger_false;
+    }
     unsigned negated_outputlit = inc(max_sym);
     aiger_add_and(a, negated_outputlit, i1, i2);
     return negated_outputlit;
 }
 
 unsigned aigeru_multiOR(aiger* a, unsigned* max_sym, int_vector* input_aigerlits) {
-    unsigned outputlit = inc(max_sym);
-    aigeru_add_multiOR(a, max_sym, outputlit, input_aigerlits);
+    if (int_vector_count(input_aigerlits) == 0) {
+        return aiger_true;
+    }
+    if (int_vector_count(input_aigerlits) == 1) {
+        return (unsigned) int_vector_get(input_aigerlits, 0);
+    }
+    unsigned outputlit = aiger_false;
+    for (unsigned i = 0; i < int_vector_count(input_aigerlits); i++) {
+        outputlit = aigeru_OR(a, max_sym, outputlit, (unsigned) int_vector_get(input_aigerlits, i));
+    }
     return outputlit;
 }
 
@@ -110,6 +158,7 @@ void aigeru_add_multiOR(aiger* a, unsigned* max_sym, unsigned output_aigerlit, i
 
 void aigeru_add_multiplexer(aiger* a, unsigned* max_sym, unsigned output,
                                unsigned selector, unsigned if_signal, unsigned else_signal) {
+    LOG_WARNING("Not sure if this component is correct.");
     unsigned if_component = inc(max_sym);
     aiger_add_and(a, if_component, selector, if_signal);
     unsigned else_component = inc(max_sym);
@@ -119,4 +168,8 @@ void aigeru_add_multiplexer(aiger* a, unsigned* max_sym, unsigned output,
     aiger_add_and(a, output, negate(negation_of_output), negate(negation_of_output));
 }
 
-
+unsigned aigeru_MUX(aiger* a, unsigned* max_sym, unsigned selector, unsigned i1, unsigned i2) {
+    unsigned i1_out = aigeru_AND(a, max_sym, selector, i1);
+    unsigned i2_out = aigeru_AND(a, max_sym, negate(selector), i2);
+    return aigeru_OR(a, max_sym, i1_out, i2_out);
+}

@@ -1290,7 +1290,7 @@ void skolem_assign_constant_value(Skolem* s, Lit lit, union Dependencies propaga
 //    assert(skolem_get_satsolver_lit(s, lit) != s->satlit_true); // not constant already, not a big problem, but why should this happen?
     abortif(skolem_get_satsolver_lit(s, -lit) == s->satlit_true, "Propagation ended in inconsistent state.\n");
     
-    V3("Skolem: Assign value %d.\n",lit);
+    V3("Skolem: Assign value %d.\n", lit);
     skolem_update_reason_for_constant(s, var_id, reason ? reason->clause_idx : INT_MAX, s->decision_lvl);
     
     if (propagation_deps.dependence_lvl == 1) {

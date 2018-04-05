@@ -26,6 +26,7 @@ void aigeru_add_OR(aiger* a, unsigned* max_sym, unsigned output_aigerlit, unsign
 void aigeru_add_multiOR(aiger* a, unsigned* max_sym, unsigned output_aigerlit, int_vector* input_aigerlits);
 void aigeru_add_multiplexer(aiger* a, unsigned* max_sym,
                             unsigned output, unsigned selector, unsigned if_signal, unsigned else_signal);
+unsigned aigeru_MUX(aiger* a, unsigned* max_sym, unsigned selector, unsigned i1, unsigned i2);
 
 unsigned aigeru_OR(aiger* a, unsigned* max_sym, unsigned i1, unsigned i2);
 unsigned aigeru_AND(aiger* a, unsigned* max_sym, unsigned i1, unsigned i2);

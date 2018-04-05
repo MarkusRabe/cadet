@@ -36,7 +36,7 @@ typedef struct Casesplits Casesplits;
 
 struct Case {
     int_vector* universal_assumptions;
-    int_vector* decisions; // can be an assignment to dlvl>0 vars (for CEGAR) or decisions to be fed to skolem
+    int_vector* determinization_order; // can be an assignment to dlvl>0 vars (for CEGAR) or decisions to be fed to skolem
     int_vector* unique_consequences;
     int_vector* potentially_conflicted_variables;
     char type; // 0 indicates cegar round, 1 indicates case split
@@ -71,8 +71,9 @@ Casesplits* casesplits_init(QCNF*);
 bool casesplits_is_initialized(Casesplits*);
 void casesplits_free(Casesplits*);
 
-void casesplits_record_case(Casesplits*);
-void casesplits_encode_last_case(Casesplits* cs);
+int_vector* case_splits_determinization_order_with_polarities(Skolem*);
+void casesplits_encode_closed_case(Casesplits* cs, int_vector* determinization_order, int_vector* universal_assumptions);
+void casesplits_encode_CEGAR_case(Casesplits*);
 void casesplits_steal_cases(Casesplits* new_cs, Casesplits* old_cs); // for satsolver refreshs
 void casesplits_record_cegar_cube(Casesplits*, int_vector* cube, int_vector* partial_assignment);
 void casesplits_encode_case_into_satsolver(Skolem*, Case* c, SATSolver* sat);

@@ -329,15 +329,15 @@ int_vector* c2_rl_necessary_learnt_clauses(C2* solver) {
     Skolem* replay = skolem_init(qcnf_copy, solver->options);
 
     Case* last_case = vector_get(solver->cs->closed_cases, vector_count(solver->cs->closed_cases) - 1);
-    casesplits_record_conflicts(replay, last_case->decisions);
+    casesplits_record_conflicts(replay, last_case->determinization_order);
     skolem_encode_global_conflict_check(replay);
     int_vector* necessary_assumptions = c2_rl_test_assumptions(replay, universal_assumptions);
+    abortif(!necessary_assumptions, "Formula was not solved correctly in RL mode. Generation of early rewards failed."); // can now fail because we change the determinization order of the case for storage TODO
 #ifdef DEBUG
     for (unsigned i = 0; i < int_vector_count(necessary_assumptions); i++) {
         assert(int_vector_contains(universal_assumptions, int_vector_get(necessary_assumptions, i)));
     }
 #endif
-    abortif(!necessary_assumptions, "Formula was not solved correctly in RL mode. Generation of early rewards failed.");
     V1("%d out of %d learnt clauses were necessary.\n",
        int_vector_count(necessary_assumptions),
        int_vector_count(universal_assumptions));

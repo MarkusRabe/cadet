@@ -160,7 +160,7 @@ void casesplits_update_interface(Casesplits* cs, Skolem* skolem) {
 
 void case_free(Case* c) {
     if (c->universal_assumptions) {int_vector_free(c->universal_assumptions);}
-    if (c->decisions) {int_vector_free(c->decisions);}
+    if (c->determinization_order) {int_vector_free(c->determinization_order);}
     if (c->unique_consequences) {int_vector_free(c->unique_consequences);}
     if (c->potentially_conflicted_variables) {int_vector_free(c->potentially_conflicted_variables);}
     free(c);
@@ -183,7 +183,7 @@ Case* case_init() {
     Case* c = malloc(sizeof(Case));
     c->type = 0;
     c->universal_assumptions = NULL;
-    c->decisions = NULL;
+    c->determinization_order = NULL;
     c->unique_consequences = NULL;
     c->potentially_conflicted_variables = NULL;
     return c;
@@ -193,7 +193,7 @@ void casesplits_close_heuristics(Casesplits* cs, int_vector* solved_cube) {
     if (int_vector_count(solved_cube) < 20) { // prevent tinitiny increments, NaN-hell, etc
         float activity_bump = (float) ((double) 1.0 / pow(2.0, (double) int_vector_count(solved_cube)));
         //        float activity_bump = (float) ((double) 1.0 / (double) (c2->case_split_depth * c2->case_split_depth + 1.0));
-        V1("Activity bump: %f\n", activity_bump);
+        V3("Activity bump: %f\n", activity_bump);
         for (unsigned i = 0; i < int_vector_count(solved_cube); i++) {
             unsigned var_id = lit_to_var(int_vector_get(solved_cube, i));
             casesplits_add_interface_activity(cs, var_id, activity_bump);
@@ -275,7 +275,100 @@ int_vector* casesplits_test_assumptions(Casesplits* cs, int_vector* universal_as
     }
 }
 
-void casesplits_encode_last_case(Casesplits* cs) {
+
+Case* casesplits_completed_case_split(Casesplits* cs,
+                                      int_vector* universal_assumptions,
+                                      int_vector* determinization_order,
+                                      int_vector* unique_consequences,
+                                      int_vector* potentially_conflicted_variables) {
+    
+    Case* c = case_init();
+    c->type = 1; // function case
+    c->universal_assumptions = universal_assumptions;
+    c->determinization_order = determinization_order;
+    c->unique_consequences = unique_consequences;
+    c->potentially_conflicted_variables = potentially_conflicted_variables;
+    vector_add(cs->closed_cases, c);
+    return c;
+}
+
+
+void casesplits_encode_closed_case(Casesplits* cs, int_vector* determinization_order, int_vector* universal_assumptions) {
+    assert(cs->skolem->decision_lvl == 0);
+    assert(!skolem_is_conflicted(cs->skolem));
+    assert(!cs->skolem->record_conflicts);
+    
+    rl_mute();
+    stack_push(cs->skolem->stack);
+    
+    // Encode the disjunction over the potentially conflicted variables.
+    // This excludes all solutions for which this Skolem function works
+    casesplits_record_conflicts(cs->skolem, determinization_order);
+    int_vector_free(determinization_order);
+    determinization_order = case_splits_determinization_order_with_polarities(cs->skolem);
+    int_vector* potentially_conflicted_variables = int_vector_copy(cs->skolem->potentially_conflicted_variables);
+    int_vector* unique_consequences = int_vector_copy(cs->skolem->unique_consequence);
+    //#ifdef DEBUG
+    //        for (unsigned i = 0; i < int_vector_count(c->determinization_order); i++) {
+    //            int d = int_vector_get(c->determinization_order, i);
+    //            int d2 = int_vector_get(cs->skolem->determinization_order, i);
+    //            assert(d == d2);
+    //        }
+    //        for (unsigned i = 0; i < int_vector_count(c->unique_consequences); i++) {
+    //            Clause* cl = vector_get(cs->skolem->qcnf->all_clauses, i);
+    //            assert(cl);
+    //            unsigned uc = lit_to_var(int_vector_get(c->unique_consequences, i));
+    //            if (uc == 0) {
+    //                continue;
+    //            }
+    //            for (unsigned j = 0; j < cl->size; j++) {
+    //                unsigned occ = lit_to_var(cl->occs[j]);
+    //                assert(   skolem_get_decision_lvl(cs->skolem, occ)
+    //                       <= skolem_get_decision_lvl(cs->skolem, uc));
+    //            }
+    //        }
+    //#endif
+    
+    skolem_encode_global_conflict_check(cs->skolem);
+    int_vector* necessary_assumptions = casesplits_test_assumptions(cs, universal_assumptions);
+    abortif(necessary_assumptions == NULL, "Case split was not successfully closed");
+    for (unsigned i = 0; i < int_vector_count(necessary_assumptions); i++) {
+        Lit lit = int_vector_get(necessary_assumptions, i);
+        int satlit = (int) (long) map_get(cs->original_satlits, - lit);
+        satsolver_add(cs->skolem->skolem, satlit);
+    }
+    satsolver_clause_finished(cs->skolem->skolem);
+    unsigned generalizations = int_vector_count(universal_assumptions) - int_vector_count(necessary_assumptions);
+    cs->case_generalizations += generalizations;
+    if (generalizations > 0) {
+        V1("Generalized assumptions! Removed %d of %d assignments\n",
+           generalizations,
+           int_vector_count(universal_assumptions));
+    }
+    
+    int_vector_free(universal_assumptions);
+    universal_assumptions = necessary_assumptions;
+    casesplits_close_heuristics(cs, universal_assumptions);
+    
+#ifdef DEBUG
+    for (unsigned i = 0; i < var_vector_count(cs->skolem->qcnf->vars); i++) {
+        abortif(qcnf_var_exists(cs->skolem->qcnf, i) && ! skolem_is_deterministic(cs->skolem, i), "A variable remained deterministic after casesplit replay.");
+    }
+#endif
+    
+    stack_pop(cs->skolem->stack, cs->skolem);
+    rl_unmute();
+    
+    casesplits_completed_case_split(cs,
+                                    universal_assumptions,
+                                    determinization_order,
+                                    unique_consequences,
+                                    potentially_conflicted_variables);
+}
+
+
+void casesplits_encode_CEGAR_case(Casesplits* cs) {
+    
     Case* c = vector_get(cs->closed_cases, vector_count(cs->closed_cases) - 1);
     if (c->type == 0 || (c->type == 1 && cs->skolem->options->casesplits_cubes)) { // cube case
         for (unsigned i = 0; i < int_vector_count(c->universal_assumptions); i++) {
@@ -289,60 +382,10 @@ void casesplits_encode_last_case(Casesplits* cs) {
         }
         satsolver_clause_finished_for_context(cs->skolem->skolem, 0);
     } else { // function case
-        assert(c->type == 1);
-        assert(cs->skolem->decision_lvl == 0);
-        assert(!skolem_is_conflicted(cs->skolem));
-        assert(!cs->skolem->record_conflicts);
-        
-        rl_mute();
-        stack_push(cs->skolem->stack);
-        
-        // Encode the disjunction over the potentially conflicted variables.
-        // This excludes all solutions for which this Skolem function works
-        casesplits_record_conflicts(cs->skolem, c->decisions);
-        c->potentially_conflicted_variables = int_vector_copy(cs->skolem->potentially_conflicted_variables);
-        c->unique_consequences = int_vector_copy(cs->skolem->unique_consequence);
-        skolem_encode_global_conflict_check(cs->skolem);
-        int_vector* necessary_assumptions = casesplits_test_assumptions(cs, c->universal_assumptions);
-        abortif(necessary_assumptions == NULL, "Case split was not successfully closed");
-        for (unsigned i = 0; i < int_vector_count(necessary_assumptions); i++) {
-            Lit lit = int_vector_get(necessary_assumptions, i);
-            int satlit = (int) (long) map_get(cs->original_satlits, - lit);
-            satsolver_add(cs->skolem->skolem, satlit);
-        }
-        satsolver_clause_finished(cs->skolem->skolem);
-        unsigned generalizations = int_vector_count(c->universal_assumptions) - int_vector_count(necessary_assumptions);
-        cs->case_generalizations += generalizations;
-        if (generalizations > 0) {
-            V1("Generalized assumptions! Removed %d of %d assignments\n",
-               generalizations,
-               int_vector_count(c->universal_assumptions));
-        }
-        
-        int_vector_free(c->universal_assumptions);
-        c->universal_assumptions = necessary_assumptions;
-        casesplits_close_heuristics(cs, c->universal_assumptions);
-        
-#ifdef DEBUG
-        for (unsigned i = 0; i < var_vector_count(cs->skolem->qcnf->vars); i++) {
-            abortif(qcnf_var_exists(cs->skolem->qcnf, i) && ! skolem_is_deterministic(cs->skolem, i), "A variable remained deterministic after casesplit replay.");
-        }
-#endif
-        
-        stack_pop(cs->skolem->stack, cs->skolem);
-        rl_unmute();
+        abort(); // call casesplits_close
     }
 }
 
-void casesplits_completed_case_split(Casesplits* cs, int_vector* universal_assumptions, int_vector* decisions) {
-    Case* c = case_init();
-    c->type = 1; // function case
-    c->universal_assumptions = universal_assumptions;
-    c->decisions = decisions;
-    assert(c->unique_consequences == NULL);
-    assert(c->potentially_conflicted_variables == NULL);
-    vector_add(cs->closed_cases, c);
-}
 
 void casesplits_encode_case_into_satsolver(Skolem* s, Case* c, SATSolver* sat) {
     V2("Encoding completed case");
@@ -355,7 +398,7 @@ void casesplits_record_cegar_cube(Casesplits* cs, int_vector* cube, int_vector* 
     assert(!cs->skolem->options->certify_SAT || partial_assignment);
     c->type = 0;
     c->universal_assumptions = cube;
-    c->decisions = partial_assignment;
+    c->determinization_order = partial_assignment;
     vector_add(cs->closed_cases, c);
     // TODO: Instead of adding a clause to the SATsolver only, we should add a clause to the actual QCNF to enable propagation among the universals. But universal reduction might collapse these clauses to empty clauses ... not good.
     V2("Completed cube (with length %u) ", int_vector_count(cube));
@@ -378,14 +421,14 @@ void casesplits_record_cegar_cube(Casesplits* cs, int_vector* cube, int_vector* 
     V2("\n");
 }
 
-void casesplits_record_case(Casesplits* cs) {
-    int_vector* determinizations_with_polarity = int_vector_init();
-    for (unsigned i = 0; i < int_vector_count(cs->skolem->determinization_order); i++) {
-        unsigned var_id = (unsigned) int_vector_get(cs->skolem->determinization_order, i);
+int_vector* case_splits_determinization_order_with_polarities(Skolem* s) {
+    int_vector* result = int_vector_init();
+    for (unsigned i = 0; i < int_vector_count(s->determinization_order); i++) {
+        unsigned var_id = (unsigned) int_vector_get(s->determinization_order, i);
         Lit lit = (Lit) var_id;
-        int constant_val = skolem_get_constant_value(cs->skolem, (Lit) var_id);
-        int decision_val = skolem_get_decision_val(cs->skolem, var_id);
-        int pure_val = skolem_get_pure_val(cs->skolem, var_id);
+        int constant_val = skolem_get_constant_value(s, (Lit) var_id);
+        int decision_val = skolem_get_decision_val(s, var_id);
+        int pure_val = skolem_get_pure_val(s, var_id);
         assert(! pure_val || ! decision_val);
         
         if (constant_val) {
@@ -396,34 +439,32 @@ void casesplits_record_case(Casesplits* cs) {
             lit = - pure_val * lit;
         }
         
-        int_vector_add(determinizations_with_polarity, lit);
+        int_vector_add(result, lit);
     }
-    
-    casesplits_completed_case_split(cs,
-                                    int_vector_copy(cs->skolem->universals_assumptions),
-                                    determinizations_with_polarity);
+    return result;
 }
 
 void casesplits_steal_cases(Casesplits* new_cs, Casesplits* old_cs) {
+    LOG_WARNING("This function is deprecated.");
     for (unsigned i = 0; i < vector_count(old_cs->closed_cases); i++) {
         Case* c = (Case*) vector_get(old_cs->closed_cases, i);
         if (c->type == 0) {
-            casesplits_record_cegar_cube(new_cs, c->universal_assumptions, c->decisions);
+            casesplits_record_cegar_cube(new_cs, c->universal_assumptions, c->determinization_order);
             // We passed these objects on to the new casesplits object, so make sure these
             // objects will not be deallocated during free of old_cs below.
             c->universal_assumptions = NULL;
-            c->decisions = NULL;
+            c->determinization_order = NULL;
             assert(c->unique_consequences == NULL);
+            casesplits_encode_CEGAR_case(new_cs);
         } else {
             assert(c->type == 1);
             // We passed these objects on to the new casesplits object, so make sure these
             // objects will not be deallocated during free of old_cs below.
-            casesplits_completed_case_split(new_cs, c->universal_assumptions, c->decisions);
+            casesplits_encode_closed_case(new_cs, c->determinization_order, c->universal_assumptions);
             c->universal_assumptions = NULL;
-            c->decisions = NULL;
+            c->determinization_order = NULL;
             c->unique_consequences = NULL;
         }
-        casesplits_encode_last_case(new_cs);
     }
 }
 

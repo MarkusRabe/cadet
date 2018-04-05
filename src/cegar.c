@@ -127,7 +127,7 @@ void cegar_one_round_for_conflicting_assignment(C2* c2) {
             }
         }
         casesplits_record_cegar_cube(c2->cs, cube, existentials);
-        casesplits_encode_last_case(c2->cs);
+        casesplits_encode_CEGAR_case(c2->cs);
         c2->cs->cegar_stats.recent_average_cube_size = (float) int_vector_count(cube) * (float) 0.1 + c2->cs->cegar_stats.recent_average_cube_size * (float) 0.9;
     } else {
         c2->state = C2_UNSAT;

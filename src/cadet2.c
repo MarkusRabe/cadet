@@ -181,6 +181,7 @@ Var* c2_pick_nondeterministic_variable(C2* c2) {
             }
         }
         V3("Maximal activity is %f for var %u\n", decision_var_activity, decision_var==NULL?0:decision_var->var_id);
+//        assert(decision_var_activity > 0.5 || decision_var_activity < 0.01);
         return decision_var;
     } else {  // Pick a random nondeterministic variable
         Var* decision_var = NULL;

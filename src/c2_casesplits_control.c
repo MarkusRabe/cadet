@@ -307,7 +307,12 @@ void c2_close_case(C2* c2) {
     c2->statistics.cases_closed += 1;
     
     bool completed_casesplit = ! skolem_has_empty_domain(c2->skolem);
-    if (completed_casesplit) {casesplits_record_case(c2->cs);}
+    int_vector* determinization_order = NULL;
+    int_vector* universal_assumptions = NULL;
+    if (completed_casesplit) {
+        determinization_order = case_splits_determinization_order_with_polarities(c2->skolem);
+        universal_assumptions = int_vector_copy(c2->skolem->universals_assumptions);
+    }
     c2_backtrack_to_decision_lvl(c2, c2->restart_base_decision_lvl);
     assert(c2->skolem->decision_lvl == c2->restart_base_decision_lvl);
     c2_backtrack_casesplit(c2);
@@ -315,7 +320,7 @@ void c2_close_case(C2* c2) {
         return;
     }
     if (completed_casesplit) {
-        casesplits_encode_last_case(c2->cs);
+        casesplits_encode_closed_case(c2->cs, determinization_order, universal_assumptions);
         
 //        // now turn last case split into a clause .. DEACTIVATED due to mysterious drop in performance
 //        Case* last_case = vector_get(c2->cs->closed_cases, vector_count(c2->cs->closed_cases) - 1);

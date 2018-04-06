@@ -182,6 +182,36 @@ unsigned cert_encode_c2_cube(C2* c2, aiger* a, unsigned *max_sym, int_vector* ai
     return outputlit;
 }
 
+
+unsigned cert_encode_CEGAR(C2* c2, aiger* a, unsigned *max_sym, int_vector* aigerlits, Case* c) {
+    assert(c->type == 0);  // encodes a function
+    assert(c->universal_assumptions != NULL);
+    
+    // Certificate all remaining cases by writing out the unique consequences of the dlvl>0 variables
+    for (unsigned i = 0; i < int_vector_count(c->determinization_order); i++) {
+        Lit decision_lit = int_vector_get(c->determinization_order, i);
+        assert(decision_lit != 0);
+        unsigned var_id = lit_to_var(decision_lit);
+        if (! qcnf_var_exists(c2->qcnf, var_id)) {   //  || cert_is_dlvl_zero_var(c2, var_id) // not skipping dlvl0 variables as variables can move into dlvl0 after this case was finished
+            //            assert(!int_vector_contains_sorted(c->potentially_conflicted_variables, (int) var_id));
+            continue;
+        }
+        if (! cert_is_dlvl_zero_var(c2, var_id)) {
+            assert(!qcnf_is_universal(c2->qcnf, var_id));
+            int_vector_set(aigerlits, var_id, decision_lit > 0 ? aiger_true : aiger_false);
+        }
+    }
+    
+    unsigned case_is_valid = aiger_true;
+    for (unsigned i = 0; i < int_vector_count(c->universal_assumptions); i++) {
+        Lit assumption = int_vector_get(c->universal_assumptions, i);
+        unsigned assumption_aigerlit = mapped_lit2aigerlit(aigerlits, assumption);
+        case_is_valid = aigeru_AND(a, max_sym, case_is_valid, assumption_aigerlit);
+    }
+    return case_is_valid;
+}
+
+
 unsigned cert_encode_case(C2* c2, aiger* a, unsigned *max_sym, int_vector* aigerlits, Case* c) {
     assert(c->type == 1);  // encodes a function
     unsigned case_is_valid = aiger_true;
@@ -193,7 +223,7 @@ unsigned cert_encode_case(C2* c2, aiger* a, unsigned *max_sym, int_vector* aiger
         V2("\n");
     }
     
-    // Certificate all remaining cases by writing out the unique consequences of the dlvl>0 variables
+    // Certify all vars with dlvl>0 by writing out the unique consequences in the correct order
     for (unsigned i = 0; i < int_vector_count(c->determinization_order); i++) {
         Lit decision_lit = int_vector_get(c->determinization_order, i);
         assert(decision_lit != 0);
@@ -250,7 +280,7 @@ void cert_validate_print_assignment(aiger* a, QCNF* qcnf, SATSolver* checker, in
 }
 
 
-bool cert_validate(aiger* a, QCNF* qcnf, int_vector* aigerlits, unsigned some_case_applies) {
+bool cert_validate(aiger* a, QCNF* qcnf, int_vector* aigerlits, int_vector* case_selectors) {
     V1("Validating Skolem function with %u gates.\n", a->num_ands);
     Stats* timer = statistics_init(1000);  // 1 ms resolution
     statistics_start_timer(timer);
@@ -281,17 +311,19 @@ bool cert_validate(aiger* a, QCNF* qcnf, int_vector* aigerlits, unsigned some_ca
     
     assert(satsolver_sat(checker) == SATSOLVER_SAT);
     
-#ifdef DEBUG
+
     satsolver_push(checker);
-    satsolver_add(checker, - aiger_lit2lit(some_case_applies, truelit));
-    satsolver_clause_finished(checker);
+    for (unsigned i = 0; i < int_vector_count(case_selectors); i++) {
+        unsigned sel = (unsigned) int_vector_get(case_selectors, i);
+        satsolver_add(checker, - aiger_lit2lit(sel, truelit));
+        satsolver_clause_finished(checker);
+    }
     if (satsolver_sat(checker) == SATSOLVER_SAT) {
         LOG_ERROR("No case in the encoded certificate applies.");
         cert_validate_print_assignment(a, qcnf, checker, aigerlits, truelit);
 //        abort();
     }
     satsolver_pop(checker);
-#endif
     
     
     // Encode big disjunction over the violation of the clauses
@@ -477,27 +509,26 @@ void c2_write_AIG_certificate(C2* c2) {
         unsigned case_applies = AIGERLIT_UNDEFINED;
         Case* c = vector_get(c2->cs->closed_cases, case_idx);
         if (c->type == 0) {  // CEGAR assignment
-            NOT_IMPLEMENTED();
-            // case_encode_cegar();
+            case_applies = cert_encode_CEGAR(c2, a, &max_sym, aigerlits, c);
         } else {  // certificate is an actual function, closed case split
             case_applies = cert_encode_case(c2, a, &max_sym, aigerlits, c);
         }
         abortif(case_applies == aiger_false, "This case does not contribute.");
         
-#ifdef DEBUG
+//#ifdef DEBUG
         char* s = malloc(sizeof(char) * 100);
         sprintf(s, "case %u", case_idx + 1);
         aiger_add_output(a, case_applies, s);
-
-        for (unsigned var_id = 0; var_id < int_vector_count(aigerlits); var_id++) {
-            if (qcnf_var_exists(c2->qcnf, var_id) && ! cert_is_dlvl_zero_var(c2, var_id)) {
-                unsigned l = (unsigned) int_vector_get(aigerlits, var_id);
-                char* s2 = malloc(sizeof(char) * 100);
-                sprintf(s2, "%u-%u", var_id, case_idx + 1);
-                aiger_add_output(a, l, s2);
-            }
-        }
-#endif
+//
+//        for (unsigned var_id = 0; var_id < int_vector_count(aigerlits); var_id++) {
+//            if (qcnf_var_exists(c2->qcnf, var_id) && ! cert_is_dlvl_zero_var(c2, var_id)) {
+//                unsigned l = (unsigned) int_vector_get(aigerlits, var_id);
+//                char* s2 = malloc(sizeof(char) * 100);
+//                sprintf(s2, "%u-%u", var_id, case_idx + 1);
+//                aiger_add_output(a, l, s2);
+//            }
+//        }
+//#endif
         
         int_vector_add(case_selectors, (int) case_applies);
         for (unsigned var_id = 0; var_id < int_vector_count(aigerlits); var_id++) {
@@ -512,8 +543,8 @@ void c2_write_AIG_certificate(C2* c2) {
     }
     
     int_vector* out_aigerlits = int_vector_copy(aigerlits);
-//    int_vector_pop(case_selectors);
-//    int_vector_add(case_selectors, aiger_true);
+    int_vector_pop(case_selectors);
+    int_vector_add(case_selectors, aiger_true);
     for (unsigned var_id = 0; var_id < vector_count(case_aigerlits); var_id++) {
         if (! qcnf_var_exists(c2->qcnf, var_id) || cert_is_dlvl_zero_var(c2, var_id)) {
             continue;
@@ -534,17 +565,7 @@ void c2_write_AIG_certificate(C2* c2) {
     
     cert_define_aiger_outputs(c2, a, out_aigerlits);
     
-    unsigned some_case_applies = aiger_true;
-#ifdef DEBUG
-    some_case_applies = aiger_false;
-    for (unsigned i = 0; i < int_vector_count(case_selectors); i++) {
-        unsigned sel = (unsigned) int_vector_get(case_selectors, i);
-        some_case_applies = aigeru_OR(a, &max_sym, some_case_applies, sel);
-    }
-    aiger_add_output(a, some_case_applies, "Some case applies");
-#endif
-    
-    bool valid = cert_validate(a, c2->qcnf, out_aigerlits, some_case_applies);
+    bool valid = cert_validate(a, c2->qcnf, out_aigerlits, case_selectors);
     cert_write_aiger(a, c2->options);
     abortif(!valid, "Certificate invalid!");
     int_vector_free(aigerlits);

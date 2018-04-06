@@ -116,10 +116,12 @@ void cegar_one_round_for_conflicting_assignment(C2* c2) {
                 }
                 if (! skolem_is_deterministic(c2->skolem, var_id) || skolem_get_decision_lvl(c2->skolem, var_id) > 0) {
                     int val = satsolver_deref(cs->exists_solver, (int) var_id);
-                    if (val == 0 && int_vector_find_sorted(cs->additional_assignment, - (int) var_id)) {
-                        val = -1;
-                    } else { // potentially (int) var_id is in additional_assignment
-                        val = +1;  // default is +1
+                    if (val == 0) {
+                        if (int_vector_find_sorted(cs->additional_assignment, - (int) var_id)) {
+                            val = -1;
+                        } else { // potentially (int) var_id is in additional_assignment
+                            val = +1;  // default is +1
+                        }
                     }
                     assert(val == -1 || val == +1);
                     int_vector_add(existentials, val * (int) var_id);

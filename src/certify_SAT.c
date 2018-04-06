@@ -513,12 +513,12 @@ void c2_write_AIG_certificate(C2* c2) {
         } else {  // certificate is an actual function, closed case split
             case_applies = cert_encode_case(c2, a, &max_sym, aigerlits, c);
         }
-        abortif(case_applies == aiger_false, "This case does not contribute.");
+        abortif(! c2->options->cegar && case_applies == aiger_false, "This case does not contribute.");
         
 //#ifdef DEBUG
-        char* s = malloc(sizeof(char) * 100);
-        sprintf(s, "case %u", case_idx + 1);
-        aiger_add_output(a, case_applies, s);
+//        char* s = malloc(sizeof(char) * 100);
+//        sprintf(s, "case %u", case_idx + 1);
+//        aiger_add_output(a, case_applies, s);
 //
 //        for (unsigned var_id = 0; var_id < int_vector_count(aigerlits); var_id++) {
 //            if (qcnf_var_exists(c2->qcnf, var_id) && ! cert_is_dlvl_zero_var(c2, var_id)) {
@@ -543,8 +543,6 @@ void c2_write_AIG_certificate(C2* c2) {
     }
     
     int_vector* out_aigerlits = int_vector_copy(aigerlits);
-    int_vector_pop(case_selectors);
-    int_vector_add(case_selectors, aiger_true);
     for (unsigned var_id = 0; var_id < vector_count(case_aigerlits); var_id++) {
         if (! qcnf_var_exists(c2->qcnf, var_id) || cert_is_dlvl_zero_var(c2, var_id)) {
             continue;

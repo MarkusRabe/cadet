@@ -565,9 +565,12 @@ void c2_write_AIG_certificate(C2* c2) {
     
     cert_define_aiger_outputs(c2, a, out_aigerlits);
     
+#ifdef DEBUG
     bool valid = cert_validate(a, c2->qcnf, out_aigerlits, case_selectors);
-    cert_write_aiger(a, c2->options);
     abortif(!valid, "Certificate invalid!");
+#endif
+    cert_write_aiger(a, c2->options);
+
     int_vector_free(aigerlits);
     int_vector_free(out_aigerlits);
     vector_free(case_aigerlits);

@@ -284,6 +284,7 @@ bool cert_validate(aiger* a, QCNF* qcnf, int_vector* aigerlits, int_vector* case
     V1("Validating Skolem function with %u gates.\n", a->num_ands);
     Stats* timer = statistics_init(1000);  // 1 ms resolution
     statistics_start_timer(timer);
+    bool ret = true;
     
     SATSolver* checker = satsolver_init();
     satsolver_set_max_var(checker, (int) a->maxvar);
@@ -319,9 +320,9 @@ bool cert_validate(aiger* a, QCNF* qcnf, int_vector* aigerlits, int_vector* case
         satsolver_clause_finished(checker);
     }
     if (satsolver_sat(checker) == SATSOLVER_SAT) {
-        LOG_ERROR("No case in the encoded certificate applies.");
+        LOG_ERROR("Case distinction in the certificate is incomplete.");
         cert_validate_print_assignment(a, qcnf, checker, aigerlits, truelit);
-//        abort();
+        ret = false;
     }
     satsolver_pop(checker);
     
@@ -366,7 +367,8 @@ bool cert_validate(aiger* a, QCNF* qcnf, int_vector* aigerlits, int_vector* case
     }
     statistics_free(timer);
     satsolver_free(checker);
-    return res == SATSOLVER_UNSAT;
+    ret = ret && (res == SATSOLVER_UNSAT);
+    return ret;
 }
 
 

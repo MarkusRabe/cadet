@@ -3,12 +3,11 @@
 # Usage: ./caqecertprove sh <file.qdimacs>
 # Launch from this folder; apply only to SAT files
 
-./../cadet -c skolem.aig $1
+./../cadet --cegar --debugging -c skolem.aig $1
 
-# abc -c "read tmp.aig; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2;  print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; write tmp.aig;"
+# abc -c "read skolem.aig; print_stats; dc2; dc2; print_stats; write skolem.aig;"
 
-# some old version
-# abc -c "&r tmp.aig; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &put; write tmp.aig"
+abc -c "read skolem.aig; print_stats; dc2; dc2; dc2; print_stats; write skolem.aig;"
 
 ./../../../tools/caqe/certcheck $1 skolem.aig > cert.aag
 

@@ -1,19 +1,18 @@
 #!/bin/bash
 
-./../cadet -c tmp.aig $1
+./../cadet --sat_by_qbf --cegar --case_splits -c tmp.aag $1
 
-#aigtoaig tmp.aag tmp.aig
+aigtoaig tmp.aag tmp.aig
+# abc -c "read tmp.aig; write tmp.aig"
+abc -c "read tmp.aig; print_stats; dc2; dc2; rewrite; dc2; print_stats; write tmp.aig"
+aigtoaig tmp.aig tmp.aag
 
-# abc -c "read tmp.aig; write tmp.aig"
-abc -c "read tmp.aig; dc2; dc2; write tmp.aig"
-# abc -c "read tmp.aig; rewrite; dfraig; write tmp.aig"
-# abc -c "&r tmp.aig; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &put; write tmp.aig"
-# abc -c "read tmp.aig; write tmp.aig"
+
 
 echo "Calling dot to generate the PDF"
-aigtodot tmp.aig | dot -Tpdf -o$1.pdf
+aigtodot tmp.aag | dot -Tpdf -o$1.pdf
 
 open $1.pdf
 
-rm tmp.aig $1.pdf
+rm tmp.aag tmp.aig $1.pdf
 

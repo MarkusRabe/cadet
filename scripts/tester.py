@@ -547,6 +547,7 @@ if __name__ == "__main__":
                    '--case_splits',
                    '--cegar --case_splits',
                    '--debugging --sat_by_qbf -c cert.aag',
+                   '--debugging --sat_by_qbf --cegar -c cert.aag',
                    '--debugging --sat_by_qbf --case_splits -c cert.aag',
                    '--debugging --sat_by_qbf --cegar',
                    '--debugging --sat_by_qbf --cegar --case_splits',

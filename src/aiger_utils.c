@@ -120,9 +120,9 @@ unsigned aigeru_AND(aiger* a, unsigned* max_sym, unsigned i1, unsigned i2) {
     if (i1 == negate(i2)) {
         return aiger_false;
     }
-    unsigned negated_outputlit = inc(max_sym);
-    aiger_add_and(a, negated_outputlit, i1, i2);
-    return negated_outputlit;
+    unsigned out = inc(max_sym);
+    aiger_add_and(a, out, i1, i2);
+    return out;
 }
 
 unsigned aigeru_multiOR(aiger* a, unsigned* max_sym, int_vector* input_aigerlits) {
@@ -166,4 +166,22 @@ unsigned aigeru_MUX(aiger* a, unsigned* max_sym, unsigned selector, unsigned i1,
     unsigned i1_out = aigeru_AND(a, max_sym, selector, i1);
     unsigned i2_out = aigeru_AND(a, max_sym, negate(selector), i2);
     return aigeru_OR(a, max_sym, i1_out, i2_out);
+}
+
+
+unsigned aigeru_multiMUX(aiger* a, unsigned* max_sym, int_vector* selectors, int_vector* inputs) {
+    assert(int_vector_count(selectors) == int_vector_count(inputs));
+    unsigned out = aiger_false;
+    unsigned previous_case_applies = aiger_false;
+    for (unsigned i = 0; i < int_vector_count(selectors); i++) {
+        unsigned selector = (unsigned) int_vector_get(selectors, i);
+        unsigned value = (unsigned) int_vector_get(inputs, i);
+        unsigned this_case_applies = aigeru_AND(a, max_sym, negate(previous_case_applies), selector);
+        unsigned selected_value = aigeru_AND(a, max_sym, this_case_applies, value);
+        out = aigeru_OR(a, max_sym, out, selected_value);
+        if (i + 1 < int_vector_count(selectors)) {
+            previous_case_applies = aigeru_OR(a, max_sym, previous_case_applies, selector);
+        }
+    }
+    return out;
 }

@@ -22,5 +22,6 @@ FILE* open_possibly_zipped_file(const char* file_name);
 void close_possibly_zipped_file(const char* file_name, FILE* file);
 
 char* cautious_readline(char * __restrict, int, FILE *);
+int discrete_logarithm(unsigned x);
 
 #endif

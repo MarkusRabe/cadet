@@ -135,3 +135,12 @@ char* cautious_readline(char * target, int n, FILE* file) {
     }
     return result;
 }
+
+
+
+int discrete_logarithm(unsigned x) {
+    int log = 0;
+    while (x >>= 1) log++;
+    return log;
+}
+

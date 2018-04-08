@@ -216,6 +216,74 @@ bool cert_validate_functional_synthesis(aiger* a, QCNF* qcnf, int_vector* aigerl
 
 // Check one side of the correcntess of the projection:
 // If the projection is 'false', then there should not be a satisfying assignment.
-bool cert_validate_quantifier_elimination(aiger* a, QCNF* qcnf, unsigned projection_lit) {
-    NOT_IMPLEMENTED();
+bool cert_validate_quantifier_elimination(aiger* a, QCNF* qcnf, int_vector* aigerlits, unsigned projection_lit) {
+#ifndef DEBUG
+    return true;
+#endif
+    V1("Validating quantifier elimination with %u gates.\n", a->num_ands);
+    Stats* timer = statistics_init(1000);  // 1 ms resolution
+    statistics_start_timer(timer);
+    
+    SATSolver* checker = satsolver_init();
+    satsolver_set_max_var(checker, (int) a->maxvar);
+    
+    int truelit = satsolver_inc_max_var(checker);
+    satsolver_add(checker, truelit);
+    satsolver_clause_finished(checker);
+    
+    cert_validate_encode_aiger(a, checker, truelit);
+    
+    int_vector* qcnfvar2satlit = int_vector_init();
+    for (unsigned i = 0; i < var_vector_count(qcnf->vars); i++) {
+        int satlit = satsolver_inc_max_var(checker);
+        int_vector_add(qcnfvar2satlit, satlit);
+    }
+    // encode that universal variables of the aiger encoding and the qcnf encoding are equal
+    for (unsigned i = 0; i < var_vector_count(qcnf->vars); i++) {
+        if (qcnf_var_exists(qcnf, i) && qcnf_is_universal(qcnf, i)) {
+            unsigned al = mapped_lit2aigerlit(aigerlits, (Lit) i);
+            assert(aiger_is_input(a, al));
+            
+            satsolver_add(checker,   int_vector_get(qcnfvar2satlit, i));
+            satsolver_add(checker, - aiger_lit2lit(al, truelit));
+            
+            satsolver_clause_finished(checker);
+            
+            satsolver_add(checker, - int_vector_get(qcnfvar2satlit, i));
+            satsolver_add(checker,   aiger_lit2lit(al, truelit));
+            satsolver_clause_finished(checker);
+        }
+    }
+    // encode the qcnf in the satlits in qcnfvar2satlit
+    for (unsigned i = 0; i < vector_count(qcnf->all_clauses); i++) {
+        Clause* c = vector_get(qcnf->all_clauses, i);
+        if (c->original) {
+            for (unsigned j = 0; j < c->size; j++) {
+                Lit l = c->occs[j];
+                unsigned var_id = lit_to_var(l);
+                int polarity = l > 0 ? 1 : -1;
+                int satlit = int_vector_get(qcnfvar2satlit, var_id);
+                satsolver_add(checker, satlit * polarity);
+            }
+            satsolver_clause_finished(checker);
+        }
+    }
+    //    assert(satsolver_sat(checker) == SATSOLVER_SAT); // not the case for empty clause!
+    
+    int projection_satlit = aiger_lit2lit(projection_lit, truelit);
+    satsolver_add(checker, - projection_satlit); // is violated even though there must be an assignment to the existentials
+    satsolver_clause_finished(checker);
+    
+    sat_res res = satsolver_sat(checker);
+    statistics_stop_and_record_timer(timer);
+    V1("Validation took %f s\n", timer->accumulated_value);
+    if (res != SATSOLVER_UNSAT) {
+        LOG_ERROR("Validation failed!");
+        cert_validate_print_assignment(a, qcnf, checker, aigerlits, truelit);
+    }
+    
+    int_vector_free(qcnfvar2satlit);
+    statistics_free(timer);
+    satsolver_free(checker);
+    return res == SATSOLVER_UNSAT;
 }

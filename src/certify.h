@@ -24,7 +24,7 @@ void cert_propositional_AIG_certificate_SAT(QCNF* qcnf, Options* o, void* domain
 
 bool cert_validate_skolem_function(aiger* a, QCNF* qcnf, int_vector* aigerlits, int_vector* case_selectors);
 bool cert_validate_functional_synthesis(aiger* a, QCNF* qcnf, int_vector* aigerlits, int_vector* case_selectors);
-bool cert_validate_quantifier_elimination(aiger* a, QCNF* qcnf, unsigned projection_lit);
+bool cert_validate_quantifier_elimination(aiger* a, QCNF* qcnf, int_vector* aigerlits, unsigned projection_lit);
 
 unsigned mapped_lit2aigerlit(int_vector* aigerlits, Lit lit);
 

@@ -178,7 +178,14 @@ def run_testcases(threads, runs=1):
         if category in all_testcases:
             for (path,result) in all_testcases[category]:
                 for config in configs:
-                    to_run.append((path,result,config))
+                    assert(result in [10, 20, 30])
+                    if config.startswith("RESULT_SAT"):
+                        c = config[len("RESULT_SAT"):]
+                        r = 10
+                    else:
+                        c = config
+                        r = result
+                    to_run.append((path, r, c))
     
     testcases = [name + ' ' + config for name,_,config in to_run]
     
@@ -547,8 +554,10 @@ if __name__ == "__main__":
                    '--case_splits',
                    '--cegar --case_splits',
                    '--debugging --sat_by_qbf -c cert.aag',
+                   'RESULT_SAT --debugging --sat_by_qbf -f cert.aag',
+                   'RESULT_SAT --debugging --sat_by_qbf -e cert.aag',
                    '--debugging --sat_by_qbf --cegar -c cert.aag',
-                   '--debugging --sat_by_qbf --case_splits -c cert.aag',
+                   # '--debugging --sat_by_qbf --case_splits -c cert.aag',
                    '--debugging --sat_by_qbf --cegar',
                    '--debugging --sat_by_qbf --cegar --case_splits',
                    '--rl --rl_mock --sat_by_qbf',

@@ -446,7 +446,7 @@ void c2_write_AIG_certificate(C2* c2) {
         projection = aigeru_AND(a, &max_sym, projection, negate(dlvl0_conflict));
         aiger_add_output(a, projection, QUANTIFIER_ELIMINATION_OUTPUT_STRING);
         
-        bool valid = cert_validate_quantifier_elimination(a, c2->qcnf, projection);
+        bool valid = cert_validate_quantifier_elimination(a, c2->qcnf, aigerlits, projection);
         abortif(!valid, "Quantifier elimination failed!");
         
     } else { // Create function

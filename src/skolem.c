@@ -164,7 +164,7 @@ void skolem_new_clause(Skolem* s, Clause* c) {
         if (c->is_cube) {vector_add(s->clauses_to_check, c);}
         if (s->options->functional_synthesis) {
             assert(s->decision_lvl == 0);
-            V1("Functional synthesis detected a deterministic clause of length %u over dlvl0.\n", c->size);
+            V2("Functional synthesis detected a deterministic clause of length %u over dlvl0.\n", c->size);
             for (unsigned i = 0; i < c->size; i++) {
                 satsolver_add(s->skolem, skolem_get_satsolver_lit(s, c->occs[i]));
             }

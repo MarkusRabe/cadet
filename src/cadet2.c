@@ -464,6 +464,16 @@ void c2_run(C2* c2, unsigned remaining_conflicts) {
             
             assert(!skolem_is_conflicted(c2->skolem) || c2->state == C2_UNSAT);
             assert(decisions_involved || c2->options->functional_synthesis || c2->state == C2_UNSAT);
+            if (c2->options->functional_synthesis && skolem_is_conflicted(c2->skolem)) {
+                // An evil hack to make functional synthesis work
+                assert(c2->skolem->decision_lvl == 0);
+                assert(c2->skolem->stack->push_count == 0);
+                assert(c2->skolem->state == SKOLEM_STATE_CONSTANTS_CONLICT
+//                     || c2->skolem->state == SKOLEM_STATE_SKOLEM_CONFLICT
+                       );
+                c2->state = C2_SAT;
+                return;
+            }
             if (c2->state == C2_UNSAT) {
                 return;
             }

@@ -37,7 +37,7 @@ void cert_write_aiger(aiger* a, Options* o) {
     V1("Wrote AIG certificate to %s\n", filename);
 }
 
-aiger* cert_setup_AIG(QCNF* qcnf, Options* o) {
+aiger* cert_setup_AIG(QCNF* qcnf) {
     aiger* a = aiger_init();
     
     // taking the logarithm of the maximum var_id
@@ -65,7 +65,7 @@ unsigned lit2aigerlit(Lit lit) {
 }
 
 void cert_propositional_AIG_certificate_SAT(QCNF* qcnf, Options* o, void* domain, int (*get_value)(void* domain, Lit lit)) {
-    aiger* a = cert_setup_AIG(qcnf, o);
+    aiger* a = cert_setup_AIG(qcnf);
     for (unsigned var_id = 1; var_id < var_vector_count(qcnf->vars); var_id++) {
         if (qcnf_var_exists(qcnf, var_id)) {
             Var* v = var_vector_get(qcnf->vars, var_id);
@@ -331,7 +331,14 @@ void c2_write_AIG_certificate(C2* c2) {
         if (c2->options->quantifier_elimination) {
             aiger_add_output(a, aiger_false, QUANTIFIER_ELIMINATION_OUTPUT_STRING);
         } else {
-            for (unsigned i = 0 ; i < var_vector_count(c2->qcnf->vars); i++) {int_vector_add(aigerlits, aiger_false);}
+            for (unsigned i = 0 ; i < var_vector_count(c2->qcnf->vars); i++) {
+                if (qcnf_var_exists(c2->qcnf, i)
+                    && qcnf_is_original(c2->qcnf, i)
+                    && qcnf_is_existential(c2->qcnf, i)) {
+                    
+                    int_vector_set(aigerlits, i, aiger_false);
+                }
+            }
             cert_define_aiger_outputs(skolem_dlvl0, a, aigerlits);
         }
         cert_write_aiger(a, c2->options);

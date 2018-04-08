@@ -21,7 +21,6 @@ Options* default_options() {
     o->cegar = false;
     o->cegar_only = false;
     o->use_qbf_engine_also_for_propositional_problems = false;
-    o->functional_synthesis = false;
     o->casesplits = false;
     o->casesplits_cubes = false;
     o->random_decisions = false;
@@ -33,6 +32,8 @@ Options* default_options() {
     o->aiger_controllable_inputs = "2 "; // "controllable_";
 
     // Certificates
+    o->functional_synthesis = false;
+    o->certificate_output_missing_cases = false;
     o->certify_internally_UNSAT = true;
     o->certify_SAT = false;
     o->certificate_file_name = NULL;
@@ -97,7 +98,9 @@ char* options_get_help() {
     "\t-v [0-4]\t\tSet the verbosity [default %d]\n"
     "\t-s [num]\t\tSet the seed for the random number generator\n"
     "\t--no_colors \t\tSuppress colors in output.\n"
-    "\t-c [file]\t\tWrite certificate to specified file. File ending\n\t\t\t\tdefines Aiger formag aag/aig.\n"
+    "\t-c [file]\t\tProduce Skolem function.\n\t\t\t\tFile ending (aag/aig) determines output type.\n"
+    "\t-e [file]\t\tEliminate existential quantifier.\n\t\t\t\tFile ending (aag/aig) determines output type.\n"
+    "\t-f [file]\t\tProduce funcitonal synthesis certificate.\n\t\t\t\tFile ending (aag/aig) determines output type. ()\n"
     "\t--qbfcert\t\tWrite certificate in qbfcert-readable format.\n\t\t\t\tOnly compatible with aag file ending.\n"
     "\n  Options for the QBF engine\n"
     "\t--rl\t\t\tReinforcement learning mode: print state-action pairs,\n\t\t\t\tread decisions (default %d).\n"
@@ -106,12 +109,11 @@ char* options_get_help() {
     "\t--cegar\t\t\tUse CEGAR refinements in addition to clause learning\n\t\t\t\t(default %d)\n"
     "\t--cegar_only\t\tUse CEGAR strategy exclusively (default %d)\n"
     "\t--case_splits \t\tCase distinctions (default %d) \n"
-    "\t--functional-synthesis\tFunctional synthesis (default %d)\n"
     "\t--sat_by_qbf\t\tUse QBF engine also for propositional problems\n\t\t\t\t(default %d)\n"
     "\t--miniscoping \t\tEnables miniscoping (default %d)\n"
     "\t--minimize \t\tConflict minimization (default %d) \n"
     "\t--pure_literals\t\tUse pure literal detection (default %d)\n"
-    "\t--fresh_seed\t\tUse a fresh random seed for every initialization of the solver (default false)\n"
+    "\t--fresh_seed\t\tUse a fresh random seed for every initialization of\n\t\t\t\tthe solver (default false)\n"
 //    "\t--enhanced_pure_literals\tUse enhanced pure literal detection (default %d)\n"
 //    "\t--qbce\t\t\tBlocked clause elimination (default %d)\n"
 //    "\t--pg\t\t\tPlaisted Greenbaum completion (default %d).\n"
@@ -133,7 +135,6 @@ char* options_get_help() {
     o->cegar,
     o->cegar_only,
     o->casesplits,
-    o->functional_synthesis,
     o->use_qbf_engine_also_for_propositional_problems,
     o->miniscoping,
     o->minimize_learnt_clauses,

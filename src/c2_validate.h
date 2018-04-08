@@ -13,7 +13,7 @@
 
 #include <stdio.h>
 
-void c2_validate_var(C2*, unsigned var_id);
+void c2_validate_var(Skolem*, unsigned var_id);
 void c2_validate_unique_consequences(C2*);
 
 #endif /* c2_validate_h */

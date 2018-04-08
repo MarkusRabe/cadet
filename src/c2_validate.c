@@ -10,18 +10,18 @@
 #include "log.h"
 #include "skolem_var.h"
 
-void c2_validate_var(C2* c2, unsigned var_id) {
-    skolem_var sv = skolem_get_info(c2->skolem, var_id);
+void c2_validate_var(Skolem* skolem, unsigned var_id) {
+    skolem_var sv = skolem_get_info(skolem, var_id);
     abortif(sv.pure_neg && sv.pure_pos, "");
     abortif(sv.deterministic && sv.pos_lit == 0 && sv.neg_lit == 0, "");
     abortif(sv.deterministic && sv.pos_lit == 0 && sv.neg_lit == 0, "");
     
-    int decision_val = skolem_get_decision_val(c2->skolem, var_id);
+    int decision_val = skolem_get_decision_val(skolem, var_id);
     abortif(decision_val != 0 && (sv.pure_pos || sv.pure_neg), "");
     abortif(decision_val != 0 && !sv.deterministic, "");
     
     abortif(sv.reason_for_constant == INT_MAX && sv.dlvl_for_constant != 0, "");
-    abortif(sv.reason_for_constant != INT_MAX && ! skolem_is_deterministic(c2->skolem, var_id), "");
+    abortif(sv.reason_for_constant != INT_MAX && ! skolem_is_deterministic(skolem, var_id), "");
 }
 
 void c2_validate_unique_consequences(C2* c2) {

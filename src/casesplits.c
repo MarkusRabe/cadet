@@ -421,25 +421,28 @@ void casesplits_record_cegar_cube(Casesplits* cs, int_vector* cube, int_vector* 
     V2("\n");
 }
 
+int case_splits_variable_polarity(Skolem* s, unsigned var_id) {
+    int constant_val = skolem_get_constant_value(s, (Lit) var_id);
+    int decision_val = skolem_get_decision_val(s, var_id);
+    int pure_val = skolem_get_pure_val(s, var_id);
+    assert(! pure_val || ! decision_val); // cannot be pure and decision at the same time
+    int polarity = 1;
+    if (constant_val) {
+        polarity = constant_val;
+    } else if (decision_val) {
+        polarity = decision_val;
+    } else if (pure_val) {
+        polarity = - pure_val;
+    }
+    assert(polarity == -1 || polarity == 1);
+    return polarity;
+}
+
 int_vector* case_splits_determinization_order_with_polarities(Skolem* s) {
     int_vector* result = int_vector_init();
     for (unsigned i = 0; i < int_vector_count(s->determinization_order); i++) {
         unsigned var_id = (unsigned) int_vector_get(s->determinization_order, i);
-        Lit lit = (Lit) var_id;
-        int constant_val = skolem_get_constant_value(s, (Lit) var_id);
-        int decision_val = skolem_get_decision_val(s, var_id);
-        int pure_val = skolem_get_pure_val(s, var_id);
-        assert(! pure_val || ! decision_val);
-        
-        if (constant_val) {
-            lit = constant_val * lit;
-        } else if (decision_val) {
-            lit = decision_val * lit;
-        } else if (pure_val) {
-            lit = - pure_val * lit;
-        }
-        
-        int_vector_add(result, lit);
+        int_vector_add(result, case_splits_variable_polarity(s, var_id) * (Lit) var_id);
     }
     return result;
 }

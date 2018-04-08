@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		28675A4F1DDAA9D000951212 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A1C1DDAA9D000951212 /* main.c */; };
+		28DC3AD72079960E00266A75 /* certify_validate.c in Sources */ = {isa = PBXBuildFile; fileRef = 28DC3AD62079960E00266A75 /* certify_validate.c */; };
 		28FF2E86206C285100AEFB7F /* log.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A6B1DDAAB2600951212 /* log.c */; };
 		28FF2E87206C285100AEFB7F /* statistics.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A3B1DDAA9D000951212 /* statistics.c */; };
 		28FF2E89206C285100AEFB7F /* debug.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A171DDAA9D000951212 /* debug.c */; };
@@ -178,6 +179,7 @@
 		28D2C38A1DDAA95E000E9C51 /* cadet */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = cadet; sourceTree = BUILT_PRODUCTS_DIR; };
 		28DA30F21DFFDD2600EABCA6 /* skolem_dependencies.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = skolem_dependencies.c; path = src/skolem_dependencies.c; sourceTree = "<group>"; };
 		28DA30F31DFFDD2600EABCA6 /* skolem_dependencies.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = skolem_dependencies.h; path = src/skolem_dependencies.h; sourceTree = "<group>"; };
+		28DC3AD62079960E00266A75 /* certify_validate.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = certify_validate.c; path = src/certify_validate.c; sourceTree = "<group>"; };
 		28EBA54F1DE19539003D21EB /* int_vector.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = int_vector.c; path = src/int_vector.c; sourceTree = "<group>"; };
 		28EBA5501DE19539003D21EB /* int_vector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = int_vector.h; path = src/int_vector.h; sourceTree = "<group>"; };
 		28EBA5521DE195DD003D21EB /* skolem_var_vector.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = skolem_var_vector.c; path = src/skolem_var_vector.c; sourceTree = "<group>"; };
@@ -336,6 +338,7 @@
 			children = (
 				28675A121DDAA9D000951212 /* certify.h */,
 				28675A111DDAA9D000951212 /* certify_SAT.c */,
+				28DC3AD62079960E00266A75 /* certify_validate.c */,
 				28A9631D205CD52700B32831 /* certify_UNSAT.c */,
 			);
 			name = certify;
@@ -499,6 +502,7 @@
 				28FF2EA7206C285100AEFB7F /* picosat.c in Sources */,
 				28FF2EA4206C285100AEFB7F /* aiger.c in Sources */,
 				28FF2EA2206C285100AEFB7F /* qipasir_parser.c in Sources */,
+				28DC3AD72079960E00266A75 /* certify_validate.c in Sources */,
 				28FF2E90206C285100AEFB7F /* c2_validate.c in Sources */,
 				28FF2EB7206C285100AEFB7F /* skolem_var_vector.c in Sources */,
 				28FF2EAD206C285100AEFB7F /* mersenne_twister.c in Sources */,

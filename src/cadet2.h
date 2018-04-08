@@ -54,10 +54,10 @@ cadet_res c2_sat(C2*);
 cadet_res c2_result(C2*);
 
 // Returns the value of the literal of a universal variable; only available after CADET_RESULT_UNSAT result.
-int c2_val (C2* c2, int literal);
+int c2_val (C2*, int literal);
 
 // Prints the AIG certificate to the specified file.
-void c2_write_AIG_certificate(C2* c2);
+void c2_write_AIG_certificate(C2*);
 
 // Print solver statistics on stdout.
 void c2_print_statistics(C2*);

@@ -22,4 +22,7 @@ bool cert_check_UNSAT(C2*);
 void c2_print_qdimacs_output(int_vector* refuting_assignment);
 void cert_propositional_AIG_certificate_SAT(QCNF* qcnf, Options* o, void* domain, int (*get_value)(void* domain, Lit lit));
 
+bool cert_validate(aiger* a, QCNF* qcnf, int_vector* aigerlits, int_vector* case_selectors);
+unsigned mapped_lit2aigerlit(int_vector* aigerlits, Lit lit);
+
 #endif /* certificates_h */

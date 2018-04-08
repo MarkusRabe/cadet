@@ -561,7 +561,7 @@ void c2_run(C2* c2, unsigned remaining_conflicts) {
 cadet_res c2_result(C2* c2) {
     switch (c2->state) {
         case C2_SAT:
-            assert(skolem_has_empty_domain(c2->skolem));
+            assert(c2->options->functional_synthesis || skolem_has_empty_domain(c2->skolem));
             return CADET_RESULT_SAT;
         case C2_UNSAT:
             assert(satsolver_state(c2->skolem->skolem) == SATSOLVER_SAT || c2->skolem->state == SKOLEM_STATE_CONSTANTS_CONLICT);
@@ -691,11 +691,17 @@ cadet_res c2_sat(C2* c2) {
         goto return_result;
     }
     abortif(int_vector_count(c2->skolem->universals_assumptions) != 0, "There are universal assumptions before solving started.");
-    assert(int_vector_count(c2->qcnf->universal_clauses) == 0); // they must have been detected through c2_new_clause
+    assert(c2->options->functional_synthesis || int_vector_count(c2->qcnf->universal_clauses) == 0); // they must have been detected through c2_new_clause
     
+    V1("Initial propagation\n");
     c2_propagate(c2);
     if (c2_is_in_conflcit(c2)) {
-        c2->state = C2_UNSAT;
+        if (!c2->options->functional_synthesis) {
+            c2->state = C2_UNSAT;
+        } else {
+            assert(c2->skolem->state == SKOLEM_STATE_CONSTANTS_CONLICT);
+            c2->state = C2_SAT;
+        }
         goto return_result;
     }
     
@@ -731,7 +737,10 @@ cadet_res c2_sat(C2* c2) {
         }
     }
 return_result:
-    return c2_result(c2);
+    assert(true);
+    cadet_res result = c2_result(c2);
+    assert(! c2->options->functional_synthesis || result != CADET_RESULT_UNSAT);
+    return result;
 }
 
 int_vector* c2_refuting_assignment(C2* c2) {

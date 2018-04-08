@@ -18,6 +18,24 @@ void print_usage(const char* name) {
     printf("Usage: %s [options] file\n\n  The file can be in QDIMACS or AIGER format. Files can be compressed with gzip\n  (ending in .gz or .gzip). \n\n%s\n", name, options_get_help());
 }
 
+static void certificate_filename(const char* filename, Options *options) {
+    options->certificate_file_name = filename;
+    
+    if (strcmp(options->certificate_file_name, "stdout") == 0) {
+        log_silent = true;
+    } else {
+        const char* ext = get_filename_ext(options->certificate_file_name);
+        if (! ext || strlen(ext) != 3) {
+            LOG_ERROR("Must give file extension aig or aag for certificates.\n");
+            abort();
+        }
+        if (strcmp(ext, "aig") != 0 && strcmp(ext, "aag") != 0) {
+            LOG_ERROR("File extension of certificate must be aig or aag.\n");
+            abort();
+        }
+    }
+}
+
 int main(int argc, const char* argv[]) {
 
     // default
@@ -32,35 +50,26 @@ int main(int argc, const char* argv[]) {
         
         if (argv[i][0] == '-') {
             switch (argv[i][1]) {
-                    
+                case 'e':
+                    abortif(options->certificate_output_missing_cases,
+                            "Can only set one of the options -e, -f, -c; and each one only once.");
+                    options->certificate_output_missing_cases = true;
+                    // WARNING: CASE CONTINUES TO NEXT ONE
+                case 'f':
+                    abortif(options->functional_synthesis,
+                            "Can only set one of the options -e, -f, -c; and each one only once.");
+                    options->functional_synthesis = true;
+                    // WARNING: CASE CONTINUES TO NEXT ONE
                 case 'c': // certification flag
+                    abortif(options->certify_SAT,
+                            "Can only set one of the options -e, -f, -c; and each one only once.");
                     if (i + 1 >= argc) {
                         LOG_ERROR("File name for certificate missing.\n");
                         print_usage(argv[0]);
                         return 1;
                     }
-                    
                     options->certify_SAT = true;
-                    options->certify_internally_UNSAT = false;
-                    
-                    options->certificate_file_name = argv[i+1];
-                    
-                    if (strcmp(options->certificate_file_name, "stdout") == 0) {
-                        log_silent = true;
-                    } else {
-                        const char* ext = get_filename_ext(options->certificate_file_name);
-                        if (! ext || strlen(ext) != 3) {
-                            LOG_ERROR("Must give file extension aig or aag for certificates.\n");
-                            print_usage(argv[0]);
-                            return 0;
-                        }
-                        if (strcmp(ext, "aig") != 0 && strcmp(ext, "aag") != 0) {
-                            LOG_ERROR("File extension of certificate must be aig or aag.\n");
-                            print_usage(argv[0]);
-                            return 0;
-                        }
-                    }
-                    
+                    certificate_filename(argv[i+1], options);
                     i++;
                     break;
                     
@@ -118,9 +127,6 @@ int main(int argc, const char* argv[]) {
                         options->fresh_random_seed = true;
                     } else if (strcmp(argv[i], "--random_decisions") == 0) {
                         options->random_decisions = true;
-                    } else if (strcmp(argv[i], "--functional-synthesis") == 0) {
-                        assert(!options->functional_synthesis);
-                        options->functional_synthesis = true;
                     } else if (strcmp(argv[i], "--minimize") == 0) {
                         options->minimize_learnt_clauses = ! options->minimize_learnt_clauses;
                     } else if (strcmp(argv[i], "--miniscoping") == 0) {

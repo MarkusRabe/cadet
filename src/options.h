@@ -17,7 +17,7 @@ typedef enum {
     QBFCERT,
     CAQECERT,
     QAIGER
-} certificate_type;
+} function_output_format;
 
 typedef struct {
     
@@ -36,17 +36,18 @@ typedef struct {
     bool cegar_only;
     bool use_qbf_engine_also_for_propositional_problems;
     unsigned examples_max_num;
-    bool functional_synthesis;
     bool random_decisions;
     
     // Aiger interpretations
     const char* aiger_controllable_inputs;
     
     // Certificates
+    bool functional_synthesis;
+    bool certificate_output_missing_cases;
     bool certify_internally_UNSAT;
     bool certify_SAT;
     const char* certificate_file_name;
-    certificate_type certificate_type;
+    function_output_format certificate_type;
     
     // Case splits
     bool casesplits;

@@ -446,6 +446,9 @@ void c2_write_AIG_certificate(C2* c2) {
         projection = aigeru_AND(a, &max_sym, projection, negate(dlvl0_conflict));
         aiger_add_output(a, projection, QUANTIFIER_ELIMINATION_OUTPUT_STRING);
         
+        bool valid = cert_validate_quantifier_elimination(a, c2->qcnf, projection);
+        abortif(!valid, "Quantifier elimination failed!");
+        
     } else { // Create function
         int_vector* out_aigerlits = int_vector_copy(aigerlits);
         for (unsigned var_id = 0; var_id < vector_count(case_aigerlits); var_id++) {
@@ -469,8 +472,11 @@ void c2_write_AIG_certificate(C2* c2) {
         cert_define_aiger_outputs(skolem_dlvl0, a, out_aigerlits);
         
         if (!c2->options->functional_synthesis) {
-            bool valid = cert_validate(a, c2->qcnf, out_aigerlits, case_selectors);
+            bool valid = cert_validate_skolem_function(a, c2->qcnf, out_aigerlits, case_selectors);
             abortif(!valid, "Skolem function invalid!");
+        } else {
+            bool valid = cert_validate_functional_synthesis(a, c2->qcnf, out_aigerlits, case_selectors);
+            abortif(!valid, "Functional synthesis failed!");
         }
         
         int_vector_free(out_aigerlits);

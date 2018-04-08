@@ -329,26 +329,33 @@ void casesplits_encode_closed_case(Casesplits* cs, int_vector* determinization_o
     //        }
     //#endif
     
-    skolem_encode_global_conflict_check(cs->skolem);
-    int_vector* necessary_assumptions = casesplits_test_assumptions(cs, universal_assumptions);
-    abortif(necessary_assumptions == NULL, "Case split was not successfully closed");
-    for (unsigned i = 0; i < int_vector_count(necessary_assumptions); i++) {
-        Lit lit = int_vector_get(necessary_assumptions, i);
-        int satlit = (int) (long) map_get(cs->original_satlits, - lit);
-        satsolver_add(cs->skolem->skolem, satlit);
+    if ( ! cs->skolem->options->functional_synthesis) {
+        skolem_encode_global_conflict_check(cs->skolem);
+        int_vector* necessary_assumptions = casesplits_test_assumptions(cs, universal_assumptions);
+        abortif(necessary_assumptions == NULL, "Case split was not successfully closed");
+        for (unsigned i = 0; i < int_vector_count(necessary_assumptions); i++) {
+            Lit lit = int_vector_get(necessary_assumptions, i);
+            int satlit = (int) (long) map_get(cs->original_satlits, - lit);
+            satsolver_add(cs->skolem->skolem, satlit);
+        }
+        satsolver_clause_finished(cs->skolem->skolem);
+        unsigned generalizations = int_vector_count(universal_assumptions) - int_vector_count(necessary_assumptions);
+        cs->case_generalizations += generalizations;
+        if (generalizations > 0) {
+            V1("Generalized assumptions! Removed %d of %d assignments\n",
+               generalizations,
+               int_vector_count(universal_assumptions));
+        }
+        
+        int_vector_free(universal_assumptions);
+        universal_assumptions = necessary_assumptions;
+        casesplits_close_heuristics(cs, universal_assumptions);
+    } else { // functional synthesis!
+        abortif(int_vector_count(universal_assumptions) != 0,
+                "Case splits and functional synthesis are not supported together atm.");
+        satsolver_clause_finished(cs->skolem->skolem); // make the formula UNSAT no matter what
+        skolem_encode_global_conflict_check(cs->skolem);
     }
-    satsolver_clause_finished(cs->skolem->skolem);
-    unsigned generalizations = int_vector_count(universal_assumptions) - int_vector_count(necessary_assumptions);
-    cs->case_generalizations += generalizations;
-    if (generalizations > 0) {
-        V1("Generalized assumptions! Removed %d of %d assignments\n",
-           generalizations,
-           int_vector_count(universal_assumptions));
-    }
-    
-    int_vector_free(universal_assumptions);
-    universal_assumptions = necessary_assumptions;
-    casesplits_close_heuristics(cs, universal_assumptions);
     
 #ifdef DEBUG
     for (unsigned i = 0; i < var_vector_count(cs->skolem->qcnf->vars); i++) {

@@ -58,7 +58,7 @@ Skolem* skolem_init(QCNF* qcnf, Options* o) {
     
     s->clauses_to_check = vector_init();
     
-    s->decision_indicator_satlits = int_vector_init();
+    s->decision_satlits = int_vector_init();
     s->decisions = int_vector_init();
     s->determinization_order = int_vector_init();
     s->universals_assumptions = int_vector_init();
@@ -108,9 +108,7 @@ void skolem_free(Skolem* s) {
     int_vector_free(s->unique_consequence);
     int_vector_free(s->decisions);
     int_vector_free(s->universals_assumptions);
-    if (s->options->functional_synthesis) {
-        int_vector_free(s->decision_indicator_satlits);
-    }
+    int_vector_free(s->decision_satlits);
     stack_free(s->stack);
     free(s);
 }
@@ -168,7 +166,7 @@ void skolem_new_clause(Skolem* s, Clause* c) {
             for (unsigned i = 0; i < c->size; i++) {
                 satsolver_add(s->skolem, skolem_get_satsolver_lit(s, c->occs[i]));
             }
-            satsolver_clause_finished(s->skolem);
+            satsolver_clause_finished_for_context(s->skolem, 0);
         } else {
             V2("Added deterministic clause.\n");
             for (unsigned i = 0; i < c->size; i++) {
@@ -968,8 +966,8 @@ void skolem_encode_global_conflict_check(Skolem* s) {
     assert(int_vector_count(s->potentially_conflicted_variables) == int_vector_count(s->potential_conflicts_satlits));
     
     if (s->options->functional_synthesis) {
-        for (unsigned i = 0; i < int_vector_count(s->decision_indicator_satlits); i++) {
-            satsolver_add(s->skolem, int_vector_get(s->decision_indicator_satlits, i));
+        for (unsigned i = 0; i < int_vector_count(s->decision_satlits); i++) {
+            satsolver_add(s->skolem, int_vector_get(s->decision_satlits, i));
         }
         satsolver_clause_finished(s->skolem);
     }
@@ -1155,8 +1153,8 @@ void skolem_undo(void* parent, char type, void* obj) {
             si->decision_neg = 0;
             
             if (s->options->functional_synthesis) {
-                int_vector_pop(s->decision_indicator_satlits);
-                assert(int_vector_count(s->decisions) == int_vector_count(s->decision_indicator_satlits));
+                int_vector_pop(s->decision_satlits);
+                assert(int_vector_count(s->decisions) == int_vector_count(s->decision_satlits));
             }
             break;
             
@@ -1472,8 +1470,8 @@ void skolem_decision(Skolem* s, Lit decision_lit) {
      * the same input the decision var would be conflicted as well.
      */
     bool positive_side_needs_complete_definitions_too = s->options->functional_synthesis;
-    
-    skolem_fix_lit_for_unique_antecedents(s,  decision_lit, positive_side_needs_complete_definitions_too, FUAM_ONLY_LEGALS);
+    skolem_fix_lit_for_unique_antecedents(s,  decision_lit, positive_side_needs_complete_definitions_too,
+                                          FUAM_ONLY_LEGALS);
     bool opposite_case_exists = skolem_fix_lit_for_unique_antecedents(s, - decision_lit, true, FUAM_ONLY_LEGALS);
     
     // Here we already fix the function domain decisions
@@ -1515,20 +1513,20 @@ void skolem_decision(Skolem* s, Lit decision_lit) {
         // For functional synthesis, we will require that all conflicts involve at least one decision var. For that we introduce a sat_lit that represents exactly that.
         
         // Define the sat_lit_fresh := new_val_satlit && -val_satlit  // - opposite_satlit && - val_satlit
-        int sat_lit_fresh = satsolver_inc_max_var(s->skolem);
+        int decision_lit = satsolver_inc_max_var(s->skolem);
         
-        int_vector_add(s->decision_indicator_satlits, sat_lit_fresh);
+        int_vector_add(s->decision_satlits, decision_lit);
 
-        satsolver_add(s->skolem, sat_lit_fresh);
+        satsolver_add(s->skolem, decision_lit);
         satsolver_add(s->skolem, - new_val_satlit);
         satsolver_add(s->skolem,   val_satlit);
         satsolver_clause_finished(s->skolem);
         
-        satsolver_add(s->skolem, - sat_lit_fresh);
+        satsolver_add(s->skolem, - decision_lit);
         satsolver_add(s->skolem,   new_val_satlit);
         satsolver_clause_finished(s->skolem);
         
-        satsolver_add(s->skolem, - sat_lit_fresh);
+        satsolver_add(s->skolem, - decision_lit);
         satsolver_add(s->skolem, - val_satlit);
         satsolver_clause_finished(s->skolem);
     }

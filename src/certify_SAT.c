@@ -18,6 +18,7 @@
 #include <string.h>
 
 #define AIGERLIT_UNDEFINED INT_MAX
+#define QUANTIFIER_ELIMINATION_OUTPUT_STRING "There is an assignment to the existentials"
 
 void cert_write_aiger(aiger* a, Options* o) {
     const char* filename = o->certificate_file_name;
@@ -28,7 +29,6 @@ void cert_write_aiger(aiger* a, Options* o) {
     int write_success = 0;
     if (!filename || strcmp(filename, "stdout") == 0) {
         write_success = aiger_write_to_file(a, aiger_ascii_mode, stdout);
-        
     } else {
         write_success = aiger_open_and_write_to_file(a, filename);
         
@@ -250,7 +250,7 @@ unsigned cert_dlvl0_definitions(aiger* a, int_vector* aigerlits, Skolem* skolem,
     int_vector* decision_sequence = case_splits_determinization_order_with_polarities(skolem);
     cert_encode_function_for_case(skolem, a, max_sym, aigerlits, decision_sequence, skolem->unique_consequence);
     
-    if (skolem->options->certificate_output_missing_cases) {
+    if (skolem->options->quantifier_elimination) {
         unsigned res = cert_encode_conflicts(skolem, a, max_sym, aigerlits, decision_sequence,
                                              skolem->potentially_conflicted_variables, skolem->unique_consequence);
         int_vector_free(decision_sequence);
@@ -319,28 +319,34 @@ void c2_write_AIG_certificate(C2* c2) {
     
     aiger* a = aiger_init();
     
-    int_vector* aigerlits = int_vector_init(); // maps var_id to the current aiger_lit representing it
+    // map from var_id to the current aiger_lit representing it
+    int_vector* aigerlits = int_vector_init();
     for (unsigned i = 0 ; i < var_vector_count(c2->qcnf->vars); i++) {int_vector_add(aigerlits, AIGERLIT_UNDEFINED);}
     
     cert_define_aiger_inputs(a, aigerlits, skolem_dlvl0);
+    
+    if (skolem_is_conflicted(skolem_dlvl0)) { // constants conflicts on dlvl0 in functional synthesis mode ...
+        assert(c2->options->functional_synthesis);
+        assert(skolem_dlvl0->state == SKOLEM_STATE_CONSTANTS_CONLICT);
+        if (c2->options->quantifier_elimination) {
+            aiger_add_output(a, aiger_false, QUANTIFIER_ELIMINATION_OUTPUT_STRING);
+        } else {
+            for (unsigned i = 0 ; i < var_vector_count(c2->qcnf->vars); i++) {int_vector_add(aigerlits, aiger_false);}
+            cert_define_aiger_outputs(skolem_dlvl0, a, aigerlits);
+        }
+        cert_write_aiger(a, c2->options);
+        
+        int_vector_free(aigerlits);
+        skolem_free(skolem_dlvl0);
+        aiger_reset(a);
+        return;
+    }
     
     unsigned max_sym = var2aigerlit(a->maxvar);
     assert(c2->options->certificate_type != QBFCERT || max_sym == var2aigerlit(a->maxvar + 1));
     
     // Certificate for the dlvl0 variables
-    unsigned dlvl0_conflict = AIGERLIT_UNDEFINED;
-    
-    if (skolem_is_conflicted(skolem_dlvl0)) { // constants conflicts on dlvl0 in functional synthesis mode ...
-        assert(c2->options->functional_synthesis);
-        assert(skolem_dlvl0->state == SKOLEM_STATE_CONSTANTS_CONLICT);
-//        for (<#initialization#>; <#condition#>; <#increment#>) {
-//            <#statements#>
-//        }
-        dlvl0_conflict = aiger_true;
-        goto AIGER_FINISHED;
-    } else {
-        dlvl0_conflict = cert_dlvl0_definitions(a, aigerlits, skolem_dlvl0, &max_sym);
-    }
+    unsigned dlvl0_conflict = cert_dlvl0_definitions(a, aigerlits, skolem_dlvl0, &max_sym);
     
     // The following data structures remember all the aigerlits for all cases; dlvl0 vars are only remembered once
     vector* case_aigerlits = vector_init(); // stores for every variable an int_vector of aigerlits for the different cases
@@ -399,8 +405,7 @@ void c2_write_AIG_certificate(C2* c2) {
         }
     }
     
-AIGER_FINISHED:
-    if (c2->options->certificate_output_missing_cases) {
+    if (c2->options->quantifier_elimination) {
         // This is the quantifier elimination certificate.
         // There are three ways the resulting formula can evaluate to false:
         
@@ -432,7 +437,7 @@ AIGER_FINISHED:
         
         unsigned projection = aigeru_AND(a, &max_sym, some_case_applies, negate(some_universal_violated));
         projection = aigeru_AND(a, &max_sym, projection, negate(dlvl0_conflict));
-        aiger_add_output(a, projection, "There is an assignment to the existentials");
+        aiger_add_output(a, projection, QUANTIFIER_ELIMINATION_OUTPUT_STRING);
         
     } else { // Create function
         int_vector* out_aigerlits = int_vector_copy(aigerlits);

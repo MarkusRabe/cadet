@@ -33,7 +33,7 @@ Options* default_options() {
 
     // Certificates
     o->functional_synthesis = false;
-    o->certificate_output_missing_cases = false;
+    o->quantifier_elimination = false;
     o->certify_internally_UNSAT = true;
     o->certify_SAT = false;
     o->certificate_file_name = NULL;

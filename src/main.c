@@ -51,9 +51,9 @@ int main(int argc, const char* argv[]) {
         if (argv[i][0] == '-') {
             switch (argv[i][1]) {
                 case 'e':
-                    abortif(options->certificate_output_missing_cases,
+                    abortif(options->quantifier_elimination,
                             "Can only set one of the options -e, -f, -c; and each one only once.");
-                    options->certificate_output_missing_cases = true;
+                    options->quantifier_elimination = true;
                     // WARNING: CASE CONTINUES TO NEXT ONE
                 case 'f':
                     abortif(options->functional_synthesis,

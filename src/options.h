@@ -43,7 +43,7 @@ typedef struct {
     
     // Certificates
     bool functional_synthesis;
-    bool certificate_output_missing_cases;
+    bool quantifier_elimination;
     bool certify_internally_UNSAT;
     bool certify_SAT;
     const char* certificate_file_name;

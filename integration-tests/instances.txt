@@ -79,6 +79,13 @@ integration-tests/341_SAT.qdimacs | 10
 integration-tests/qaiger/equiv.qaig | 10
 integration-tests/qaiger/and.qaig | 20
 integration-tests/qaiger/or.qaig | 10
+integration-tests/qaiger/and_latch.qaig | 20
+integration-tests/qaiger/beem.qaig | 20
+integration-tests/qaiger/beem8.aag | 20
+integration-tests/qaiger/bob12s05_c0to7.aag | 20
+integration-tests/qaiger/hwmmc.qaig | 20
+integration-tests/qaiger/ltl2dba_C2-6_comp2_REAL.aag | 20
+integration-tests/qaiger/ltl2dba_U1-6_comp3_REAL.aag | 20
 integration-tests/stmt27rrr.qdimacs | 20
 integration-tests/adder2.qdimacs | 20
 

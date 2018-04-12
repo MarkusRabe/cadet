@@ -40,7 +40,7 @@ Options* default_options() {
     o->certify_internally_UNSAT = true;
     o->certify_SAT = false;
     o->certificate_file_name = NULL;
-    o->certificate_type = QAIGER;
+    o->certificate_type = CAQECERT;
 
     // Optimizations
     o->plaisted_greenbaum_completion = false; // pure literal detection is better
@@ -83,8 +83,8 @@ char* options_get_help() {
     "\t-e [file]\t\tEliminate existential quantifier.\n\t\t\t\tFile ending (aag/aig) determines output type.\n"
     "\t-f [file]\t\tProduce funcitonal synthesis certificate.\n\t\t\t\tFile ending (aag/aig) determines output type. ()\n"
     "\t--qbfcert\t\tWrite certificate in qbfcert-readable format.\n\t\t\t\tOnly compatible with aag file ending.\n"
-    "\t--caqecert\t\tWrite certificate in caqecert format\n"
-    "\t--qaiger\t\tWrite certificate in qaiger format (default)\n"
+    "\t--caqecert\t\tWrite certificate in caqecert format (default)\n"
+    "\t--qaiger\t\tWrite certificate in qaiger format\n"
     "\n  Options for the QBF engine\n"
     "\t--rl\t\t\tReinforcement learning mode: print state-action pairs,\n\t\t\t\tread decisions (default %d).\n"
     "\t--rl_advanced_rewards\tReward necessary actions (default %d)\n"

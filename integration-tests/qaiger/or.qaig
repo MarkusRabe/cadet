@@ -1,0 +1,9 @@
+aag 3 2 0 1 1
+2
+4
+7
+6 3 5
+i0 1 x
+i1 2 y
+c
+forall x, exists y:  x & y

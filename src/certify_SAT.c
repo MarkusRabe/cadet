@@ -299,7 +299,6 @@ static void cert_define_aiger_outputs(Skolem* skolem, aiger* a, int_vector* aige
 
 
 static void cert_define_aiger_inputs(aiger *a, int_vector *aigerlits, Skolem* skolem) {
-    unsigned log_of_var_num = discrete_logarithm(var_vector_count(skolem->qcnf->vars));
     for (unsigned i = 0; i < var_vector_count(skolem->qcnf->vars); i++) {
         if (qcnf_var_exists(skolem->qcnf, i)
             && qcnf_is_original(skolem->qcnf, i)

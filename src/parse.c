@@ -244,8 +244,8 @@ C2* c2_from_qdimacs_and_header(Options* options, FILE* file, char* header, int l
 
 
 bool is_controllable_input(const char* str, Options* options) {
-    return strlen(str) >= strlen(options->aiger_controllable_inputs)
-        && strncmp(options->aiger_controllable_inputs, str, strlen(options->aiger_controllable_inputs)) == 0;
+    return strlen(str) >= strlen(options->aiger_controllable_input_prefix)
+        && strncmp(options->aiger_controllable_input_prefix, str, strlen(options->aiger_controllable_input_prefix)) == 0;
 }
 
 unsigned aiger_quantification_levels(unsigned depends_on_input_group) {
@@ -448,7 +448,7 @@ unsigned aiger_quantification_levels(unsigned depends_on_input_group) {
 //    return c2;
 //}
 
-unsigned qaiger_quantifier_level(char* name) {
+unsigned qaiger_quantifier_level(const char* name) {
     if (strncmp("0 ", name, 2) == 0) {
         return 0;
     }
@@ -461,22 +461,28 @@ unsigned qaiger_quantifier_level(char* name) {
     abortif(true, "Only 2 QBF is supported");
 }
 
+
+void parser_create_output_var(C2* c2, aiger* a, unsigned lit, const char* name) {
+    if (lit > 1 && ! qcnf_var_exists(c2->qcnf, aiger_lit2var(lit))) {
+        c2_new_variable(c2, false, 1, aiger_lit2var(lit));
+    } // else ignore // we don't have to create constant signals or signals that are inputs
+    options_set_variable_name(c2->options, aiger_lit2var(lit), name);
+}
+
+
 C2* c2_from_qaiger(aiger* aig, Options* options) {
     if (!options) {options = default_options();}
     assert (aiger_check(aig) == NULL);
+    abortif(aig->num_latches > 0, "CADET only supports reading combinatorial AIGs for QBF input.");
     if (aig->num_bad > 0) {
-        LOG_WARNING("QAIGER does not support bad outputs; conjoining them with outputs.");
+        LOG_WARNING("QAIGER does not officially support bad outputs; conjoining them with outputs.");
     }
     if (aig->num_outputs > 1) {
-        LOG_WARNING("QAIGER requires a single output but given %u; conjoining outputs.", aig->num_outputs);
+        LOG_WARNING("QAIGER requires a single output but given %u outputs; conjoining outputs.", aig->num_outputs);
     }
-    if (aig->num_constraints != 0) {
+    if (aig->num_constraints > 0) {
         LOG_WARNING("QAIGER does not support constraints.");
     }
-    if (aig->num_bad > 1) {
-        LOG_WARNING("Multiple bad outputs defined. CADET uses their conjunction as the bad property.");
-    }
-    abortif(aig->num_latches > 0, "CADET only supports reading combinatorial AIGs for QBF input.");
     
     C2* c2 = c2_init(options);
     
@@ -495,19 +501,16 @@ C2* c2_from_qaiger(aiger* aig, Options* options) {
         options_set_variable_name(options, aiger_lit2var(input.lit), input.name);
     }
     
-    // remember the names of outputs, but don't do more
+    // remember the names of outputs
     for (size_t i = 0; i < aig->num_outputs; i++) {
         aiger_symbol out = aig->outputs [i];
-        options_set_variable_name(options, aiger_lit2var(out.lit), out.name);
+        parser_create_output_var(c2, aig, out.lit, out.name);
     }
     
     // outputs
     for (size_t i = 0; i < aig->num_bad; i++) {
         aiger_symbol b = aig->bad[i];
-        if (b.lit > 1 && ! qcnf_var_exists(c2->qcnf, aiger_lit2var(b.lit))) {
-            c2_new_variable(c2, false, qaiger_quantifier_level(b.name), aiger_lit2var(b.lit));
-        } // else ignore // we can ignore true and false signals.
-        options_set_variable_name(options, aiger_lit2var(b.lit), b.name);
+        parser_create_output_var(c2, aig, b.lit, b.name);
     }
     
     for (size_t i = 0; i < aig->num_constraints; i++) {

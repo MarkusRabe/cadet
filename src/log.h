@@ -54,7 +54,7 @@ bool log_silent;
 
 #define NOT_IMPLEMENTED() LOG_COLOR(KCYN, "Not yet implemented, abort\n"); abort();
 
-#define LOG_COLOR(color,message, ...) if(log_colors){V0("%s", color);}V0(message, ## __VA_ARGS__);if(log_colors){V0(KNRM);}
+#define LOG_COLOR(color, message, ...) if(log_colors){V0("%s", color);}V0(message, ## __VA_ARGS__);if(log_colors){V0(KNRM);}
 #define LOG_ERROR(message, ...) LOG_COLOR(KRED, "Error: "); fprintf(stdout, message "\n", ## __VA_ARGS__);
 #define LOG_WARNING(message, ...) LOG_COLOR(KYEL, "Warning: "); V0(message "\n", ## __VA_ARGS__);
 

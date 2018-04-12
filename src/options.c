@@ -8,6 +8,9 @@
 
 #include "options.h"
 #include "log.h"
+#include "util.h"
+
+#include <string.h>
 
 Options* default_options() {
     Options* o = malloc(sizeof(Options));
@@ -29,7 +32,7 @@ Options* default_options() {
     o->examples_max_num = 0; // 0 corresponds to not doing examples at all
 
     // Aiger interpretations
-    o->aiger_controllable_inputs = "2 "; // "controllable_";
+    o->aiger_controllable_input_prefix = "2 "; // "controllable_";
 
     // Certificates
     o->functional_synthesis = false;
@@ -53,7 +56,8 @@ Options* default_options() {
     o->print_detailed_miniscoping_stats = false;
     o->print_name_mapping = true;
     o->print_statistics = true;
-    o->variable_names = NULL;
+    o->print_variable_names = false;
+    o->variable_names = vector_init();
 
     o->trace_learnt_clauses = false;
     o->trace_for_visualization = false;
@@ -66,28 +70,38 @@ Options* default_options() {
     return o;
 }
 
-void options_print_literal_name(Options* o, char* color, int lit) {
-    assert(lit != 0);
-    unsigned var_id = (unsigned) (lit < 0 ? - lit : lit);
-    if (o->variable_names && var_id < vector_count(o->variable_names) && vector_get(o->variable_names, var_id) != NULL) {
-        if (lit > 0) {
-            LOG_COLOR(color, " %s", (char*) vector_get(o->variable_names, var_id));
-        } else {
-            LOG_COLOR(color, " -%s", (char*) vector_get(o->variable_names, var_id));
-        }
+
+char* options_get_variable_name(Options* o, unsigned var_id) {
+    assert(var_id != 0);
+    if (var_id < vector_count(o->variable_names)) {
+        return vector_get(o->variable_names, var_id);
     } else {
-        LOG_COLOR(color, " %d", lit);
+        return NULL;
     }
 }
 
-void options_set_variable_name(Options* o, unsigned var_id, char* name) {
-    if (o->variable_names && name) {
-        while (vector_count(o->variable_names) <= var_id) {
-            vector_add(o->variable_names, NULL);
-        }
-        vector_set(o->variable_names, var_id, name);
+
+void options_print_colored_literal_name(Options* o, char* color, int lit) {
+    char* name = options_get_variable_name(o, lit_to_var(lit));
+    if (!o->print_variable_names || name == NULL) {
+        LOG_COLOR(color, " %d", lit);
     }
+    LOG_COLOR(color, " %s%s", lit > 0 ? "" : "-", name);
 }
+
+
+void options_set_variable_name(Options* o, unsigned var_id, const char* name) {
+    while (vector_count(o->variable_names) <= var_id) {
+        vector_add(o->variable_names, NULL);
+    }
+    char* copy = NULL;
+    if (name) {
+        copy = malloc(sizeof(char) * ((size_t) strlen(name) + 1));
+        strcpy(copy, name);
+    }
+    vector_set(o->variable_names, var_id, copy);
+}
+
 
 char* options_get_help() {
     Options* o = default_options();
@@ -123,10 +137,9 @@ char* options_get_help() {
     "\t--trace_learnt_clauses\tPrint (colored) learnt clauses.\n"
     "\t--trace_for_vis\t\tPrint trace of solver states at every conflict point.\n"
     "\t--trace_for_profiling\tPrint trace of learnt clauses with timestamps\n\t\t\t\tand SAT solver time consumption.\n"
-    "\t--print_variable_names\tReplace variable numbers by names where available\n"
+    "\t--print_variable_names\tReplace variable numbers by names where available\n\t\t\t\t(default %d)\n"
     "\n  Aiger options\n"
-    "\t--aiger_negated\t\tNegate encoding of aiger files.\n\t\t\t\tCan be combined with --print.\n"
-    "\t--aiger_ci [string]\tSet prefix of controllable inputs of\n\t\t\t\tAIGER files (default 'pi_')\n"
+    "\t--aiger_ci [string]\tSet prefix of controllable inputs in QAIGER\n\t\t\t\t(default '%s')\n"
     "\n",
     debug_verbosity,
     o->reinforcement_learning,
@@ -142,7 +155,9 @@ char* options_get_help() {
 //    o->enhanced_pure_literals,
 //    o->qbce,
 //    o->plaisted_greenbaum_completion,
-    o->print_detailed_miniscoping_stats
+    o->print_detailed_miniscoping_stats,
+    o->print_variable_names,
+    o->aiger_controllable_input_prefix
     );
     
     return options_string;

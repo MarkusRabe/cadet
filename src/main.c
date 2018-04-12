@@ -119,7 +119,7 @@ int main(int argc, const char* argv[]) {
                             print_usage(argv[0]);
                             return 1;
                         }
-                        options->aiger_controllable_inputs = argv[i+1];
+                        options->aiger_controllable_input_prefix = argv[i+1];
                         i++;
                     } else if (strcmp(argv[i], "--case_splits") == 0) {
                         options->casesplits = ! options->casesplits;
@@ -151,7 +151,7 @@ int main(int argc, const char* argv[]) {
                     } else if (strcmp(argv[i], "--trace_for_profiling") == 0) {
                         options->trace_for_profiling = true;
                     } else if (strcmp(argv[i], "--print_variable_names") == 0) {
-                        options->variable_names = vector_init();
+                        options->print_variable_names = true;
                     } else if (strcmp(argv[i], "--selftest") == 0) {
                         test_all();
                         exit(0);

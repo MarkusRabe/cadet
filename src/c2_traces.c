@@ -200,7 +200,7 @@ void c2_log_clause(C2* c2, Clause* c) {
         c2_print_learnt_clause_color_legend();
         
         for (unsigned i = 0; i < c->size; i++) {
-            options_print_literal_name(c2->options, c2_literal_color(c2, c, c->occs[i]), c->occs[i]);
+            options_print_colored_literal_name(c2->options, c2_literal_color(c2, c, c->occs[i]), c->occs[i]);
         }
         LOG_COLOR(KNRM, "\n");
     }

@@ -48,10 +48,11 @@ aiger* cert_setup_AIG(QCNF* qcnf) {
     // Mark universal variables as inputs
     for (unsigned i = 0; i < var_vector_count(qcnf->vars); i++) {
         if (qcnf_var_exists(qcnf, i) && qcnf_is_original(qcnf, i)) {
-            char* name = malloc(sizeof(char) * (size_t) log_of_var_num + 2);
-            sprintf(name, "%d", i);
             if (qcnf_is_universal(qcnf, i)) {
+                char* name = malloc(sizeof(char) * (size_t) log_of_var_num + 2);
+                sprintf(name, "%d", i);
                 aiger_add_input(a, var2aigerlit(i), name);
+                free(name);
             }
         }
     }
@@ -262,21 +263,32 @@ unsigned cert_dlvl0_definitions(aiger* a, int_vector* aigerlits, Skolem* skolem,
 
 
 static void cert_define_aiger_outputs(Skolem* skolem, aiger* a, int_vector* aigerlits) {
-    int log_of_var_num = discrete_logarithm(var_vector_count(skolem->qcnf->vars));
     for (unsigned i = 0; i < var_vector_count(skolem->qcnf->vars); i++) {
         if (qcnf_var_exists(skolem->qcnf, i)
             && qcnf_is_original(skolem->qcnf, i)
             && qcnf_is_existential(skolem->qcnf, i)) {
             
-            unsigned al = (unsigned) int_vector_get(aigerlits, i);
-            char* name = malloc(sizeof(char) * (size_t) log_of_var_num + 2);
-            if (skolem->options->certificate_type == QAIGER) {
-                sprintf(name, "2 %d", i);
+            char* output_name = NULL;
+            unsigned name_size = 2; // for \0, one reserve
+            if (skolem->options->certificate_type) {
+                char* var_name = options_get_variable_name(skolem->options, i);
+                if (!var_name) {
+                    var_name = "";
+                }
+                name_size += strlen(var_name);
+                const char* prefix = skolem->options->aiger_controllable_input_prefix;
+                name_size += strlen(prefix);
+                output_name = malloc(sizeof(char) * (size_t) name_size);
+                sprintf(output_name, "%s%s", prefix, var_name);
             } else {
-                sprintf(name, "%d", i);
+                name_size += discrete_logarithm(var_vector_count(skolem->qcnf->vars));
+                output_name = malloc(sizeof(char) * (size_t) name_size);
+                sprintf(output_name, "%u", i);
             }
-            aiger_add_output(a, al, name);
             
+            unsigned al = (unsigned) int_vector_get(aigerlits, i);
+            aiger_add_output(a, al, output_name);
+            if (output_name) {free(output_name);}
         }
     }
     
@@ -288,7 +300,7 @@ static void cert_define_aiger_outputs(Skolem* skolem, aiger* a, int_vector* aige
 
 
 static void cert_define_aiger_inputs(aiger *a, int_vector *aigerlits, Skolem* skolem) {
-    int log_of_var_num = discrete_logarithm(var_vector_count(skolem->qcnf->vars));
+    unsigned log_of_var_num = discrete_logarithm(var_vector_count(skolem->qcnf->vars));
     for (unsigned i = 0; i < var_vector_count(skolem->qcnf->vars); i++) {
         if (qcnf_var_exists(skolem->qcnf, i)
             && qcnf_is_original(skolem->qcnf, i)
@@ -303,6 +315,7 @@ static void cert_define_aiger_inputs(aiger *a, int_vector *aigerlits, Skolem* sk
                 sprintf(name, "%d", i);
             }
             aiger_add_input(a, al, name);
+            free(name);
         }
     }
 }

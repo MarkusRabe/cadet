@@ -100,8 +100,8 @@ void casesplits_update_interface(Casesplits* cs, Skolem* skolem) {
         if (! c->original) {
             continue;
         }
-        unsigned uc_var = lit_to_var(skolem_get_unique_consequence(cs->skolem, c));
-        if (uc_var != 0 && skolem_is_deterministic(cs->skolem, uc_var)) {
+        Lit uc = skolem_get_unique_consequence(cs->skolem, c);
+        if (uc != 0 && skolem_is_deterministic(cs->skolem, lit_to_var(uc))) {
             continue;
         }
         for (unsigned j = 0; j < c->size; j++) {
@@ -119,8 +119,8 @@ void casesplits_update_interface(Casesplits* cs, Skolem* skolem) {
         if (! c->original || c->blocked) {
             continue;
         }
-        unsigned uc_var = lit_to_var(skolem_get_unique_consequence(cs->skolem, c));
-        if (uc_var != 0 && skolem_is_deterministic(cs->skolem, uc_var)) {
+        Lit uc = skolem_get_unique_consequence(cs->skolem, c);
+        if (uc != 0 && skolem_is_deterministic(cs->skolem, lit_to_var(uc))) {
             continue;
         }
         for (unsigned j = 0; j < c->size; j++) {

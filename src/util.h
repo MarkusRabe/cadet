@@ -3,10 +3,11 @@
 
 #include <stdbool.h>
 #include <stdio.h>
+#include <assert.h>
 
 #define VERSION "v2.4"
 
-static inline unsigned lit_to_var(int lit) { return lit < 0 ? (unsigned) -lit : (unsigned) lit; }
+static inline unsigned lit_to_var(int lit) {return lit < 0 ? (unsigned) -lit : (unsigned) lit; } // assert(lit != 0); 
 
 int hash6432shift(void* k) __attribute__((no_sanitize("undefined")));
 int hash32shiftmult(int key) __attribute__((no_sanitize("undefined")));
@@ -22,6 +23,6 @@ FILE* open_possibly_zipped_file(const char* file_name);
 void close_possibly_zipped_file(const char* file_name, FILE* file);
 
 char* cautious_readline(char * __restrict, int, FILE *);
-int discrete_logarithm(unsigned x);
+unsigned discrete_logarithm(unsigned x);
 
 #endif

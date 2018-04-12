@@ -39,7 +39,7 @@ typedef struct {
     bool random_decisions;
     
     // Aiger interpretations
-    const char* aiger_controllable_inputs;
+    const char* aiger_controllable_input_prefix;
     
     // Certificates
     bool functional_synthesis;
@@ -70,6 +70,7 @@ typedef struct {
     bool print_statistics;
     bool print_detailed_miniscoping_stats;
     vector* variable_names;
+    bool print_variable_names;
     
     // Traces
     bool trace_learnt_clauses;
@@ -78,8 +79,9 @@ typedef struct {
 } Options;
 
 Options* default_options();
-void options_print_literal_name(Options*, char* color, int lit);
-void options_set_variable_name(Options*, unsigned var_id, char* name);
+char* options_get_variable_name(Options*, unsigned var_id);
+void options_print_colored_literal_name(Options*, char* color, int lit);
+void options_set_variable_name(Options*, unsigned var_id, const char* name);
 char* options_get_help();
 
 #endif /* options_h */

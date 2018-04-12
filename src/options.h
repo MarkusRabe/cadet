@@ -69,7 +69,6 @@ typedef struct {
     bool print_name_mapping;
     bool print_statistics;
     bool print_detailed_miniscoping_stats;
-    vector* variable_names;
     bool print_variable_names;
     
     // Traces
@@ -79,9 +78,7 @@ typedef struct {
 } Options;
 
 Options* default_options();
-char* options_get_variable_name(Options*, unsigned var_id);
-void options_print_colored_literal_name(Options*, char* color, int lit);
-void options_set_variable_name(Options*, unsigned var_id, const char* name);
+void options_free(Options* o);
 char* options_get_help();
 
 #endif /* options_h */

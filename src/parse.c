@@ -465,8 +465,8 @@ unsigned qaiger_quantifier_level(const char* name) {
 void parser_create_output_var(C2* c2, aiger* a, unsigned lit, const char* name) {
     if (lit > 1 && ! qcnf_var_exists(c2->qcnf, aiger_lit2var(lit))) {
         c2_new_variable(c2, false, 1, aiger_lit2var(lit));
-    } // else ignore // we don't have to create constant signals or signals that are inputs
-    options_set_variable_name(c2->options, aiger_lit2var(lit), name);
+        qcnf_set_variable_name(c2->qcnf, aiger_lit2var(lit), name);
+    }
 }
 
 
@@ -486,28 +486,31 @@ C2* c2_from_qaiger(aiger* aig, Options* options) {
     
     C2* c2 = c2_init(options);
     
-    // uncontrollable inputs
+    // inputs
     for (size_t i = 0; i < aig->num_inputs; i++) {
         aiger_symbol input = aig->inputs[i];
-        unsigned qaiger_quantifier_lvl = qaiger_quantifier_level(input.name);
-        c2_new_variable(c2, qaiger_quantifier_lvl % 2, aiger_quantification_levels(qaiger_quantifier_lvl), aiger_lit2var(input.lit));
+        unsigned qaiger_quantifier_lvl = 1; // default uncontrollable
+        if (input.name) {
+            qaiger_quantifier_lvl = qaiger_quantifier_level(input.name);
+        }
+        unsigned qcnf_quantification_lvl = aiger_quantification_levels(qaiger_quantifier_lvl);
+        assert(qcnf_quantification_lvl == 1);
+        c2_new_variable(c2, qaiger_quantifier_lvl % 2, qcnf_quantification_lvl, aiger_lit2var(input.lit));
         
         if (options->print_name_mapping) {
-            V0("%s %s controllable; var %d\n",
+            V1("%s %s controllable; var %d\n",
                input.name,
                qaiger_quantifier_lvl == 1 ? "not" : "is",
                aiger_lit2var(input.lit));
         }
-        options_set_variable_name(options, aiger_lit2var(input.lit), input.name);
+        qcnf_set_variable_name(c2->qcnf, aiger_lit2var(input.lit), input.name);
     }
     
-    // remember the names of outputs
+    // remember the names of outputs and bad signals
     for (size_t i = 0; i < aig->num_outputs; i++) {
         aiger_symbol out = aig->outputs [i];
         parser_create_output_var(c2, aig, out.lit, out.name);
     }
-    
-    // outputs
     for (size_t i = 0; i < aig->num_bad; i++) {
         aiger_symbol b = aig->bad[i];
         parser_create_output_var(c2, aig, b.lit, b.name);
@@ -518,99 +521,127 @@ C2* c2_from_qaiger(aiger* aig, Options* options) {
         if (c.lit > 1 && ! qcnf_var_exists(c2->qcnf, aiger_lit2var(c.lit))) {
             c2_new_variable(c2, false, 1, aiger_lit2var(c.lit));
         } // else ignore // we can ignore true and false signals.
-        options_set_variable_name(options, aiger_lit2var(c.lit), c.name);
+        qcnf_set_variable_name(c2->qcnf, aiger_lit2var(c.lit), c.name);
     }
-    unsigned circuit_depth = 0;
-    while (true) {
-        bool new_gate = false;
-        for (size_t i = 0; i < aig->num_ands; i++) {
-            aiger_and a = aig->ands[i];
-            if (! qcnf_var_exists(c2->qcnf, aiger_lit2var(a.lhs)) && qcnf_var_exists(c2->qcnf, aiger_lit2var(a.rhs0)) && qcnf_var_exists(c2->qcnf, aiger_lit2var(a.rhs1))) {
-                new_gate = true;
-                Var* rhs0 = var_vector_get(c2->qcnf->vars, aiger_lit2var(a.rhs0));
-                Var* rhs1 = var_vector_get(c2->qcnf->vars, aiger_lit2var(a.rhs1));
-                unsigned gate_dependency = rhs0->scope_id > rhs1->scope_id ? rhs0->scope_id : rhs1->scope_id;
-                c2_new_variable(c2, false, aiger_quantification_levels(gate_dependency), aiger_lit2var(a.lhs));
-            }
+    for (size_t i = 0; i < aig->num_ands; i++) {
+        aiger_and a = aig->ands[i];
+        if (! qcnf_var_exists(c2->qcnf, aiger_lit2var(a.lhs))) {
+            c2_new_variable(c2, false, 1, aiger_lit2var(a.lhs));
         }
-        if (!new_gate) {
-            break;
-        }
-        circuit_depth += 1;
     }
-    V1("Circuit has depth %u\n", circuit_depth);
+    // The following code computes the gate dependencies and can replace the previous for loop
+//    unsigned circuit_depth = 0;
+//    while (true) {
+//        bool new_gate = false;
+//        for (size_t i = 0; i < aig->num_ands; i++) {
+//            aiger_and a = aig->ands[i];
+//            if (! qcnf_var_exists(c2->qcnf, aiger_lit2var(a.lhs)) && qcnf_var_exists(c2->qcnf, aiger_lit2var(a.rhs0)) && qcnf_var_exists(c2->qcnf, aiger_lit2var(a.rhs1))) {
+//                new_gate = true;
+//                Var* rhs0 = var_vector_get(c2->qcnf->vars, aiger_lit2var(a.rhs0));
+//                Var* rhs1 = var_vector_get(c2->qcnf->vars, aiger_lit2var(a.rhs1));
+//                unsigned gate_dependency = rhs0->scope_id > rhs1->scope_id ? rhs0->scope_id : rhs1->scope_id;
+//                c2_new_variable(c2, false, aiger_quantification_levels(gate_dependency), aiger_lit2var(a.lhs));
+//            }
+//        }
+//        if (!new_gate) {
+//            break;
+//        }
+//        circuit_depth += 1;
+//    }
+//    V1("Circuit has depth %u\n", circuit_depth);
     
     ////// CLAUSES //////
     
-    // bads
-    unsigned bads_qcnf_var = (unsigned) aiger_lit2lit( 2 * (aig->maxvar + 1), 0);
-    options_set_variable_name(options, bads_qcnf_var, "BADS");
+    Lit output_qcnf_lit = INT_MAX;
     
-    c2_new_variable(c2, false, 1, bads_qcnf_var);
-    if (options->print_name_mapping) {
-        V0("bads summary variable %d\n", bads_qcnf_var);
-    }
-    
-    for (size_t i = 0; i < aig->num_outputs; i++) {
-        aiger_symbol o = aig->outputs[i];
-        c2_add_lit(c2, - aiger_lit2lit(o.lit, 0));
-        c2_add_lit(c2, (Lit) bads_qcnf_var);
-        c2_add_lit(c2, 0);
+    if (aig->num_outputs + aig->num_bad > 1) {
+        output_qcnf_lit = (Lit) c2_fresh_variable(c2, false);
+        //    qcnf_set_variable_name(c2->qcnf, bads_qcnf_var, "Output");
         
         if (options->print_name_mapping) {
-            V0("bad %d\n", aiger_lit2lit(o.lit, 0));
+            V1("bad variable %d\n", output_qcnf_lit);
         }
-    }
-    for (size_t i = 0; i < aig->num_bad; i++) {
-        aiger_symbol b = aig->bad[i];
-        c2_add_lit(c2, - aiger_lit2lit(b.lit, 0));
-        c2_add_lit(c2, (Lit) bads_qcnf_var);
-        c2_add_lit(c2, 0);
         
-        if (options->print_name_mapping) {
-            V0("bad %d\n", aiger_lit2lit(b.lit, 0));
+        for (size_t i = 0; i < aig->num_outputs; i++) {
+            aiger_symbol o = aig->outputs[i];
+            c2_add_lit(c2, - aiger_lit2lit(o.lit, 0));
+            c2_add_lit(c2, (Lit) output_qcnf_lit);
+            c2_add_lit(c2, 0);
+            
+            if (options->print_name_mapping) {
+                V1("bad %d\n", aiger_lit2lit(o.lit, 0));
+            }
+        }
+        for (size_t i = 0; i < aig->num_bad; i++) {
+            aiger_symbol b = aig->bad[i];
+            c2_add_lit(c2, - aiger_lit2lit(b.lit, 0));
+            c2_add_lit(c2, (Lit) output_qcnf_lit);
+            c2_add_lit(c2, 0);
+            
+            if (options->print_name_mapping) {
+                V1("bad %d\n", aiger_lit2lit(b.lit, 0));
+            }
+        }
+        for (size_t i = 0; i < aig->num_outputs; i++) {
+            aiger_symbol o = aig->outputs[i];
+            c2_add_lit(c2, aiger_lit2lit(o.lit, 0));
+        }
+        for (size_t i = 0; i < aig->num_bad; i++) {
+            aiger_symbol b = aig->bad[i];
+            c2_add_lit(c2, aiger_lit2lit(b.lit, 0));
+        }
+        c2_add_lit(c2, - (Lit) output_qcnf_lit);
+        c2_add_lit(c2, 0);
+    } else {
+        unsigned out_aigerlit = INT_MAX;
+        if (aig->num_bad > 0) {
+            aiger_symbol b = aig->bad[0];
+            out_aigerlit = b.lit;
+        } else {
+            aiger_symbol o = aig->outputs[0];
+            out_aigerlit = o.lit;
+        }
+        if (out_aigerlit == aiger_true) {
+            output_qcnf_lit = (Lit) c2_fresh_variable(c2, false);
+        } else if (out_aigerlit == aiger_false) {
+            output_qcnf_lit = 0;
+        } else {
+            output_qcnf_lit = aiger_lit2lit(out_aigerlit, INT_MAX);
         }
     }
-    for (size_t i = 0; i < aig->num_outputs; i++) {
-        aiger_symbol o = aig->outputs[i];
-        c2_add_lit(c2, aiger_lit2lit(o.lit, 0));
-    }
-    for (size_t i = 0; i < aig->num_bad; i++) {
-        aiger_symbol b = aig->bad[i];
-        c2_add_lit(c2, aiger_lit2lit(b.lit, 0));
-    }
-    c2_add_lit(c2, - (Lit) bads_qcnf_var);
+    
+    c2_add_lit(c2, output_qcnf_lit);
     c2_add_lit(c2, 0);
     
     // constraints
-    unsigned constraints_qcnf_var = (unsigned) aiger_lit2lit( 2 * (aig->maxvar + 2), 0);
-//    int_vector_add(c2->qcnf->universals_constraints, (int) constraints_qcnf_var);
-    options_set_variable_name(options, constraints_qcnf_var, "CONSTRAINTS");
-    
-    c2_new_variable(c2, false, 1, constraints_qcnf_var);
-    if (options->print_name_mapping) {
-        V0("constraints summary variable %d\n", constraints_qcnf_var);
-    }
-    
-    for (size_t i = 0; i < aig->num_constraints; i++) {
-        aiger_symbol c = aig->constraints[i];
-        c2_add_lit(c2, aiger_lit2lit(c.lit, 0));
-        c2_add_lit(c2, - (Lit) constraints_qcnf_var);
+    if (aig->num_constraints > 0) {
+        unsigned constraints_qcnf_var = c2_fresh_variable(c2, false);
+        //    int_vector_add(c2->qcnf->universals_constraints, (int) constraints_qcnf_var);
+        qcnf_set_variable_name(c2->qcnf, constraints_qcnf_var, "CONSTRAINTS");
+        if (options->print_name_mapping) {
+            V1("constraints summary variable %d\n", constraints_qcnf_var);
+        }
+        
+        for (size_t i = 0; i < aig->num_constraints; i++) {
+            aiger_symbol c = aig->constraints[i];
+            c2_add_lit(c2, aiger_lit2lit(c.lit, 0));
+            c2_add_lit(c2, - (Lit) constraints_qcnf_var);
+            c2_add_lit(c2, 0);
+            if (options->print_name_mapping)
+                V1("constraint %d\n", aiger_lit2lit(c.lit, 0));
+        }
+        for (size_t i = 0; i < aig->num_constraints; i++) {
+            aiger_symbol c = aig->constraints[i];
+            c2_add_lit(c2, - aiger_lit2lit(c.lit, 0));
+        }
+        c2_add_lit(c2, (Lit) constraints_qcnf_var);
         c2_add_lit(c2, 0);
-        if (options->print_name_mapping)
-            V0("constraint %d\n", aiger_lit2lit(c.lit, 0));
+        
+        // putting constraints and bads together: if the constraints hold, then the bads should be false.
+        c2_add_lit(c2, (Lit) - constraints_qcnf_var);
+        c2_add_lit(c2, (Lit) - output_qcnf_lit);
+        c2_add_lit(c2, 0);
     }
-    for (size_t i = 0; i < aig->num_constraints; i++) {
-        aiger_symbol c = aig->constraints[i];
-        c2_add_lit(c2, - aiger_lit2lit(c.lit, 0));
-    }
-    c2_add_lit(c2, (Lit) constraints_qcnf_var);
-    c2_add_lit(c2, 0);
-    
-    // putting constraints and bads together: if the constraints hold, then the bads should be false.
-    c2_add_lit(c2, (Lit) - constraints_qcnf_var);
-    c2_add_lit(c2, (Lit) - bads_qcnf_var);
-    c2_add_lit(c2, 0);
     
     // circuit definition
     for (size_t i = 0; i < aig->num_ands; i++) {
@@ -649,6 +680,8 @@ C2* c2_from_qaiger(aiger* aig, Options* options) {
             c2_add_lit(c2, 0);
         }
     }
+    
+    qcnf_print_qdimacs(c2->qcnf);
     return c2;
 }
 
@@ -684,6 +717,7 @@ C2* c2_from_file(FILE* file, Options* options) {
         abortif(err, "Error while reading aiger file:\n %s", err);
         
         solver = c2_from_qaiger(aig, options);
+        options->certificate_type = QAIGER;
     } else {
         abortif(true, "Cannot identify header of the file. Wrong file format? Some line must start with 'p cnf', 'aig', or 'aag'.");
     }

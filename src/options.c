@@ -57,7 +57,6 @@ Options* default_options() {
     o->print_name_mapping = true;
     o->print_statistics = true;
     o->print_variable_names = false;
-    o->variable_names = vector_init();
 
     o->trace_learnt_clauses = false;
     o->trace_for_visualization = false;
@@ -68,38 +67,6 @@ Options* default_options() {
     o->cegar_soft_conflict_limit = false;
     
     return o;
-}
-
-
-char* options_get_variable_name(Options* o, unsigned var_id) {
-    assert(var_id != 0);
-    if (var_id < vector_count(o->variable_names)) {
-        return vector_get(o->variable_names, var_id);
-    } else {
-        return NULL;
-    }
-}
-
-
-void options_print_colored_literal_name(Options* o, char* color, int lit) {
-    char* name = options_get_variable_name(o, lit_to_var(lit));
-    if (!o->print_variable_names || name == NULL) {
-        LOG_COLOR(color, " %d", lit);
-    }
-    LOG_COLOR(color, " %s%s", lit > 0 ? "" : "-", name);
-}
-
-
-void options_set_variable_name(Options* o, unsigned var_id, const char* name) {
-    while (vector_count(o->variable_names) <= var_id) {
-        vector_add(o->variable_names, NULL);
-    }
-    char* copy = NULL;
-    if (name) {
-        copy = malloc(sizeof(char) * ((size_t) strlen(name) + 1));
-        strcpy(copy, name);
-    }
-    vector_set(o->variable_names, var_id, copy);
 }
 
 
@@ -161,4 +128,8 @@ char* options_get_help() {
     );
     
     return options_string;
+}
+
+void options_free(Options* o) {
+    free(o);
 }

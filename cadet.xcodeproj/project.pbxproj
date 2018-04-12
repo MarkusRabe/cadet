@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		28675A4F1DDAA9D000951212 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A1C1DDAA9D000951212 /* main.c */; };
+		289A56E0207EF58100BEAC53 /* qcnf_variable_names.c in Sources */ = {isa = PBXBuildFile; fileRef = 289A56DF207EF58100BEAC53 /* qcnf_variable_names.c */; };
 		28DC3AD72079960E00266A75 /* certify_validate.c in Sources */ = {isa = PBXBuildFile; fileRef = 28DC3AD62079960E00266A75 /* certify_validate.c */; };
 		28FF2E86206C285100AEFB7F /* log.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A6B1DDAAB2600951212 /* log.c */; };
 		28FF2E87206C285100AEFB7F /* statistics.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A3B1DDAA9D000951212 /* statistics.c */; };
@@ -168,6 +169,7 @@
 		287C3B151E3C01FE00F7096A /* skolem_var.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = skolem_var.h; path = src/skolem_var.h; sourceTree = "<group>"; };
 		287C3B191E3C2D5500F7096A /* val_vector.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = val_vector.c; path = src/val_vector.c; sourceTree = "<group>"; };
 		287C3B1A1E3C2D5500F7096A /* val_vector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = val_vector.h; path = src/val_vector.h; sourceTree = "<group>"; };
+		289A56DF207EF58100BEAC53 /* qcnf_variable_names.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = qcnf_variable_names.c; path = src/qcnf_variable_names.c; sourceTree = "<group>"; };
 		28A9631D205CD52700B32831 /* certify_UNSAT.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = certify_UNSAT.c; path = src/certify_UNSAT.c; sourceTree = "<group>"; };
 		28A9631F20642D6100B32831 /* cadet_internal.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = cadet_internal.h; path = src/cadet_internal.h; sourceTree = "<group>"; };
 		28C1C17D20197A000094DB4E /* c2_rl.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = c2_rl.h; path = src/c2_rl.h; sourceTree = "<group>"; };
@@ -235,6 +237,7 @@
 				28675A2F1DDAA9D000951212 /* qcnf.h */,
 				28675A2E1DDAA9D000951212 /* qcnf.c */,
 				2863194F2056650500808F7C /* active_clause_iterator.c */,
+				289A56DF207EF58100BEAC53 /* qcnf_variable_names.c */,
 			);
 			name = qcnf;
 			sourceTree = "<group>";
@@ -552,6 +555,7 @@
 				28FF2E98206C285100AEFB7F /* skolem_conflict_analysis.c in Sources */,
 				28FF2EF7206C4E8100AEFB7F /* tests.c in Sources */,
 				28FF2EA1206C285100AEFB7F /* qipasir.c in Sources */,
+				289A56E0207EF58100BEAC53 /* qcnf_variable_names.c in Sources */,
 				28FF2E87206C285100AEFB7F /* statistics.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

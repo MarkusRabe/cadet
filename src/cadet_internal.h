@@ -151,5 +151,6 @@ void c2_analysis_determine_number_of_partitions(C2* c2);
 void c2_delete_learnt_clauses_greater_than(C2* c2, unsigned max_size);
 
 void c2_print_debug_info(C2*);
+void c2_print_colored_literal_name(C2*, char* color, int lit);
 
 #endif /* cadet_internal_h */

@@ -91,6 +91,8 @@ struct QCNF {
     
     Stack* stack;
     
+    vector* variable_names;
+    
     // Stats
     unsigned universal_reductions;
     unsigned deleted_clauses;
@@ -195,5 +197,9 @@ bool qcnf_is_blocked(QCNF* qcnf, Clause* c);
 
 Clause_Iterator qcnf_get_clause_iterator(QCNF*);
 Clause* qcnf_next_clause(Clause_Iterator*);
+
+char* qcnf_get_variable_name(QCNF*, unsigned var_id);
+void qcnf_set_variable_name(QCNF*, unsigned var_id, const char* name);
+
 
 #endif /* qcnf_h */

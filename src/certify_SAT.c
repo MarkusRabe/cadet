@@ -270,25 +270,24 @@ static void cert_define_aiger_outputs(Skolem* skolem, aiger* a, int_vector* aige
             
             char* output_name = NULL;
             unsigned name_size = 2; // for \0, one reserve
-            if (skolem->options->certificate_type) {
-                char* var_name = options_get_variable_name(skolem->options, i);
-                if (!var_name) {
-                    var_name = "";
+            if (skolem->options->certificate_type == QAIGER) {
+                char* var_name = qcnf_get_variable_name(skolem->qcnf, i);
+                if (var_name) {
+                    name_size += strlen(var_name);
+                    output_name = malloc(sizeof(char) * (size_t) name_size);
+                    sprintf(output_name, "%s", var_name);
+                    unsigned al = (unsigned) int_vector_get(aigerlits, i);
+                    aiger_add_output(a, al, output_name);
+                    free(output_name);
                 }
-                name_size += strlen(var_name);
-                const char* prefix = skolem->options->aiger_controllable_input_prefix;
-                name_size += strlen(prefix);
-                output_name = malloc(sizeof(char) * (size_t) name_size);
-                sprintf(output_name, "%s%s", prefix, var_name);
             } else {
                 name_size += discrete_logarithm(var_vector_count(skolem->qcnf->vars));
                 output_name = malloc(sizeof(char) * (size_t) name_size);
                 sprintf(output_name, "%u", i);
+                unsigned al = (unsigned) int_vector_get(aigerlits, i);
+                aiger_add_output(a, al, output_name);
+                free(output_name);
             }
-            
-            unsigned al = (unsigned) int_vector_get(aigerlits, i);
-            aiger_add_output(a, al, output_name);
-            if (output_name) {free(output_name);}
         }
     }
     

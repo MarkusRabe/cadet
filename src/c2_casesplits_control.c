@@ -128,7 +128,7 @@ Lit c2_case_split_pick_literal(C2* c2) {
     }
     if (lit != 0 && debug_verbosity >= VERBOSITY_MEDIUM) {
         V1("Case split literal ");
-        options_print_colored_literal_name(c2->options, c2_literal_color(c2, NULL, lit), lit);
+        c2_print_colored_literal_name(c2, c2_literal_color(c2, NULL, lit), lit);
         V1(" has quality %.2f, cost factor %.3f, and activity factor %.2f\n",
            max_total,
            cost_factor_of_max,

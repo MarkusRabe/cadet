@@ -911,3 +911,13 @@ int c2_val (C2* c2, int lit) {
     assert(qcnf_is_universal(c2->qcnf, lit_to_var(lit)));
     return skolem_get_constant_value(c2->skolem, lit) * lit;
 }
+
+
+void c2_print_colored_literal_name(C2* c2, char* color, int lit) {
+    char* name = qcnf_get_variable_name(c2->qcnf, lit_to_var(lit));
+    if (!c2->options->print_variable_names || name == NULL) {
+        LOG_COLOR(color, " %d", lit);
+    }
+    LOG_COLOR(color, " %s%s", lit > 0 ? "" : "-", name);
+}
+

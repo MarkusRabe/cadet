@@ -260,6 +260,8 @@ QCNF* qcnf_init() {
     
     qcnf->stack = stack_init(qcnf_undo_op);
     
+    qcnf->variable_names = vector_init();
+    
     // Statistics
     qcnf->universal_reductions = 0;
     qcnf->deleted_clauses = 0;
@@ -571,6 +573,11 @@ void qcnf_free(QCNF* qcnf) {
         if (d) {qcnf_scope_free(d);}
     }
     vector_free(qcnf->scopes);
+    for (unsigned i = 0; i < vector_count(qcnf->variable_names); i++) {
+        char* str = vector_get(qcnf->variable_names, i);
+        free(str);
+    }
+    vector_free(qcnf->variable_names);
     free(qcnf);
 }
 

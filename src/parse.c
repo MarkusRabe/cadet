@@ -449,16 +449,18 @@ unsigned aiger_quantification_levels(unsigned depends_on_input_group) {
 //}
 
 unsigned qaiger_quantifier_level(const char* name) {
-    if (strncmp("0 ", name, 2) == 0) {
-        return 0;
-    }
-    if (strncmp("1 ", name, 2) == 0) {
-        return 1;
-    }
     if (strncmp("2 ", name, 2) == 0) {
         return 2;
+    } else {
+        return 1;
     }
-    abortif(true, "Only 2 QBF is supported");
+//    if (strncmp("0 ", name, 2) == 0) {
+//        return 0;
+//    }
+//    if (strncmp("1 ", name, 2) == 0) {
+//        return 1;
+//    }
+//    abortif(true, "Only 2 QBF is supported");
 }
 
 
@@ -473,7 +475,9 @@ void parser_create_output_var(C2* c2, aiger* a, unsigned lit, const char* name) 
 C2* c2_from_qaiger(aiger* aig, Options* options) {
     if (!options) {options = default_options();}
     assert (aiger_check(aig) == NULL);
-    abortif(aig->num_latches > 0, "CADET only supports reading combinatorial AIGs for QBF input.");
+    if (aig->num_latches > 0) {
+        LOG_WARNING("CADET only supports reading combinatorial AIGs for QBF input. Interpreting latches as uncontrollable inputs.");
+    }
     if (aig->num_bad > 0) {
         LOG_WARNING("QAIGER does not officially support bad outputs; conjoining them with outputs.");
     }
@@ -489,10 +493,7 @@ C2* c2_from_qaiger(aiger* aig, Options* options) {
     // inputs
     for (size_t i = 0; i < aig->num_inputs; i++) {
         aiger_symbol input = aig->inputs[i];
-        unsigned qaiger_quantifier_lvl = 1; // default uncontrollable
-        if (input.name) {
-            qaiger_quantifier_lvl = qaiger_quantifier_level(input.name);
-        }
+        unsigned qaiger_quantifier_lvl = qaiger_quantifier_level(input.name); // default uncontrollable
         unsigned qcnf_quantification_lvl = aiger_quantification_levels(qaiger_quantifier_lvl);
         assert(qcnf_quantification_lvl == 1);
         c2_new_variable(c2, qaiger_quantifier_lvl % 2, qcnf_quantification_lvl, aiger_lit2var(input.lit));
@@ -504,6 +505,15 @@ C2* c2_from_qaiger(aiger* aig, Options* options) {
                aiger_lit2var(input.lit));
         }
         qcnf_set_variable_name(c2->qcnf, aiger_lit2var(input.lit), input.name);
+    }
+    for (size_t i = 0; i < aig->num_latches; i++) {
+        aiger_symbol latch = aig->latches[i];
+        c2_new_variable(c2, false, 1, aiger_lit2var(latch.lit));
+        
+        if (options->print_name_mapping) {
+            V1("%s latch (not controllable); var %d\n", latch.name, aiger_lit2var(latch.lit));
+        }
+        qcnf_set_variable_name(c2->qcnf, aiger_lit2var(latch.lit), latch.name);
     }
     
     // remember the names of outputs and bad signals
@@ -681,7 +691,6 @@ C2* c2_from_qaiger(aiger* aig, Options* options) {
         }
     }
     
-    qcnf_print_qdimacs(c2->qcnf);
     return c2;
 }
 

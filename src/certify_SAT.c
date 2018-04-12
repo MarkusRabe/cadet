@@ -307,14 +307,26 @@ static void cert_define_aiger_inputs(aiger *a, int_vector *aigerlits, Skolem* sk
             
             unsigned al = var2aigerlit(i);
             int_vector_set(aigerlits, i, (int) al);
-            char* name = malloc(sizeof(char) * (size_t) log_of_var_num + 2);
+            char* input_name = NULL;
+            unsigned name_size = 2; // for \0, one reserve
             if (skolem->options->certificate_type == QAIGER) {
-                sprintf(name, "1 %d", i);
+                char* var_name = qcnf_get_variable_name(skolem->qcnf, i);
+                if (var_name) {
+                    name_size += strlen(var_name);
+                    input_name = malloc(sizeof(char) * (size_t) name_size);
+                    sprintf(input_name, "%s", var_name);
+                    aiger_add_input(a, al, input_name);
+                    free(input_name);
+                }
             } else {
-                sprintf(name, "%d", i);
+                name_size += discrete_logarithm(var_vector_count(skolem->qcnf->vars));
+                input_name = malloc(sizeof(char) * (size_t) name_size);
+                sprintf(input_name, "%u", i);
+                aiger_add_input(a, al, input_name);
+                free(input_name);
             }
-            aiger_add_input(a, al, name);
-            free(name);
+            
+            
         }
     }
 }

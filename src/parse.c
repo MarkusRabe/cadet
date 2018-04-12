@@ -508,7 +508,7 @@ C2* c2_from_qaiger(aiger* aig, Options* options) {
     }
     for (size_t i = 0; i < aig->num_latches; i++) {
         aiger_symbol latch = aig->latches[i];
-        c2_new_variable(c2, false, 1, aiger_lit2var(latch.lit));
+        c2_new_variable(c2, true, 1, aiger_lit2var(latch.lit));
         
         if (options->print_name_mapping) {
             V1("%s latch (not controllable); var %d\n", latch.name, aiger_lit2var(latch.lit));

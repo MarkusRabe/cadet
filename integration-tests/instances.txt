@@ -77,6 +77,8 @@ integration-tests/5_SAT.dimacs | 10
 integration-tests/349_SAT.qdimacs | 10
 integration-tests/341_SAT.qdimacs | 10
 integration-tests/qaiger/equiv.qaig | 10
+integration-tests/qaiger/and.qaig | 20
+integration-tests/qaiger/or.qaig | 10
 integration-tests/stmt27rrr.qdimacs | 20
 integration-tests/adder2.qdimacs | 20
 

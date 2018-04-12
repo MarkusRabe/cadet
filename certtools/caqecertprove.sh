@@ -3,7 +3,7 @@
 # Usage: ./caqecertprove sh <file.qdimacs>
 # Launch from this folder; apply only to SAT files
 
-./../cadet --cegar --debugging -c skolem.aig $1
+./../cadet --cegar --caqecert --debugging -c skolem.aig $1
 
 # abc -c "read skolem.aig; print_stats; dc2; dc2; print_stats; write skolem.aig;"
 

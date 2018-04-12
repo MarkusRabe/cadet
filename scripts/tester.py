@@ -311,7 +311,7 @@ def run_testcase(testcase_input):
     if ARGS.certify:
         # random_string = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(N))
         cert_file = testcase+'.cert1.aig';
-        parameters += ['-c', cert_file]
+        parameters += ['-c', cert_file, '--caqecert']
     
     file_path = os.path.join(BASE_PATH, testcase)
     

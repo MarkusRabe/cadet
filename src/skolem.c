@@ -423,10 +423,11 @@ bool skolem_add_occurrences_for_determinicity_check(Skolem* s, SATSolver* sat,
     bool case_exists = false;
     for (unsigned i = 0; i < vector_count(occs); i++) {
         Clause* c = vector_get(occs, i);
-        Lit unique_consequence = skolem_get_unique_consequence(s, c);
-        
-        if (lit_to_var(unique_consequence) == var_id
-                && ! skolem_has_illegal_dependence(s,c)) {
+        Lit uc = skolem_get_unique_consequence(s, c);
+        if (uc
+            && lit_to_var(uc) == var_id
+            && ! skolem_has_illegal_dependence(s,c)) {
+            
             for (unsigned i = 0; i < c->size; i++) {
                 if (lit_to_var(c->occs[i]) != var_id && ! skolem_lit_satisfied(s, - c->occs[i])) {
                     satsolver_add(sat, c->occs[i]);
@@ -442,11 +443,13 @@ bool skolem_add_occurrences_for_determinicity_check(Skolem* s, SATSolver* sat,
 void skolem_add_clauses_using_existing_satlits(Skolem* s, unsigned var_id, vector* occs) {
     for (unsigned i = 0; i < vector_count(occs); i++) {
         Clause* c = vector_get(occs, i);
-        Lit unique_consequence = skolem_get_unique_consequence(s, c);
+        Lit uc = skolem_get_unique_consequence(s, c);
         
-        if (lit_to_var(unique_consequence) == var_id
+        if (uc
+            && lit_to_var(uc) == var_id
             && ! skolem_has_illegal_dependence(s,c)
             /*&& ! skolem_clause_satisfied(s, c)*/) {
+            
             for (unsigned i = 0; i < c->size; i++) {
                 int sat_lit = skolem_get_satsolver_lit(s, c->occs[i]);
                 satsolver_add(s->skolem, sat_lit);
@@ -610,7 +613,8 @@ void skolem_add_unique_antecedents_of_v_local_conflict_check(Skolem* s, SATSolve
     vector* occs = qcnf_get_occs_of_lit(s->qcnf, lit);
     for (unsigned i = 0; i < vector_count(occs); i++) {
         Clause* c = vector_get(occs, i);
-        if (lit_to_var(skolem_get_unique_consequence(s, c)) == lit_to_var(lit)) {
+        Lit uc = skolem_get_unique_consequence(s, c);
+        if (uc && lit_to_var(uc) == lit_to_var(lit)) {
             switch (c->size) {
                 case 1:
                     // This is a tricky one: as long as the conjunction vars have not been asserted in

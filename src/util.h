@@ -7,7 +7,7 @@
 
 #define VERSION "v2.4"
 
-static inline unsigned lit_to_var(int lit) {return lit < 0 ? (unsigned) -lit : (unsigned) lit; } // assert(lit != 0); 
+static inline unsigned lit_to_var(int lit) {assert(lit != 0); return lit < 0 ? (unsigned) -lit : (unsigned) lit; } 
 
 int hash6432shift(void* k) __attribute__((no_sanitize("undefined")));
 int hash32shiftmult(int key) __attribute__((no_sanitize("undefined")));

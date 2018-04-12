@@ -123,10 +123,12 @@ void skolem_compute_dependencies_for_occs(Skolem* s, union Dependencies* aggrega
     vector* occs = qcnf_get_occs_of_lit(s->qcnf, lit);
     for (unsigned i = 0; i < vector_count(occs); i++) {
         Clause* c = vector_get(occs, i);
-        Lit uc_lit = skolem_get_unique_consequence(s, c);
-        if (lit_to_var(uc_lit) == lit_to_var(lit) && ! skolem_has_illegal_dependence(s, c)) {
+        Lit uc = skolem_get_unique_consequence(s, c);
+        if (uc
+            && lit_to_var(uc) == lit_to_var(lit)
+            && ! skolem_has_illegal_dependence(s, c)) {
             for (int j = c->size - 1; j >= 0; j--) {
-                if (c->occs[j] != uc_lit) {
+                if (c->occs[j] != uc) {
                     skolem_update_dependencies_for_lit(s, aggregate_dependencies, c->occs[j]);
                 }
             }

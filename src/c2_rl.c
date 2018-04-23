@@ -209,20 +209,27 @@ int c2_rl_get_decision(C2* solver) {
     }
     
     long ret = 0;
-    if (solver->options->reinforcement_learning_mock) {
-        Var* v = c2_pick_nondeterministic_variable(solver);
-        if (v) {
-            ret = v->var_id;
-        }
-    } else {
+    bool pick_by_std_heuristic = false;
+    bool ask_on_terminal_for_line = !solver->options->reinforcement_learning_mock;
+    if (ask_on_terminal_for_line) {
         char *s = c2_rl_readline();
-        char *end = NULL;
-        ret = LONG_MIN;
-        ret = strtol(s, &end, 10); // convert to an integer, base 10, end pointer indicates last character read.
-        //    LOG_PRINTF("The number(unsigned long integer) is %ld\n", ret);
-        abortif(*s == '\0', "String could not be read.");
-        abortif(*end != '\0' && *end != '\n', "String not terminated by \\0 or \\n");
+        if (s != NULL && s[0] == '?') {
+            pick_by_std_heuristic = true;
+        } else {
+            char *end = NULL;
+            ret = LONG_MIN;
+            ret = strtol(s, &end, 10); // convert to an integer, base 10, end pointer indicates last character read.
+            //    LOG_PRINTF("The number(unsigned long integer) is %ld\n", ret);
+            abortif(*s == '\0', "String could not be read.");
+            abortif(*end != '\0' && *end != '\n', "String not terminated by \\0 or \\n");
+        }
     }
+    
+    if (pick_by_std_heuristic) {
+        Var* v = c2_pick_nondeterministic_variable(solver);
+        if (v) {ret = v->var_id;}
+    }
+    
     assert(ret != LONG_MIN);
     assert(ret <= INT_MAX);
     assert(ret >= INT_MIN);

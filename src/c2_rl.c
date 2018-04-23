@@ -225,7 +225,7 @@ int c2_rl_get_decision(C2* solver) {
         }
     }
     
-    if (pick_by_std_heuristic) {
+    if (pick_by_std_heuristic || solver->options->reinforcement_learning_mock) {
         Var* v = c2_pick_nondeterministic_variable(solver);
         if (v) {ret = v->var_id;}
     }

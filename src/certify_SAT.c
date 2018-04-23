@@ -324,8 +324,6 @@ static void cert_define_aiger_inputs(aiger *a, int_vector *aigerlits, Skolem* sk
                 aiger_add_input(a, al, input_name);
                 free(input_name);
             }
-            
-            
         }
     }
 }

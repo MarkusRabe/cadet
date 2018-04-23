@@ -87,7 +87,6 @@ void c2_rl_update_constant_value(unsigned var_id, int val) {
     if (rl && !rl->mute) {
         LOG_PRINTF("v %u %d\n", var_id, val);
     }
-    
 }
 
 void c2_rl_update_unique_consequence(unsigned clause_idx, Lit lit) {

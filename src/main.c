@@ -51,24 +51,26 @@ int main(int argc, const char* argv[]) {
         if (argv[i][0] == '-') {
             switch (argv[i][1]) {
                 case 'e':
-                    abortif(options->quantifier_elimination,
+                    abortif(options->quantifier_elimination || options->certify_SAT,
                             "Can only set one of the options -e, -f, -c; and each one only once.");
                     options->quantifier_elimination = true;
                     // WARNING: CASE CONTINUES TO NEXT ONE
                 case 'f':
-                    abortif(options->functional_synthesis,
+                    abortif(options->functional_synthesis || options->certify_SAT,
                             "Can only set one of the options -e, -f, -c; and each one only once.");
                     options->functional_synthesis = true;
                     // WARNING: CASE CONTINUES TO NEXT ONE
                 case 'c': // certification flag
-                    abortif(options->certify_SAT,
-                            "Can only set one of the options -e, -f, -c; and each one only once.");
+//                    abortif(options->quantifier_elimination || options->functional_synthesis,
+//                            "Can only set one of the options -e, -f, -c.");
+                    options->certify_SAT = true;
+                    
                     if (i + 1 >= argc) {
                         LOG_ERROR("File name for certificate missing.\n");
                         print_usage(argv[0]);
                         return 1;
                     }
-                    options->certify_SAT = true;
+                    
                     certificate_filename(argv[i+1], options);
                     i++;
                     break;

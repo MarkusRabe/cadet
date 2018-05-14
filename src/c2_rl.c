@@ -150,8 +150,10 @@ void c2_rl_print_state(C2* c2, unsigned conflicts_until_next_restart) {
                vector_count(c2->qcnf->active_clauses),
                var_ratio);
     
+    Var* max_activity_var = c2_pick_nondeterministic_variable(c2);
+    
     // Solver statistics
-    LOG_PRINTF("%zu,%zu,%f,%f,%zu,%f,%zu,%f,%zu,%f,%zu,%f,%zu,%f,%zu,%zu,%f,%f,%zu,%f,%zu,%f,%zu,%f,%zu\n",
+    LOG_PRINTF("%zu,%zu,%f,%f,%zu,%f,%zu,%f,%zu,%f,%zu,%f,%zu,%f,%zu,%zu,%f,%f,%zu,%f,%zu,%f,%zu,%f,%zu,%f\n",
                c2->statistics.decisions,
                c2->statistics.conflicts,
                (float) c2->statistics.decisions / (float) (c2->statistics.conflicts + 1),
@@ -176,7 +178,8 @@ void c2_rl_print_state(C2* c2, unsigned conflicts_until_next_restart) {
                (float) c2->statistics.learnt_clauses_total_length / (float) (c2->statistics.conflicts + 1),
                c2->statistics.successful_conflict_clause_minimizations,
                (float) c2->statistics.successful_conflict_clause_minimizations / (float) (c2->statistics.learnt_clauses_total_length + 1),
-               c2->statistics.cases_closed
+               c2->statistics.cases_closed,
+               max_activity_var ? c2_get_activity(c2, max_activity_var->var_id) : 0.0
                );
 }
 

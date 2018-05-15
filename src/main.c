@@ -102,6 +102,17 @@ int main(int argc, const char* argv[]) {
                     i++;
                     break;
                 
+                case 'l':
+                    if (i + 1 >= argc) {
+                        LOG_ERROR("Missing number for decision limit\n");
+                        print_usage(argv[0]);
+                        return 1;
+                    }
+                    options->hard_decision_limit = (int) strtol(argv[i+1], NULL, 0);
+                    assert(options->hard_decision_limit < 10000000);
+                    i++;
+                    break;
+                    
                 case '-': // long argument (--...)
                     if (strcmp(argv[i], "--stats") == 0) {
                         V0("Enabled printing statistics\n");
@@ -204,6 +215,8 @@ int main(int argc, const char* argv[]) {
     }
     
     V0("CADET %s\n", VERSION);
+    
+    options_print(options);
     
 //    void* solver = create_solver_from_qdimacs(file);
 //    int res = qipasir_solve(solver);

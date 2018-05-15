@@ -150,7 +150,7 @@ void c2_rl_print_state(C2* c2, unsigned conflicts_until_next_restart) {
                vector_count(c2->qcnf->active_clauses),
                var_ratio);
     
-    Var* max_activity_var = c2_pick_nondeterministic_variable(c2);
+    Var* max_activity_var = c2_pick_max_activity_variable(c2);
     
     // Solver statistics
     LOG_PRINTF("%zu,%zu,%f,%f,%zu,%f,%zu,%f,%zu,%f,%zu,%f,%zu,%f,%zu,%zu,%f,%f,%zu,%f,%zu,%f,%zu,%f,%zu,%f\n",

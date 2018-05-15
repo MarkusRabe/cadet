@@ -140,6 +140,7 @@ void c2_set_activity(C2* c2, unsigned var_id, float val);
 void c2_increase_activity(C2* c2, unsigned var_id, float summand);
 void c2_scale_activity(C2* c2, unsigned var_id, float factor);
 unsigned c2_get_decision_lvl(C2* c2, unsigned var_id);
+Var* c2_pick_max_activity_variable(C2* c2);
 Var* c2_pick_nondeterministic_variable(C2* c2);
 void c2_backtrack_to_decision_lvl(C2 *c2, unsigned backtracking_lvl);
 

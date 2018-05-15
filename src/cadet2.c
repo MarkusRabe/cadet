@@ -159,30 +159,33 @@ void c2_rescale_activity_values(C2* c2) {
     }
 }
 
-// Returns NULL, if all variables are decided
-Var* c2_pick_nondeterministic_variable(C2* c2) {
-    if (!c2->options->random_decisions) {  // Pick variable with highest activity
-        Var* decision_var = NULL;
-        float decision_var_activity = -1.0;
-        for (unsigned i = 1; i < var_vector_count(c2->qcnf->vars); i++) {
-            if (!skolem_is_deterministic(c2->skolem, i)) {
-                Var* v = var_vector_get(c2->qcnf->vars, i);
-                assert(!v->is_universal);
-                if (v->var_id != 0) {
-                    assert(v->var_id == i);
-                    float v_activity = c2_get_activity(c2, v->var_id);
-                    c2_rl_print_activity(v->var_id, v_activity);
-                    assert(v_activity > -0.001);
-                    if (decision_var_activity < v_activity) {
-                        decision_var_activity = v_activity;
-                        decision_var = v;
-                    }
+Var* c2_pick_max_activity_variable(C2* c2) {
+    Var* var = NULL;
+    float decision_var_activity = -1.0;
+    for (unsigned i = 1; i < var_vector_count(c2->qcnf->vars); i++) {
+        if (!skolem_is_deterministic(c2->skolem, i)) {
+            Var* v = var_vector_get(c2->qcnf->vars, i);
+            assert(!v->is_universal);
+            if (v->var_id != 0) {
+                assert(v->var_id == i);
+                float v_activity = c2_get_activity(c2, v->var_id);
+                c2_rl_print_activity(v->var_id, v_activity);
+                assert(v_activity > -0.001);
+                if (decision_var_activity < v_activity) {
+                    decision_var_activity = v_activity;
+                    var = v;
                 }
             }
         }
-        V3("Maximal activity is %f for var %u\n", decision_var_activity, decision_var==NULL?0:decision_var->var_id);
-//        assert(decision_var_activity > 0.5 || decision_var_activity < 0.01);
-        return decision_var;
+    }
+    V3("Maximal activity is %f for var %u\n", decision_var_activity, var==NULL ? 0 : var->var_id);
+    return var;
+}
+
+// Returns NULL, if all variables are decided
+Var* c2_pick_nondeterministic_variable(C2* c2) {
+    if (!c2->options->random_decisions) {  // Pick variable with highest activity
+        return c2_pick_max_activity_variable(c2);
     } else {  // Pick a random nondeterministic variable
         Var* decision_var = NULL;
         long candidate_quality = LONG_MIN;
@@ -349,7 +352,7 @@ void c2_propagate(C2* c2) {
 // MAIN LOOPS
 void c2_run(C2* c2, unsigned remaining_conflicts) {
     
-    while (remaining_conflicts > 0) {
+    while (remaining_conflicts > 0 && (c2->options->hard_decision_limit == 0 || c2->statistics.decisions < c2->options->hard_decision_limit)) {
         V4("\nEntering main loop at dlvl %u.\n", c2->skolem->decision_lvl);
         assert(c2->state == C2_READY || c2->state == C2_SKOLEM_CONFLICT || c2->state == C2_EXAMPLES_CONFLICT);
         assert(c2->skolem->decision_lvl >= c2->restart_base_decision_lvl);
@@ -732,6 +735,9 @@ cadet_res c2_sat(C2* c2) {
             bool must_be_SAT = int_vector_count(c2->skolem->universals_assumptions) == 0; // just for safety
             c2_close_case(c2);
             assert(! must_be_SAT || c2->state == C2_SAT);
+        }
+        if (c2->options->hard_decision_limit != 0 && c2->statistics.decisions >= c2->options->hard_decision_limit) {
+            goto return_result;
         }
         if (c2->state == C2_READY) {
             c2_backtrack_to_decision_lvl(c2, c2->restart_base_decision_lvl);

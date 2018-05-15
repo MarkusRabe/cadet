@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <assert.h>
 
-#define VERSION "v2.4"
+#define VERSION "v2.5"
 
 static inline unsigned lit_to_var(int lit) {assert(lit != 0); return lit < 0 ? (unsigned) -lit : (unsigned) lit; } 
 

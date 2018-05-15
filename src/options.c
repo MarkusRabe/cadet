@@ -65,6 +65,7 @@ Options* default_options() {
     o->rl_advanced_rewards = false;
     o->reinforcement_learning_mock = false;
     o->cegar_soft_conflict_limit = false;
+    o->hard_decision_limit = 0;  // 0 means no limit
     
     return o;
 }
@@ -97,6 +98,7 @@ char* options_get_help() {
     "\t--minimize \t\tConflict minimization (default %d) \n"
     "\t--pure_literals\t\tUse pure literal detection (default %d)\n"
     "\t--fresh_seed\t\tUse a fresh random seed for every initialization of\n\t\t\t\tthe solver (default false)\n"
+    "\t-l [N]\t\t\tStop after N decisions; return UNKNONW (30).\n"
 //    "\t--enhanced_pure_literals\tUse enhanced pure literal detection (default %d)\n"
 //    "\t--qbce\t\t\tBlocked clause elimination (default %d)\n"
 //    "\t--pg\t\t\tPlaisted Greenbaum completion (default %d).\n"
@@ -130,6 +132,10 @@ char* options_get_help() {
     );
     
     return options_string;
+}
+
+void options_print(Options* o) {
+    V1("Decision limit: %u\n", o->hard_decision_limit);
 }
 
 void options_free(Options* o) {

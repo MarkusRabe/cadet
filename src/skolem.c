@@ -569,7 +569,7 @@ bool skolem_fix_lit_for_unique_antecedents(Skolem* s, Lit lit, bool define_both_
         bool has_illegals = skolem_has_illegal_dependence(s, c);
         case_exists = true;
         if (! has_illegals) {
-            skolem_propagate_partial_over_clause_for_lit(s, c, lit, define_both_sides, IDE_IGNORE);
+            skolem_propagate_partial_over_clause_for_lit(s, c, lit, define_both_sides);
         }
     }
     return case_exists;
@@ -850,10 +850,9 @@ void skolem_propagate_pure_variable(Skolem* s, unsigned var_id) {
  * used to encode potentially conflicted variables). Otherwise conflicted vars can decide to be not
  * conflicted.
  */
-void skolem_propagate_partial_over_clause_for_lit(Skolem* s, Clause* c, Lit lit, bool define_both_sides, ILLEGAL_DEPENDENCIES_ENCODING ide) {
-    assert (ide == IDE_IGNORE || ide == IDE_GUARDED);
+void skolem_propagate_partial_over_clause_for_lit(Skolem* s, Clause* c, Lit lit, bool define_both_sides) {
     assert(qcnf_contains_literal(c, lit) != 0);
-    assert(!skolem_is_deterministic(s, lit_to_var(lit)) || ide == IDE_GUARDED);
+    assert(!skolem_is_deterministic(s, lit_to_var(lit)));
     assert( skolem_get_unique_consequence(s, c) == 0 || skolem_get_unique_consequence(s, c) == lit );
     
     if (s->options->functional_synthesis) {
@@ -874,14 +873,11 @@ void skolem_propagate_partial_over_clause_for_lit(Skolem* s, Clause* c, Lit lit,
     for (unsigned i = 0; i < c->size; i++) {
         if (lit == c->occs[i]) {continue;}
         bool is_legal = skolem_may_depend_on(s, lit_to_var(lit), lit_to_var(c->occs[i]));
-        if (ide == IDE_GUARDED || is_legal) {
+        if (is_legal) {
             assert(skolem_is_deterministic(s, lit_to_var(c->occs[i])));
             satsolver_add(s->skolem, -newlit);
             satsolver_add(s->skolem, skolem_get_satsolver_lit(s, lit)); // prevlit
             satsolver_add(s->skolem, skolem_get_satsolver_lit(s, - c->occs[i]));
-            if (ide == IDE_GUARDED && ! is_legal) {
-                satsolver_add(s->skolem, lit > 0 ? s->dependency_choice_sat_lit : - s->dependency_choice_sat_lit);
-            }
             satsolver_clause_finished(s->skolem);
             
             if (is_legal) {
@@ -905,8 +901,6 @@ void skolem_propagate_partial_over_clause_for_lit(Skolem* s, Clause* c, Lit lit,
     }
     
     if (define_both_sides) {
-        assert(ide == IDE_IGNORE); // have not implemented this yet
-        
         // For the other direction we need the following two clauses:
         // (prevlit || -x && -y && -z) -> newlit
         // -prevlit && (x || y || z) || newlit

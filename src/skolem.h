@@ -192,11 +192,7 @@ void skolem_propagate_explicit_assignments(Skolem* s);
 
 int skolem_get_constant_value(Skolem* s, Lit lit); // get the value of the variable, if it is a constant
 
-typedef enum {
-    IDE_IGNORE = 2,
-    IDE_GUARDED = 3,
-} ILLEGAL_DEPENDENCIES_ENCODING;
-void skolem_propagate_partial_over_clause_for_lit(Skolem*, Clause*, Lit, bool define_both_sides, ILLEGAL_DEPENDENCIES_ENCODING);
+void skolem_propagate_partial_over_clause_for_lit(Skolem*, Clause*, Lit, bool define_both_sides);
 
 void skolem_check_occs_for_unique_consequences(Skolem*, Lit lit);
 void skolem_check_for_unique_consequence(Skolem*, Clause*);

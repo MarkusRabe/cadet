@@ -120,6 +120,31 @@ void c2_rl_delete_clause(Clause* c) {
     }
 }
 
+void c2_rl_print_slim_state(C2* c2, unsigned conflicts_until_next_restart) {
+    if (!rl || rl->mute) {
+        return;
+    }
+    
+    unsigned var_num = var_vector_count(c2->qcnf->vars);
+    unsigned uvar_num = 0;
+    if (!qcnf_is_propositional(c2->qcnf)) {
+        Scope* s = vector_get(c2->qcnf->scopes, 1);
+        uvar_num = int_vector_count(s->vars);
+    }
+    
+    Var* max_activity_var = c2_pick_max_activity_variable(c2);
+    
+    LOG_PRINTF("s %u,%u,%f,%zu,%zu,%u,%f\n",
+               c2->restart_base_decision_lvl,
+               c2->skolem->decision_lvl,
+               (float) int_vector_count(c2->skolem->determinization_order) / (float) (var_num + 1),
+               c2->restarts,
+               c2->restarts_since_last_major,
+               conflicts_until_next_restart,
+               max_activity_var ? c2_get_activity(c2, max_activity_var->var_id) : 0.0
+               );
+}
+
 void c2_rl_print_state(C2* c2, unsigned conflicts_until_next_restart) {
     if (!rl || rl->mute) {
         return;
@@ -132,55 +157,65 @@ void c2_rl_print_state(C2* c2, unsigned conflicts_until_next_restart) {
         uvar_num = int_vector_count(s->vars);
     }
     float var_ratio = (float) uvar_num / (float) (var_num + 1);
-    
-    // Solver state
-    LOG_PRINTF("s %u,%u,%u,%f,%zu,%zu,%u,",
-               c2->restart_base_decision_lvl,
-               c2->skolem->decision_lvl,
-               int_vector_count(c2->skolem->determinization_order),
-               (float) int_vector_count(c2->skolem->determinization_order) / (float) (var_num + 1),
-               c2->restarts,
-               c2->restarts_since_last_major,
-               conflicts_until_next_restart
-               );
-    
-    // Formula statistics
-    LOG_PRINTF("%u,%u,%f,",
-               var_num,
-               vector_count(c2->qcnf->active_clauses),
-               var_ratio);
-    
     Var* max_activity_var = c2_pick_max_activity_variable(c2);
-    
-    // Solver statistics
-    LOG_PRINTF("%zu,%zu,%f,%f,%zu,%f,%zu,%f,%zu,%f,%zu,%f,%zu,%f,%zu,%zu,%f,%f,%zu,%f,%zu,%f,%zu,%f,%zu,%f\n",
-               c2->statistics.decisions,
-               c2->statistics.conflicts,
-               (float) c2->statistics.decisions / (float) (c2->statistics.conflicts + 1),
-               (float) c2->statistics.decisions / (float) (c2->restarts + 1),
-               c2->skolem->statistics.propagations,
-               (float) c2->skolem->statistics.propagations / (float) (c2->statistics.decisions + 1),
-               c2->skolem->statistics.explicit_propagations,
-               (float) c2->skolem->statistics.explicit_propagations / (float) (c2->skolem->statistics.propagations + 1),
-               c2->skolem->statistics.pure_vars,
-               (float) c2->skolem->statistics.pure_vars / (float) (c2->skolem->statistics.propagations + 1),
-               c2->skolem->statistics.pure_constants,
-               (float) c2->skolem->statistics.pure_constants / (float) (c2->skolem->statistics.pure_vars + 1),
-               c2->skolem->statistics.local_determinicity_checks,
-               (float) c2->skolem->statistics.local_determinicity_checks / (float) (c2->skolem->statistics.propagations + 1),
-               c2->skolem->statistics.local_conflict_checks,
-               c2->skolem->statistics.global_conflict_checks,
-               (float) c2->skolem->statistics.global_conflict_checks / (float) (c2->skolem->statistics.local_conflict_checks + 1),
-               (float) c2->statistics.conflicts / (float) (c2->skolem->statistics.global_conflict_checks + 1),
-               c2->skolem->statistics.explicit_propagation_conflicts,
-               (float) c2->skolem->statistics.explicit_propagation_conflicts / (float) (c2->statistics.conflicts + 1),
-               c2->statistics.learnt_clauses_total_length,
-               (float) c2->statistics.learnt_clauses_total_length / (float) (c2->statistics.conflicts + 1),
-               c2->statistics.successful_conflict_clause_minimizations,
-               (float) c2->statistics.successful_conflict_clause_minimizations / (float) (c2->statistics.learnt_clauses_total_length + 1),
-               c2->statistics.cases_closed,
-               max_activity_var ? c2_get_activity(c2, max_activity_var->var_id) : 0.0
-               );
+    if (c2->options->rl_slim_state) {
+        LOG_PRINTF("s %u,%u,%f,%zu,%zu,%u,%f\n",
+                   c2->restart_base_decision_lvl,
+                   c2->skolem->decision_lvl,
+                   (float) int_vector_count(c2->skolem->determinization_order) / (float) (var_num + 1),
+                   c2->restarts,
+                   c2->restarts_since_last_major,
+                   conflicts_until_next_restart,
+                   max_activity_var ? c2_get_activity(c2, max_activity_var->var_id) : 0.0
+                   );
+    } else {
+        // Solver state
+        LOG_PRINTF("s %u,%u,%u,%f,%zu,%zu,%u,",
+                   c2->restart_base_decision_lvl,
+                   c2->skolem->decision_lvl,
+                   int_vector_count(c2->skolem->determinization_order),
+                   (float) int_vector_count(c2->skolem->determinization_order) / (float) (var_num + 1),
+                   c2->restarts,
+                   c2->restarts_since_last_major,
+                   conflicts_until_next_restart
+                   );
+        
+        // Formula statistics
+        LOG_PRINTF("%u,%u,%f,",
+                   var_num,
+                   vector_count(c2->qcnf->active_clauses),
+                   var_ratio);
+        
+        // Solver statistics
+        LOG_PRINTF("%zu,%zu,%f,%f,%zu,%f,%zu,%f,%zu,%f,%zu,%f,%zu,%f,%zu,%zu,%f,%f,%zu,%f,%zu,%f,%zu,%f,%zu,%f\n",
+                   c2->statistics.decisions,
+                   c2->statistics.conflicts,
+                   (float) c2->statistics.decisions / (float) (c2->statistics.conflicts + 1),
+                   (float) c2->statistics.decisions / (float) (c2->restarts + 1),
+                   c2->skolem->statistics.propagations,
+                   (float) c2->skolem->statistics.propagations / (float) (c2->statistics.decisions + 1),
+                   c2->skolem->statistics.explicit_propagations,
+                   (float) c2->skolem->statistics.explicit_propagations / (float) (c2->skolem->statistics.propagations + 1),
+                   c2->skolem->statistics.pure_vars,
+                   (float) c2->skolem->statistics.pure_vars / (float) (c2->skolem->statistics.propagations + 1),
+                   c2->skolem->statistics.pure_constants,
+                   (float) c2->skolem->statistics.pure_constants / (float) (c2->skolem->statistics.pure_vars + 1),
+                   c2->skolem->statistics.local_determinicity_checks,
+                   (float) c2->skolem->statistics.local_determinicity_checks / (float) (c2->skolem->statistics.propagations + 1),
+                   c2->skolem->statistics.local_conflict_checks,
+                   c2->skolem->statistics.global_conflict_checks,
+                   (float) c2->skolem->statistics.global_conflict_checks / (float) (c2->skolem->statistics.local_conflict_checks + 1),
+                   (float) c2->statistics.conflicts / (float) (c2->skolem->statistics.global_conflict_checks + 1),
+                   c2->skolem->statistics.explicit_propagation_conflicts,
+                   (float) c2->skolem->statistics.explicit_propagation_conflicts / (float) (c2->statistics.conflicts + 1),
+                   c2->statistics.learnt_clauses_total_length,
+                   (float) c2->statistics.learnt_clauses_total_length / (float) (c2->statistics.conflicts + 1),
+                   c2->statistics.successful_conflict_clause_minimizations,
+                   (float) c2->statistics.successful_conflict_clause_minimizations / (float) (c2->statistics.learnt_clauses_total_length + 1),
+                   c2->statistics.cases_closed,
+                   max_activity_var ? c2_get_activity(c2, max_activity_var->var_id) : 0.0
+                   );
+    }
 }
 
 void c2_rl_print_decision(unsigned decision_var_id, int phase) {

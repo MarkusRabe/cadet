@@ -25,6 +25,7 @@ typedef struct {
     bool fresh_random_seed;
     bool reinforcement_learning; // take decisions through stdin; trace state
     bool rl_advanced_rewards;
+    bool rl_slim_state;
     bool reinforcement_learning_mock; // for testing reinforcement learning code
     bool cegar_soft_conflict_limit; // switches cegar on after 1000 conflicts to also solve hard problems.
     unsigned hard_decision_limit;

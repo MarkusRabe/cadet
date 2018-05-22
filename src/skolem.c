@@ -980,16 +980,38 @@ void skolem_encode_global_conflict_check(Skolem* s) {
     assert(int_vector_count(s->potentially_conflicted_variables) == int_vector_count(s->potential_conflicts_satlits));
     
     if (s->options->functional_synthesis) {
-        for (unsigned i = 0; i < int_vector_count(s->decision_satlits); i++) {
-            satsolver_add(s->skolem, int_vector_get(s->decision_satlits, i));
+        int_vector* disjunction = int_vector_init();
+        for (unsigned i = 0; i < int_vector_count(s->potentially_conflicted_variables); i++) {
+            unsigned conflicted_var = (unsigned) int_vector_get(s->potentially_conflicted_variables, i);
+            
+            int is_necessary_conflict = satsolver_inc_max_var(s->skolem);
+            int_vector_add(disjunction, is_necessary_conflict);
+            
+            satsolver_add(s->skolem, int_vector_get(s->potential_conflicts_satlits, i));
+            satsolver_add(s->skolem, - is_necessary_conflict);
+            satsolver_clause_finished(s->skolem);
+            
+            satsolver_add(s->skolem, skolem_get_depends_on_decision_satlit(s, conflicted_var));
+            satsolver_add(s->skolem, - is_necessary_conflict);
+            satsolver_clause_finished(s->skolem);
+        }
+        for (unsigned i = 0; i < int_vector_count(disjunction); i++) {
+            int is_necessary_conflict = int_vector_get(disjunction, i);
+            satsolver_add(s->skolem, is_necessary_conflict);
+        }
+        satsolver_clause_finished(s->skolem);
+        int_vector_free(disjunction);
+        
+//        for (unsigned i = 0; i < int_vector_count(s->decision_satlits); i++) {
+//            satsolver_add(s->skolem, int_vector_get(s->decision_satlits, i));
+//        }
+//        satsolver_clause_finished(s->skolem);
+    } else {
+        for (unsigned i = 0; i < int_vector_count(s->potential_conflicts_satlits); i++) {
+            satsolver_add(s->skolem, int_vector_get(s->potential_conflicts_satlits, i));
         }
         satsolver_clause_finished(s->skolem);
     }
-    
-    for (unsigned i = 0; i < int_vector_count(s->potential_conflicts_satlits); i++) {
-        satsolver_add(s->skolem, int_vector_get(s->potential_conflicts_satlits, i));
-    }
-    satsolver_clause_finished(s->skolem);
 }
 
 unsigned skolem_global_conflict_check(Skolem* s, unsigned var_id) {

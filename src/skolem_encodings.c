@@ -33,7 +33,6 @@ int skolem_encode_uc_depends_on_decision(Skolem* s, Clause* c) {
         if (l != uc) {
             int other_depends_satlit = skolem_get_depends_on_decision_satlit(s, v);
             satsolver_add(s->skolem, other_depends_satlit);
-            
         }
     }
     satsolver_add(s->skolem, - satlit);
@@ -47,7 +46,7 @@ static void skolem_encode_depends_helper(Skolem *s, Lit lit) {
     vector* occs = qcnf_get_occs_of_lit(s->qcnf, lit);
     for (unsigned i = 0; i < vector_count(occs); i++) {
         Clause* c = vector_get(occs, i);
-        if (lit_to_var(skolem_get_unique_consequence(s, c)) == lit_to_var(lit)) {
+        if (skolem_get_unique_consequence(s, c) == lit) {
             int uc_depends = skolem_encode_uc_depends_on_decision(s, c);
             satsolver_add(s->skolem, - uc_depends);
         }

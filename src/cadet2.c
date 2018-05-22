@@ -709,12 +709,9 @@ cadet_res c2_sat(C2* c2) {
     V1("Initial propagation\n");
     c2_propagate(c2);
     if (c2_is_in_conflcit(c2)) {
-        if (!c2->options->functional_synthesis) {
-            c2->state = C2_UNSAT;
-        } else {
-            assert(c2->skolem->state == SKOLEM_STATE_CONSTANTS_CONLICT);
-            c2->state = C2_SAT;
-        }
+        abortif(c2->options->functional_synthesis, "In conflict mode before taking any decisions");
+        
+        c2->state = C2_UNSAT;
         goto return_result;
     }
     

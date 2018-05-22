@@ -155,12 +155,7 @@ void skolem_encode_global_conflict_check(Skolem* s);
 bool skolem_is_conflicted(Skolem*);
 bool skolem_has_empty_domain(Skolem*);
 
-typedef enum FIX_UNIQUE_ANTECEDENTS_MODE {
-    FUAM_ONLY_LEGALS = 2,
-    FUAM_ONLY_ILLEGALS_GUARDED = 3,
-//    FUAM_IGNORE_ILLEGAL_DEP_LITERALS = 4,
-} FIX_UNIQUE_ANTECEDENTS_MODE;
-bool skolem_fix_lit_for_unique_antecedents(Skolem* s, Lit lit, bool define_both_sides, FIX_UNIQUE_ANTECEDENTS_MODE);
+bool skolem_fix_lit_for_unique_antecedents(Skolem* s, Lit lit, bool define_both_sides);
 
 void skolem_add_potentially_conflicted(Skolem*, unsigned var_id);
 

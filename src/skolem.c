@@ -1166,6 +1166,12 @@ void skolem_undo(void* parent, char type, void* obj) {
             int_vector_pop(s->universals_assumptions);
             break;
             
+        case SKOLEM_OP_UPDATE_INFO_DEPENDS_ON_DECISION_SATLIT:
+            si = skolem_var_vector_get(s->infos, suu.sus.var_id);
+            si->depends_on_decision_satlit = suu.sus.val;
+            assert(si->depends_on_decision_satlit == 0);
+            break;
+            
         default:
             V0("Unknown undo operation in skolem.c: %d\n", (int) type);
             NOT_IMPLEMENTED();

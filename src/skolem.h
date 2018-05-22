@@ -169,6 +169,7 @@ void skolem_print_debug_info(Skolem*);
 void skolem_print_statistics(Skolem*);
 void skolem_print_deterministic_vars(Skolem*);
 // PRIVATE FUNCTIONS
+void skolem_encode_depends_on_decision(Skolem* s, unsigned var_id);
 
 typedef enum {
     SKOLEM_OP_UPDATE_INFO_POS_LIT, // obj contains the variable and the previous poslit, see union skolem_undo_union
@@ -211,5 +212,6 @@ bool skolem_is_locally_conflicted(Skolem*, unsigned var_id);
 
 // used by debug.c
 int skolem_get_satsolver_lit(Skolem* s, Lit lit);
+int skolem_get_depends_on_decision_satlit(Skolem* s, unsigned var_id);
 
 #endif /* skolem_h */

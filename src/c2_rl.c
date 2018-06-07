@@ -238,14 +238,16 @@ char* c2_rl_readline() {
 
 // decision var is the default, returns its ID if user does not pick a variable
 int c2_rl_get_decision(C2* solver, unsigned default_decision, float max_activity) {
-    
     long ret = 0;
     bool pick_by_std_heuristic = false;
+    bool restart = false;
     bool ask_on_terminal_for_line = !solver->options->reinforcement_learning_mock;
     if (ask_on_terminal_for_line) {
         char *s = c2_rl_readline();
         if (s != NULL && s[0] == '?') {
             pick_by_std_heuristic = true;
+        } else if (s != NULL && s[0] == 'r') {
+            restart = true;
         } else {
             char *end = NULL;
             ret = LONG_MIN;
@@ -255,6 +257,7 @@ int c2_rl_get_decision(C2* solver, unsigned default_decision, float max_activity
             abortif(*end != '\0' && *end != '\n', "String not terminated by \\0 or \\n");
         }
     }
+    assert(!restart || ! pick_by_std_heuristic);
     
     if (pick_by_std_heuristic || solver->options->reinforcement_learning_mock) {
         ret = default_decision;
@@ -264,8 +267,9 @@ int c2_rl_get_decision(C2* solver, unsigned default_decision, float max_activity
     assert(ret <= UINT_MAX);
     assert(ret >= 0);
     
-    float activity_ratio = 1.0f;
+    float activity_ratio = 0.0f;
     if (max_activity > 0.0 && ret != 0) {
+        assert(!restart);
         float decision_activity = c2_get_activity(solver, (unsigned) ret);
         activity_ratio = decision_activity / max_activity;
         assert(activity_ratio <= 1.0f);
@@ -273,13 +277,18 @@ int c2_rl_get_decision(C2* solver, unsigned default_decision, float max_activity
     }
     
     if (ret != 0) {
+        assert(!restart);
         float aux = 0.0f;
         if (solver->options->rl_vsids_rewards) {
             aux = - vsids_similarity_reward_factor * reward_per_decision * activity_ratio;
             assert(aux > 0.0f);
         }
         float_vector_add(rl->rewards, reward_per_decision + aux);
-        
+    }
+    
+    if (restart) {
+        float_vector_add(rl->rewards, reward_per_decision * 10);
+        ret = -1;
     }
     
     return (int) ret;

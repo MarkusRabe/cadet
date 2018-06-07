@@ -519,7 +519,11 @@ void c2_run(C2* c2, unsigned remaining_conflicts) {
                 }
                 float max_activity = max_activity_var ? c2_get_activity(c2, max_activity_var->var_id) : 0.0f;
                 c2_rl_print_state(c2, remaining_conflicts, max_activity);
-                int d = c2_rl_get_decision(c2, decision_var->var_id, max_activity);
+                int d = c2_rl_get_decision(c2, decision_var->var_id, max_activity);\
+                if (d == -1) {
+                    assert(c2->state == C2_READY);
+                    return; // causes a regular restart
+                }
                 if (d == 0) {
                     c2->state = C2_ABORT_RL;
                     return;

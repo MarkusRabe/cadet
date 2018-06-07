@@ -203,7 +203,7 @@ Var* c2_pick_nondeterministic_variable(C2* c2) {
                 }
             }
         }
-        V3("Maximal random value is %ld for var %u\n", candidate_quality, decision_var==NULL?0:decision_var->var_id);
+        V3("Randomly picked var %u\n", decision_var->var_id);
         return decision_var;
     }
 }
@@ -513,8 +513,13 @@ void c2_run(C2* c2, unsigned remaining_conflicts) {
             decision_var = c2_pick_nondeterministic_variable(c2);
             
             if (decision_var != NULL && c2->options->reinforcement_learning) {
-                c2_rl_print_state(c2, remaining_conflicts);
-                int d = c2_rl_get_decision(c2);
+                Var* max_activity_var = decision_var;
+                if (c2->options->random_decisions) {
+                    max_activity_var = c2_pick_max_activity_variable(c2);
+                }
+                float max_activity = max_activity_var ? c2_get_activity(c2, max_activity_var->var_id) : 0.0f;
+                c2_rl_print_state(c2, remaining_conflicts, max_activity);
+                int d = c2_rl_get_decision(c2, decision_var->var_id, max_activity);
                 if (d == 0) {
                     c2->state = C2_ABORT_RL;
                     return;

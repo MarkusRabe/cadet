@@ -63,6 +63,7 @@ Options* default_options() {
     o->trace_for_profiling = false;
     o->reinforcement_learning = false;
     o->rl_advanced_rewards = false;
+    o->rl_vsids_rewards = false;
     o->rl_slim_state = false;
     o->reinforcement_learning_mock = false;
     o->cegar_soft_conflict_limit = false;
@@ -90,6 +91,7 @@ char* options_get_help() {
     "\n  Options for the QBF engine\n"
     "\t--rl\t\t\tReinforcement learning mode: print state-action pairs,\n\t\t\t\tread decisions (default %d).\n"
     "\t--rl_advanced_rewards\tReward necessary actions (default %d)\n"
+    "\t--rl_vsids_rewards\tReward actions that are similar to VSIDS (default %d)\n"
     "\t--rl_slim_state\t\tPrint rl state without statistics (default %d)\n"
     "\t--debugging \t\tEasy debugging configuration (default %d)\n"
     "\t--cegar\t\t\tUse CEGAR refinements in addition to clause learning\n\t\t\t\t(default %d)\n"
@@ -117,6 +119,7 @@ char* options_get_help() {
     debug_verbosity,
     o->reinforcement_learning,
     o->rl_advanced_rewards,
+    o->rl_vsids_rewards,
     o->rl_slim_state,
     o->easy_debugging,
     o->cegar,

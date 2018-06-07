@@ -14,7 +14,9 @@
 #include <stdio.h>
 #include <math.h>
 
-float reward_cost_per_second = 0.1f;
+float reward_per_decision = -0.0001f;
+float vsids_similarity_reward_factor = 0.5f;
+
 float total_reward_for_necessary_conflicts = 0.5f;
 float self_reward_factor = 0.5f;
 float completion_reward = 1.0f;
@@ -26,7 +28,6 @@ typedef struct {
     
     // reward vector etc
     float_vector* rewards;
-    float_vector* runtimes;
     bool mute;
 } RL;
 
@@ -38,7 +39,6 @@ void rl_init() {
     rl = malloc(sizeof(RL));
     rl->stats = statistics_init(10000);
     rl->rewards = float_vector_init();
-    rl->runtimes = float_vector_init();
     rl->conflicts_in_reward_vector = map_init();
     rl->mute = false;
 }
@@ -65,7 +65,6 @@ void rl_add_reward(unsigned dec_idx, float value) { // for current decision
 void rl_free() {
     statistics_free(rl->stats);
     float_vector_free(rl->rewards);
-    float_vector_free(rl->runtimes);
     map_free(rl->conflicts_in_reward_vector);
     free(rl);
     rl = NULL;
@@ -145,7 +144,7 @@ void c2_rl_print_slim_state(C2* c2, unsigned conflicts_until_next_restart) {
                );
 }
 
-void c2_rl_print_state(C2* c2, unsigned conflicts_until_next_restart) {
+void c2_rl_print_state(C2* c2, unsigned conflicts_until_next_restart, float max_activity) {
     if (!rl || rl->mute) {
         return;
     }
@@ -157,7 +156,6 @@ void c2_rl_print_state(C2* c2, unsigned conflicts_until_next_restart) {
         uvar_num = int_vector_count(s->vars);
     }
     float var_ratio = (float) uvar_num / (float) (var_num + 1);
-    Var* max_activity_var = c2_pick_max_activity_variable(c2);
     if (c2->options->rl_slim_state) {
         LOG_PRINTF("s %u,%u,%f,%zu,%zu,%u,%f\n",
                    c2->restart_base_decision_lvl,
@@ -166,7 +164,7 @@ void c2_rl_print_state(C2* c2, unsigned conflicts_until_next_restart) {
                    c2->restarts,
                    c2->restarts_since_last_major,
                    conflicts_until_next_restart,
-                   max_activity_var ? c2_get_activity(c2, max_activity_var->var_id) : 0.0
+                   max_activity
                    );
     } else {
         // Solver state
@@ -213,7 +211,7 @@ void c2_rl_print_state(C2* c2, unsigned conflicts_until_next_restart) {
                    c2->statistics.successful_conflict_clause_minimizations,
                    (float) c2->statistics.successful_conflict_clause_minimizations / (float) (c2->statistics.learnt_clauses_total_length + 1),
                    c2->statistics.cases_closed,
-                   max_activity_var ? c2_get_activity(c2, max_activity_var->var_id) : 0.0
+                   max_activity
                    );
     }
 }
@@ -237,14 +235,9 @@ char* c2_rl_readline() {
     return buffer;
 }
 
-int c2_rl_get_decision(C2* solver) {
-    double seconds_since_last_decision = 0.0;
-    if (statistics_timer_is_running(rl->stats)) {
-        seconds_since_last_decision = statistics_stop_and_record_timer(rl->stats);
-        float seconds_since_last_decision_float = (float) seconds_since_last_decision;
-        assert(!isnan(seconds_since_last_decision_float));
-        float_vector_set(rl->runtimes, float_vector_count(rl->runtimes) - 1, seconds_since_last_decision_float);
-    }
+
+// decision var is the default, returns its ID if user does not pick a variable
+int c2_rl_get_decision(C2* solver, unsigned default_decision, float max_activity) {
     
     long ret = 0;
     bool pick_by_std_heuristic = false;
@@ -264,20 +257,30 @@ int c2_rl_get_decision(C2* solver) {
     }
     
     if (pick_by_std_heuristic || solver->options->reinforcement_learning_mock) {
-        Var* v = c2_pick_nondeterministic_variable(solver);
-        if (v) {ret = v->var_id;}
+        ret = default_decision;
     }
     
     assert(ret != LONG_MIN);
-    assert(ret <= INT_MAX);
-    assert(ret >= INT_MIN);
+    assert(ret <= UINT_MAX);
+    assert(ret >= 0);
+    
+    float activity_ratio = 1.0f;
+    if (max_activity > 0.0 && ret != 0) {
+        float decision_activity = c2_get_activity(solver, (unsigned) ret);
+        activity_ratio = decision_activity / max_activity;
+        assert(activity_ratio <= 1.0f);
+        assert(activity_ratio >= 0.0f);
+    }
     
     if (ret != 0) {
-        statistics_start_timer(rl->stats);
-        float_vector_add(rl->rewards, 0.0);
-        float_vector_add(rl->runtimes, 0.0);
+        float aux = 0.0f;
+        if (solver->options->rl_vsids_rewards) {
+            aux = - vsids_similarity_reward_factor * reward_per_decision * activity_ratio;
+            assert(aux > 0.0f);
+        }
+        float_vector_add(rl->rewards, reward_per_decision + aux);
+        
     }
-    assert(float_vector_count(rl->rewards) == float_vector_count(rl->runtimes));
     
     return (int) ret;
 }
@@ -538,15 +541,6 @@ cadet_res c2_rl_run_c2(Options* o) {
         }
         
         rl_advanced_action_rewards(solver);
-        
-        // Negative rewards for execution time
-        for (unsigned i = 0; i < float_vector_count(rl->rewards); i++) {
-            float seconds_since_last_decision = float_vector_get(rl->runtimes, i);
-            assert(!isnan(seconds_since_last_decision)); // Time array contains NaN
-            if (!isnan(seconds_since_last_decision)) {
-                rl_add_reward(i, - seconds_since_last_decision * reward_cost_per_second);
-            }
-        }
         
         c2_rl_print_rewards();
         

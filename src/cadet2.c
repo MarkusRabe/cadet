@@ -738,7 +738,11 @@ cadet_res c2_sat(C2* c2) {
 
     while (c2->state == C2_READY) { // This loop controls the restarts
         
-        c2_run(c2, c2->options->reinforcement_learning ? UINT_MAX : c2->next_restart);
+        unsigned next_restart = c2->next_restart;
+        if (c2->options->reinforcement_learning || c2->options->random_decisions) {
+            next_restart = UINT_MAX;
+        }
+        c2_run(c2, next_restart);
         assert(!c2_is_in_conflcit(c2) || c2->state == C2_UNSAT);
         if (c2->state == C2_CLOSE_CASE) { //} skolem_is_complete(c2->skolem) && (c2->options->casesplits || c2->options->certify_SAT)) {
             bool must_be_SAT = int_vector_count(c2->skolem->universals_assumptions) == 0; // just for safety

@@ -116,7 +116,7 @@ void skolem_enlarge_skolem_var_vector(Skolem* s, unsigned var_id) {
     sv.decision_pos = 0;
     sv.decision_neg = 0;
     
-    sv.depends_on_decision_satlit = 0;
+    sv.depends_on_decision_satlit = - s->satlit_true;
     
     sv.dep = s->empty_dependencies;
     
@@ -277,7 +277,7 @@ void skolem_update_decision(Skolem* s, Lit lit) {
 void skolem_update_depends_on_decision_satlit(Skolem* s, unsigned var_id, int satlit) {
     skolem_enlarge_skolem_var_vector(s, var_id);
     skolem_var* sv = skolem_var_vector_get(s->infos, var_id);
-    assert(sv->depends_on_decision_satlit == 0);
+    assert(satlit != 0);
     
     V4("Setting depends_on_decision_satlit %d for var %u\n", satlit, var_id);
     union skolem_undo_union suu;

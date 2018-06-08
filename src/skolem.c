@@ -336,6 +336,7 @@ int skolem_get_satsolver_lit(Skolem* s, Lit lit) {
 int skolem_get_depends_on_decision_satlit(Skolem* s, unsigned var_id) {
     assert(var_id != 0);
     skolem_var si = skolem_get_info(s, var_id);
+    assert(si.depends_on_decision_satlit != 0);
     return si.depends_on_decision_satlit;
 }
 
@@ -752,6 +753,7 @@ void skolem_propagate_pure_variable(Skolem* s, unsigned var_id) {
             }
             skolem_update_deterministic(s, var_id);
             skolem_update_dependencies(s, var_id, skolem_compute_dependencies(s,var_id));
+            
         } else {
             // pure and locally conflicted
             skolem_fix_lit_for_unique_antecedents(s,   pure_polarity * (Lit) var_id, true);
@@ -1158,7 +1160,7 @@ void skolem_undo(void* parent, char type, void* obj) {
         case SKOLEM_OP_UPDATE_INFO_DEPENDS_ON_DECISION_SATLIT:
             si = skolem_var_vector_get(s->infos, suu.sus.var_id);
             si->depends_on_decision_satlit = suu.sus.val;
-            assert(si->depends_on_decision_satlit == 0);
+//            assert(si->depends_on_decision_satlit == 0);
             break;
             
         default:
@@ -1282,12 +1284,12 @@ void skolem_assign_constant_value(Skolem* s, Lit lit, union Dependencies propaga
     // Propagation of constant may be in conflict with existing definitions
     //        assert(!skolem_is_deterministic(s, lit_to_var(lit)));
     assert(lit != 0);
-    unsigned var_id = lit_to_var(lit);
     assert(!skolem_is_conflicted(s));
 //    assert(skolem_get_satsolver_lit(s, lit) != s->satlit_true); // not constant already, not a big problem, but why should this happen?
     abortif(skolem_get_satsolver_lit(s, -lit) == s->satlit_true, "Propagation ended in inconsistent state.\n");
     
     V3("Skolem: Assign value %d.\n", lit);
+    unsigned var_id = lit_to_var(lit);
     skolem_update_reason_for_constant(s, var_id, reason ? reason->clause_idx : INT_MAX, s->decision_lvl);
     
     if (propagation_deps.dependence_lvl == 1) {
@@ -1431,7 +1433,9 @@ void skolem_propagate_constants_over_clause(Skolem* s, Clause* c) {
         skolem_update_state(s, SKOLEM_STATE_CONSTANTS_CONLICT);
         stack_push_op(s->stack, SKOLEM_OP_PROPAGATION_CONFLICT, NULL);
         
-        V3("Conflict in explicit propagation in skolem domain for clause %u and var %u\n", s->conflicted_clause->clause_idx, s->conflict_var_id);
+        V3("Conflict in explicit propagation in skolem domain for clause %u and var %u\n",
+           s->conflicted_clause->clause_idx,
+           s->conflict_var_id);
         
     } else { // assign value
 //        if (qcnf_is_universal(s->qcnf, lit_to_var(unassigned_lit)) &&
@@ -1532,11 +1536,12 @@ void skolem_decision(Skolem* s, Lit decision_lit) {
         
         // encode depends_on_decision_satlit
         // actual := old || (-val && -opposite)
-        // onesided only: (val && -old) || (opposite && -old) => - actual
+        // onesided only: actual => (old || (-val && -opposite))
+        // simplify: -actual || old || (-val && -opposite)
+        // in CNF:
         skolem_encode_depends_on_decision(s, decision_var_id);
-        int actual_depends_on_decision_satlit = satsolver_inc_max_var(s->skolem);
         int old_depends_on_decision_satlit = skolem_get_depends_on_decision_satlit(s, decision_var_id);
-        skolem_update_depends_on_decision_satlit(s, decision_var_id, actual_depends_on_decision_satlit);
+        int actual_depends_on_decision_satlit = satsolver_inc_max_var(s->skolem);
         
         satsolver_add(s->skolem, - val_satlit);
         satsolver_add(s->skolem, old_depends_on_decision_satlit);
@@ -1547,6 +1552,8 @@ void skolem_decision(Skolem* s, Lit decision_lit) {
         satsolver_add(s->skolem, old_depends_on_decision_satlit);
         satsolver_add(s->skolem, - actual_depends_on_decision_satlit);
         satsolver_clause_finished(s->skolem);
+        
+        skolem_update_depends_on_decision_satlit(s, decision_var_id, actual_depends_on_decision_satlit);
     }
     
     // Decision variable needs to be deterministic before we can do conflict checks. Also this is why we have to check exactly here.

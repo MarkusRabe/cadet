@@ -176,6 +176,15 @@ void satsolver_add(SATSolver* solver, int lit) {
 #endif
 }
 
+void satsolver_add_all(SATSolver* solver, int_vector* lits) {
+    assert(lits);
+    for (unsigned i = 0; i < int_vector_count(lits); i++) {
+        int lit = int_vector_get(lits, i);
+        assert(lit != 0);
+        satsolver_add(solver, lit);
+    }
+}
+
 void satsolver_clause_finished(SATSolver* solver) {
     satsolver_clause_finished_for_context(solver, int_vector_count(solver->context_literals)); // used as proxy for push_count
 }

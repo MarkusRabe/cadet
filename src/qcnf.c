@@ -135,6 +135,7 @@ bool qcnf_is_original(QCNF* qcnf, unsigned var_id) {
 }
 
 vector* qcnf_get_occs_of_lit(QCNF* qcnf, Lit lit) {
+    assert(lit != 0);
     Var* v = var_vector_get(qcnf->vars, lit_to_var(lit));
     return lit > 0 ? &v->pos_occs : &v->neg_occs;
 }

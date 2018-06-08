@@ -108,7 +108,7 @@ int main(int argc, const char* argv[]) {
                         print_usage(argv[0]);
                         return 1;
                     }
-                    options->hard_decision_limit = (int) strtol(argv[i+1], NULL, 0);
+                    options->hard_decision_limit = (unsigned) strtol(argv[i+1], NULL, 0);
                     assert(options->hard_decision_limit < 10000000);
                     i++;
                     break;

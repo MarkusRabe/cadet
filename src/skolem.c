@@ -208,6 +208,7 @@ void skolem_new_variable(Skolem* s, unsigned var_id) {
         && !skolem_is_deterministic(s, var_id)) {
         
         skolem_update_deterministic(s, var_id);
+        skolem_update_depends_on_decision_satlit(s, var_id, - s->satlit_true);
         
         int innerlit = satsolver_inc_max_var(s->skolem);
         skolem_update_pos_lit(s, var_id, innerlit);
@@ -331,6 +332,12 @@ int skolem_get_satsolver_lit(Skolem* s, Lit lit) {
     } else {
         return si.neg_lit;
     }
+}
+int skolem_get_depends_on_decision_satlit(Skolem* s, unsigned var_id) {
+    assert(var_id != 0);
+    skolem_var si = skolem_get_info(s, var_id);
+    assert(si.depends_on_decision_satlit != 0);
+    return si.depends_on_decision_satlit;
 }
 
 struct UNIQUE_CONSEQUENCE_UNDO_INFO;
@@ -549,8 +556,7 @@ bool skolem_is_lit_pure(Skolem* s, Lit lit) {
  *
  * Returns whether at least one case has been encoded
  */
-bool skolem_fix_lit_for_unique_antecedents(Skolem* s, Lit lit, bool define_both_sides, FIX_UNIQUE_ANTECEDENTS_MODE fuam) {
-    assert(fuam == FUAM_ONLY_LEGALS || fuam == FUAM_ONLY_ILLEGALS_GUARDED /* || fuam == FUAM_IGNORE_ILLEGAL_DEP_LITERALS */);
+bool skolem_fix_lit_for_unique_antecedents(Skolem* s, Lit lit, bool define_both_sides) {
     assert(lit != 0);
     
     vector* lit_occs = qcnf_get_occs_of_lit(s->qcnf, lit);
@@ -562,45 +568,9 @@ bool skolem_fix_lit_for_unique_antecedents(Skolem* s, Lit lit, bool define_both_
             continue;
         }
         bool has_illegals = skolem_has_illegal_dependence(s, c);
-        switch (fuam) {
-            case FUAM_ONLY_LEGALS:
-                case_exists = true;
-                if (! has_illegals) {
-                    skolem_propagate_partial_over_clause_for_lit(s, c, lit, define_both_sides, IDE_IGNORE);
-                }
-                break;
-            
-            case FUAM_ONLY_ILLEGALS_GUARDED:
-                case_exists = true;
-                if (has_illegals) {
-                    skolem_propagate_partial_over_clause_for_lit(s, c, lit, define_both_sides, IDE_GUARDED);
-                }
-                break;
-            
-//            case FUAM_IGNORE_ILLEGAL_DEP_LITERALS:
-//                assert(true);
-//                bool add_clause = true;
-//                if (has_illegals) {
-//                    // test whether this antecedent is satisfiable, including the illegals
-//                    // assume antecedent
-//                    for (unsigned i = 0; i < c->size; i++) {
-//                        if (c->occs[i] != lit) {
-//                            int l = skolem_get_satsolver_lit(s, - c->occs[i]);
-//                            satsolver_assume(s->skolem, l);
-//                        }
-//                    }
-//                    if (satsolver_sat(s->skolem) != SATSOLVER_SAT) {
-//                        add_clause = false;
-//                    }
-//                }
-//                if (add_clause) {
-//                    case_exists = true;
-//                    skolem_propagate_partial_over_clause_for_lit(s, c, lit, define_both_sides, IDE_IGNORE);
-//                }
-//                break;
-                
-            default:
-                break;
+        case_exists = true;
+        if (! has_illegals) {
+            skolem_propagate_partial_over_clause_for_lit(s, c, lit, define_both_sides);
         }
     }
     return case_exists;
@@ -702,6 +672,8 @@ void skolem_propagate_determinicity(Skolem* s, unsigned var_id) {
         s->statistics.propagations += 1;
         skolem_update_decision_lvl(s, var_id, s->decision_lvl);
         
+        skolem_encode_depends_on_decision(s, var_id);
+        
         if ( ! skolem_is_locally_conflicted(s, var_id)) {
             int satlit = satsolver_inc_max_var(s->skolem);
             skolem_update_pos_lit(s, var_id,   satlit); // must be done before the two next calls to make 'satlit' available in the skolem_var
@@ -709,11 +681,10 @@ void skolem_propagate_determinicity(Skolem* s, unsigned var_id) {
             
             skolem_add_clauses_using_existing_satlits(s, var_id, &v->pos_occs);
             skolem_add_clauses_using_existing_satlits(s, var_id, &v->neg_occs);
-            
         } else { // add clauses with unique consequence as partial function
             
-            skolem_fix_lit_for_unique_antecedents(s, (Lit)   (int) var_id, false, FUAM_ONLY_LEGALS);
-            skolem_fix_lit_for_unique_antecedents(s, (Lit) - (int) var_id, false, FUAM_ONLY_LEGALS);
+            skolem_fix_lit_for_unique_antecedents(s, (Lit)   (int) var_id, false);
+            skolem_fix_lit_for_unique_antecedents(s, (Lit) - (int) var_id, false);
             
             // Encode that variable is deterministic:
             satsolver_add(s->skolem, skolem_get_satsolver_lit(s,   (Lit) var_id));
@@ -763,8 +734,11 @@ void skolem_propagate_pure_variable(Skolem* s, unsigned var_id) {
         skolem_update_decision_lvl(s, var_id, s->decision_lvl);
         s->statistics.propagations += 1;
         s->statistics.pure_vars += 1;
+        
+        skolem_encode_depends_on_decision(s, var_id);
+        
         if ( ! skolem_is_locally_conflicted(s, var_id)) {
-            skolem_fix_lit_for_unique_antecedents(s, pure_polarity * (Lit) var_id, true, FUAM_ONLY_LEGALS);
+            skolem_fix_lit_for_unique_antecedents(s, pure_polarity * (Lit) var_id, true);
             skolem_var si = skolem_get_info(s, var_id);
             
             // also triggers checks for new unique consequences
@@ -779,10 +753,11 @@ void skolem_propagate_pure_variable(Skolem* s, unsigned var_id) {
             }
             skolem_update_deterministic(s, var_id);
             skolem_update_dependencies(s, var_id, skolem_compute_dependencies(s,var_id));
+            
         } else {
             // pure and locally conflicted
-            skolem_fix_lit_for_unique_antecedents(s,   pure_polarity * (Lit) var_id, true, FUAM_ONLY_LEGALS);
-            skolem_fix_lit_for_unique_antecedents(s, - pure_polarity * (Lit) var_id, false, FUAM_ONLY_LEGALS); // note that the other side is not defined both sided
+            skolem_fix_lit_for_unique_antecedents(s,   pure_polarity * (Lit) var_id, true);
+            skolem_fix_lit_for_unique_antecedents(s, - pure_polarity * (Lit) var_id, false); // note that the other side is not defined both sided
             
             skolem_var si = skolem_get_info(s, var_id);
             int new_opposite_sat_lit = satsolver_inc_max_var(s->skolem);
@@ -877,10 +852,9 @@ void skolem_propagate_pure_variable(Skolem* s, unsigned var_id) {
  * used to encode potentially conflicted variables). Otherwise conflicted vars can decide to be not
  * conflicted.
  */
-void skolem_propagate_partial_over_clause_for_lit(Skolem* s, Clause* c, Lit lit, bool define_both_sides, ILLEGAL_DEPENDENCIES_ENCODING ide) {
-    assert (ide == IDE_IGNORE || ide == IDE_GUARDED);
+void skolem_propagate_partial_over_clause_for_lit(Skolem* s, Clause* c, Lit lit, bool define_both_sides) {
     assert(qcnf_contains_literal(c, lit) != 0);
-    assert(!skolem_is_deterministic(s, lit_to_var(lit)) || ide == IDE_GUARDED);
+    assert(!skolem_is_deterministic(s, lit_to_var(lit)));
     assert( skolem_get_unique_consequence(s, c) == 0 || skolem_get_unique_consequence(s, c) == lit );
     
     if (s->options->functional_synthesis) {
@@ -901,14 +875,11 @@ void skolem_propagate_partial_over_clause_for_lit(Skolem* s, Clause* c, Lit lit,
     for (unsigned i = 0; i < c->size; i++) {
         if (lit == c->occs[i]) {continue;}
         bool is_legal = skolem_may_depend_on(s, lit_to_var(lit), lit_to_var(c->occs[i]));
-        if (ide == IDE_GUARDED || is_legal) {
+        if (is_legal) {
             assert(skolem_is_deterministic(s, lit_to_var(c->occs[i])));
             satsolver_add(s->skolem, -newlit);
             satsolver_add(s->skolem, skolem_get_satsolver_lit(s, lit)); // prevlit
             satsolver_add(s->skolem, skolem_get_satsolver_lit(s, - c->occs[i]));
-            if (ide == IDE_GUARDED && ! is_legal) {
-                satsolver_add(s->skolem, lit > 0 ? s->dependency_choice_sat_lit : - s->dependency_choice_sat_lit);
-            }
             satsolver_clause_finished(s->skolem);
             
             if (is_legal) {
@@ -932,8 +903,6 @@ void skolem_propagate_partial_over_clause_for_lit(Skolem* s, Clause* c, Lit lit,
     }
     
     if (define_both_sides) {
-        assert(ide == IDE_IGNORE); // have not implemented this yet
-        
         // For the other direction we need the following two clauses:
         // (prevlit || -x && -y && -z) -> newlit
         // -prevlit && (x || y || z) || newlit
@@ -970,16 +939,38 @@ void skolem_encode_global_conflict_check(Skolem* s) {
     assert(int_vector_count(s->potentially_conflicted_variables) == int_vector_count(s->potential_conflicts_satlits));
     
     if (s->options->functional_synthesis) {
-        for (unsigned i = 0; i < int_vector_count(s->decision_satlits); i++) {
-            satsolver_add(s->skolem, int_vector_get(s->decision_satlits, i));
+        int_vector* disjunction = int_vector_init();
+        for (unsigned i = 0; i < int_vector_count(s->potentially_conflicted_variables); i++) {
+            unsigned conflicted_var = (unsigned) int_vector_get(s->potentially_conflicted_variables, i);
+            
+            int is_necessary_conflict = satsolver_inc_max_var(s->skolem);
+            int_vector_add(disjunction, is_necessary_conflict);
+            
+            satsolver_add(s->skolem, int_vector_get(s->potential_conflicts_satlits, i));
+            satsolver_add(s->skolem, - is_necessary_conflict);
+            satsolver_clause_finished(s->skolem);
+            
+            satsolver_add(s->skolem, skolem_get_depends_on_decision_satlit(s, conflicted_var));
+            satsolver_add(s->skolem, - is_necessary_conflict);
+            satsolver_clause_finished(s->skolem);
+        }
+        for (unsigned i = 0; i < int_vector_count(disjunction); i++) {
+            int is_necessary_conflict = int_vector_get(disjunction, i);
+            satsolver_add(s->skolem, is_necessary_conflict);
+        }
+        satsolver_clause_finished(s->skolem);
+        int_vector_free(disjunction);
+        
+//        for (unsigned i = 0; i < int_vector_count(s->decision_satlits); i++) {
+//            satsolver_add(s->skolem, int_vector_get(s->decision_satlits, i));
+//        }
+//        satsolver_clause_finished(s->skolem);
+    } else {
+        for (unsigned i = 0; i < int_vector_count(s->potential_conflicts_satlits); i++) {
+            satsolver_add(s->skolem, int_vector_get(s->potential_conflicts_satlits, i));
         }
         satsolver_clause_finished(s->skolem);
     }
-    
-    for (unsigned i = 0; i < int_vector_count(s->potential_conflicts_satlits); i++) {
-        satsolver_add(s->skolem, int_vector_get(s->potential_conflicts_satlits, i));
-    }
-    satsolver_clause_finished(s->skolem);
 }
 
 unsigned skolem_global_conflict_check(Skolem* s, unsigned var_id) {
@@ -1166,6 +1157,12 @@ void skolem_undo(void* parent, char type, void* obj) {
             int_vector_pop(s->universals_assumptions);
             break;
             
+        case SKOLEM_OP_UPDATE_INFO_DEPENDS_ON_DECISION_SATLIT:
+            si = skolem_var_vector_get(s->infos, suu.sus.var_id);
+            si->depends_on_decision_satlit = suu.sus.val;
+//            assert(si->depends_on_decision_satlit == 0);
+            break;
+            
         default:
             V0("Unknown undo operation in skolem.c: %d\n", (int) type);
             NOT_IMPLEMENTED();
@@ -1287,12 +1284,12 @@ void skolem_assign_constant_value(Skolem* s, Lit lit, union Dependencies propaga
     // Propagation of constant may be in conflict with existing definitions
     //        assert(!skolem_is_deterministic(s, lit_to_var(lit)));
     assert(lit != 0);
-    unsigned var_id = lit_to_var(lit);
     assert(!skolem_is_conflicted(s));
 //    assert(skolem_get_satsolver_lit(s, lit) != s->satlit_true); // not constant already, not a big problem, but why should this happen?
     abortif(skolem_get_satsolver_lit(s, -lit) == s->satlit_true, "Propagation ended in inconsistent state.\n");
     
     V3("Skolem: Assign value %d.\n", lit);
+    unsigned var_id = lit_to_var(lit);
     skolem_update_reason_for_constant(s, var_id, reason ? reason->clause_idx : INT_MAX, s->decision_lvl);
     
     if (propagation_deps.dependence_lvl == 1) {
@@ -1322,11 +1319,13 @@ void skolem_assign_constant_value(Skolem* s, Lit lit, union Dependencies propaga
         }
     }
     
+    skolem_encode_depends_on_decision(s, var_id);
+    
     if (potentially_conflicted) {
         V2("Variable %u is assigned a constant but is locally conflicted in the skolem domain.\n", var_id);
         if ( ! skolem_is_deterministic(s, lit_to_var(lit))) {
             // We know the variable is deterministic now; it is in fact constant. But we have to add the opposite side of the clauses to be able to do the conflict check
-            skolem_fix_lit_for_unique_antecedents(s, (lit > 0 ? -1 : 1) * (Lit) var_id, false, FUAM_ONLY_LEGALS);
+            skolem_fix_lit_for_unique_antecedents(s, (lit > 0 ? -1 : 1) * (Lit) var_id, false);
         }
         if (lit > 0) {
             skolem_update_pos_lit(s, var_id, s->satlit_true);
@@ -1345,7 +1344,6 @@ void skolem_assign_constant_value(Skolem* s, Lit lit, union Dependencies propaga
     }
     
     skolem_update_deterministic(s, var_id);
-    
     
     // may be necessary, even after conflict check; if not conflicted, the other satlit must still be updated to the correct constant.
     int polarity = lit > 0 ? 1 : -1;
@@ -1435,7 +1433,9 @@ void skolem_propagate_constants_over_clause(Skolem* s, Clause* c) {
         skolem_update_state(s, SKOLEM_STATE_CONSTANTS_CONLICT);
         stack_push_op(s->stack, SKOLEM_OP_PROPAGATION_CONFLICT, NULL);
         
-        V3("Conflict in explicit propagation in skolem domain for clause %u and var %u\n", s->conflicted_clause->clause_idx, s->conflict_var_id);
+        V3("Conflict in explicit propagation in skolem domain for clause %u and var %u\n",
+           s->conflicted_clause->clause_idx,
+           s->conflict_var_id);
         
     } else { // assign value
 //        if (qcnf_is_universal(s->qcnf, lit_to_var(unassigned_lit)) &&
@@ -1474,9 +1474,8 @@ void skolem_decision(Skolem* s, Lit decision_lit) {
      * the same input the decision var would be conflicted as well.
      */
     bool positive_side_needs_complete_definitions_too = s->options->functional_synthesis;
-    skolem_fix_lit_for_unique_antecedents(s,  decision_lit, positive_side_needs_complete_definitions_too,
-                                          FUAM_ONLY_LEGALS);
-    bool opposite_case_exists = skolem_fix_lit_for_unique_antecedents(s, - decision_lit, true, FUAM_ONLY_LEGALS);
+    skolem_fix_lit_for_unique_antecedents(s, decision_lit, positive_side_needs_complete_definitions_too);
+    bool opposite_case_exists = skolem_fix_lit_for_unique_antecedents(s, - decision_lit, true);
     
     // Here we already fix the function domain decisions
     // This is a precautionary measure to prevent conflict analysis from interpreting the decision as a
@@ -1533,6 +1532,28 @@ void skolem_decision(Skolem* s, Lit decision_lit) {
         satsolver_add(s->skolem, - decision_lit);
         satsolver_add(s->skolem, - val_satlit);
         satsolver_clause_finished(s->skolem);
+        
+        
+        // encode depends_on_decision_satlit
+        // actual := old || (-val && -opposite)
+        // onesided only: actual => (old || (-val && -opposite))
+        // simplify: -actual || old || (-val && -opposite)
+        // in CNF:
+        skolem_encode_depends_on_decision(s, decision_var_id);
+        int old_depends_on_decision_satlit = skolem_get_depends_on_decision_satlit(s, decision_var_id);
+        int actual_depends_on_decision_satlit = satsolver_inc_max_var(s->skolem);
+        
+        satsolver_add(s->skolem, - val_satlit);
+        satsolver_add(s->skolem, old_depends_on_decision_satlit);
+        satsolver_add(s->skolem, - actual_depends_on_decision_satlit);
+        satsolver_clause_finished(s->skolem);
+        
+        satsolver_add(s->skolem, - opposite_satlit);
+        satsolver_add(s->skolem, old_depends_on_decision_satlit);
+        satsolver_add(s->skolem, - actual_depends_on_decision_satlit);
+        satsolver_clause_finished(s->skolem);
+        
+        skolem_update_depends_on_decision_satlit(s, decision_var_id, actual_depends_on_decision_satlit);
     }
     
     // Decision variable needs to be deterministic before we can do conflict checks. Also this is why we have to check exactly here.

@@ -48,6 +48,7 @@ int  satsolver_inc_max_var(SATSolver*);
 void satsolver_set_max_var(SATSolver*, int new_max);
 int satsolver_get_max_var(SATSolver*);
 void satsolver_add(SATSolver*, int lit);
+void satsolver_add_all(SATSolver* solver, int_vector* lits);
 void satsolver_assume(SATSolver*, int lit);
 void satsolver_clear_assumptions(SATSolver*);
 bool satsolver_inconsistent(SATSolver*);

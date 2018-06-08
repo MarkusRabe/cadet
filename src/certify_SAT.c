@@ -374,7 +374,7 @@ void c2_write_AIG_certificate(C2* c2) {
     assert(c2->options->certificate_type != QBFCERT || max_sym == var2aigerlit(a->maxvar + 1));
     
     // Certificate for the dlvl0 variables
-    unsigned dlvl0_conflict = cert_dlvl0_definitions(a, aigerlits, skolem_dlvl0, &max_sym);
+    unsigned dlvl0_conflict_aigerlit = cert_dlvl0_definitions(a, aigerlits, skolem_dlvl0, &max_sym);
     
     // The following data structures remember all the aigerlits for all cases; dlvl0 vars are only remembered once
     vector* case_aigerlits = vector_init(); // stores for every variable an int_vector of aigerlits for the different cases
@@ -404,7 +404,7 @@ void c2_write_AIG_certificate(C2* c2) {
                                                         c->potentially_conflicted_variables,
                                                         c->unique_consequences));
         }
-        abortif(! c2->options->cegar && case_applies == aiger_false, "This case does not contribute.");
+        abortif(!c2->options->functional_synthesis && ! c2->options->cegar && case_applies == aiger_false, "This case does not contribute.");
         
 //        // Adding auxiliary outputs to the circuit to simplify debugging.
 //        // These outputs violate output standards, so do not use otherwise.
@@ -464,7 +464,7 @@ void c2_write_AIG_certificate(C2* c2) {
         }
         
         unsigned projection = aigeru_AND(a, &max_sym, some_case_applies, negate(some_universal_violated));
-        projection = aigeru_AND(a, &max_sym, projection, negate(dlvl0_conflict));
+        projection = aigeru_AND(a, &max_sym, projection, negate(dlvl0_conflict_aigerlit));
         aiger_add_output(a, projection, QUANTIFIER_ELIMINATION_OUTPUT_STRING);
         
         bool valid = cert_validate_quantifier_elimination(a, c2->qcnf, aigerlits, projection);

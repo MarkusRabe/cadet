@@ -1,3 +1,4 @@
+
 //
 //  cadet2.c
 //  cadet
@@ -718,12 +719,16 @@ cadet_res c2_sat(C2* c2) {
     V1("Initial propagation\n");
     c2_propagate(c2);
     if (c2_is_in_conflcit(c2)) {
-        if (!c2->options->functional_synthesis) {
-            c2->state = C2_UNSAT;
-        } else {
+        
+        if (c2->options->functional_synthesis) {
+            V1("In conflict before any decision was taken. This formula is equivalent to false.")
             assert(c2->skolem->state == SKOLEM_STATE_CONSTANTS_CONLICT);
+            c2_add_lit(c2, 0);  // make formula false
             c2->state = C2_SAT;
+            goto return_result;
         }
+        
+        c2->state = C2_UNSAT;
         goto return_result;
     }
     

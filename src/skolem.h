@@ -155,12 +155,7 @@ void skolem_encode_global_conflict_check(Skolem* s);
 bool skolem_is_conflicted(Skolem*);
 bool skolem_has_empty_domain(Skolem*);
 
-typedef enum FIX_UNIQUE_ANTECEDENTS_MODE {
-    FUAM_ONLY_LEGALS = 2,
-    FUAM_ONLY_ILLEGALS_GUARDED = 3,
-//    FUAM_IGNORE_ILLEGAL_DEP_LITERALS = 4,
-} FIX_UNIQUE_ANTECEDENTS_MODE;
-bool skolem_fix_lit_for_unique_antecedents(Skolem* s, Lit lit, bool define_both_sides, FIX_UNIQUE_ANTECEDENTS_MODE);
+bool skolem_fix_lit_for_unique_antecedents(Skolem* s, Lit lit, bool define_both_sides);
 
 void skolem_add_potentially_conflicted(Skolem*, unsigned var_id);
 
@@ -169,6 +164,7 @@ void skolem_print_debug_info(Skolem*);
 void skolem_print_statistics(Skolem*);
 void skolem_print_deterministic_vars(Skolem*);
 // PRIVATE FUNCTIONS
+void skolem_encode_depends_on_decision(Skolem* s, unsigned var_id);
 
 typedef enum {
     SKOLEM_OP_UPDATE_INFO_POS_LIT, // obj contains the variable and the previous poslit, see union skolem_undo_union
@@ -186,7 +182,8 @@ typedef enum {
     SKOLEM_OP_POTENTIALLY_CONFLICTED_VAR,
     SKOLEM_OP_DECISION_LVL,
     SKOLEM_OP_DECISION,
-    SKOLEM_OP_UNIVERSAL_ASSUMPTION
+    SKOLEM_OP_UNIVERSAL_ASSUMPTION,
+    SKOLEM_OP_UPDATE_INFO_DEPENDS_ON_DECISION_SATLIT
 } SKOLEM_OP;
 
 void skolem_undo(void*,char,void*);
@@ -195,11 +192,7 @@ void skolem_propagate_explicit_assignments(Skolem* s);
 
 int skolem_get_constant_value(Skolem* s, Lit lit); // get the value of the variable, if it is a constant
 
-typedef enum {
-    IDE_IGNORE = 2,
-    IDE_GUARDED = 3,
-} ILLEGAL_DEPENDENCIES_ENCODING;
-void skolem_propagate_partial_over_clause_for_lit(Skolem*, Clause*, Lit, bool define_both_sides, ILLEGAL_DEPENDENCIES_ENCODING);
+void skolem_propagate_partial_over_clause_for_lit(Skolem*, Clause*, Lit, bool define_both_sides);
 
 void skolem_check_occs_for_unique_consequences(Skolem*, Lit lit);
 void skolem_check_for_unique_consequence(Skolem*, Clause*);
@@ -210,5 +203,6 @@ bool skolem_is_locally_conflicted(Skolem*, unsigned var_id);
 
 // used by debug.c
 int skolem_get_satsolver_lit(Skolem* s, Lit lit);
+int skolem_get_depends_on_decision_satlit(Skolem* s, unsigned var_id);
 
 #endif /* skolem_h */

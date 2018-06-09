@@ -5,6 +5,7 @@ integration-tests/true.qdimacs | 10
 integration-tests/false.qdimacs | 20
 integration-tests/stmt27_149_224.qdimacs.txt | 20
 integration-tests/constants_and_elimination.qdimacs | 10
+integration-tests/projection_error2.qdimacs | 10
 integration-tests/eequery_query04_1344n_reduced.qdimacs | 10
 integration-tests/bug6.qdimacs | 10
 integration-tests/bug6_reduced.qdimacs | 20

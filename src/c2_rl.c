@@ -281,7 +281,7 @@ int c2_rl_get_decision(C2* solver, unsigned default_decision, float max_activity
         float aux = 0.0f;
         if (solver->options->rl_vsids_rewards) {
             aux = - vsids_similarity_reward_factor * reward_per_decision * activity_ratio;
-            assert(aux > 0.0f);
+            abortif(aux < 0.0f, "Illegal value for VSIDS aux reward: %f\n", aux);
         }
         float_vector_add(rl->rewards, reward_per_decision + aux);
     }

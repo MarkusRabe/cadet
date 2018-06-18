@@ -27,7 +27,7 @@ $(TARGET): $(OBJECTS) $(LGL_OBJECTS) $(MINISAT_OBJECTS)
 	$(CC) $(CFLAGS) $(OBJECTS) $(LGL_OBJECTS) $(MINISAT_OBJECTS) $(LIBS) -o $@
 
 test: default
-	python scripts/tester.py --test -f
+	python2 scripts/tester.py --test -f
 
 shared: default
 	$(CC) $(CFLAGS) $(OBJECTS) $(LGL_OBJECTS) $(MINISAT_OBJECTS) $(LIBS) $(SHARED)

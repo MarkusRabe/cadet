@@ -191,6 +191,10 @@ void skolem_update_pos_lit(Skolem* s, unsigned var_id, int pos_lit) {
         suu.sus.val = sv->pos_lit;
         stack_push_op(s->stack, SKOLEM_OP_UPDATE_INFO_POS_LIT, suu.ptr);
         sv->pos_lit = pos_lit;
+        
+        if (sv->neg_lit == s->satlit_true) {
+            c2_rl_update_constant_value(suu.sus.var_id, 1);
+        }
     }
 }
 
@@ -204,6 +208,10 @@ void skolem_update_neg_lit(Skolem* s, unsigned var_id, int neg_lit) {
         suu.sus.val = sv->neg_lit;
         stack_push_op(s->stack, SKOLEM_OP_UPDATE_INFO_NEG_LIT, suu.ptr);
         sv->neg_lit = neg_lit;
+        
+        if (sv->neg_lit == s->satlit_true) {
+            c2_rl_update_constant_value(suu.sus.var_id, -1);
+        }
     }
 }
 void skolem_update_satlit(Skolem* s, Lit lit, int new_satlit) {

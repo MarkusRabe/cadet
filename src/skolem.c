@@ -1045,11 +1045,17 @@ void skolem_undo(void* parent, char type, void* obj) {
 
         case SKOLEM_OP_UPDATE_INFO_POS_LIT:
             si = skolem_var_vector_get(s->infos, suu.sus.var_id);
+            if (si->pos_lit == s->satlit_true && suu.sus.val != s->satlit_true) {
+                c2_rl_update_constant_value(suu.sus.var_id, 0);
+            }
             si->pos_lit = suu.sus.val;
             break;
             
         case SKOLEM_OP_UPDATE_INFO_NEG_LIT:
             si = skolem_var_vector_get(s->infos, suu.sus.var_id);
+            if (si->neg_lit == s->satlit_true && suu.sus.val != s->satlit_true) {
+                c2_rl_update_constant_value(suu.sus.var_id, 0);
+            }
             si->neg_lit = suu.sus.val;
             break;
             
@@ -1351,8 +1357,6 @@ void skolem_assign_constant_value(Skolem* s, Lit lit, union Dependencies propaga
     skolem_update_neg_lit(s, var_id, - polarity * s->satlit_true);
     
     skolem_update_dependencies(s, var_id, propagation_deps);
-    
-    c2_rl_update_constant_value(var_id, skolem_get_constant_value(s, (Lit) var_id));
     
     // Queue potentially new constants
     vector* opp_occs = qcnf_get_occs_of_lit(s->qcnf, - lit);

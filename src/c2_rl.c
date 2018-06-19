@@ -247,6 +247,7 @@ int c2_rl_get_decision(C2* solver, unsigned default_decision, float max_activity
         if (s != NULL && s[0] == '?') {
             pick_by_std_heuristic = true;
         } else if (s != NULL && s[0] == 'r') {
+            assert(ret == 0);
             restart = true;
         } else {
             char *end = NULL;
@@ -264,20 +265,21 @@ int c2_rl_get_decision(C2* solver, unsigned default_decision, float max_activity
     }
     
     assert(ret != LONG_MIN);
-    assert(ret <= UINT_MAX);
-    assert(ret >= 0);
-    
-    float activity_ratio = 0.0f;
-    if (max_activity > 0.0 && ret != 0) {
-        assert(!restart);
-        float decision_activity = c2_get_activity(solver, (unsigned) ret);
-        activity_ratio = decision_activity / max_activity;
-        assert(activity_ratio <= 1.0f);
-        assert(activity_ratio >= 0.0f);
-    }
+    assert(ret > INT_MIN);
+    assert(ret <= INT_MAX);
     
     if (ret != 0) {
         assert(!restart);
+        unsigned var_id = lit_to_var((int) ret);
+        
+        float activity_ratio = 0.0f;
+        if (max_activity > 0.0) {
+            float decision_activity = c2_get_activity(solver, var_id);
+            activity_ratio = decision_activity / max_activity;
+            assert(activity_ratio <= 1.0f);
+            assert(activity_ratio >= 0.0f);
+        }
+        
         float aux = 0.0f;
         if (solver->options->rl_vsids_rewards) {
             aux = - vsids_similarity_reward_factor * reward_per_decision * activity_ratio;
@@ -288,7 +290,7 @@ int c2_rl_get_decision(C2* solver, unsigned default_decision, float max_activity
     
     if (restart) {
         float_vector_add(rl->rewards, reward_per_decision * 10);
-        ret = -1;
+        ret = INT_MIN; // is a hack; indicates a restart
     }
     
     return (int) ret;

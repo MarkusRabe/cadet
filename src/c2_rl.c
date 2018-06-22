@@ -519,6 +519,8 @@ cadet_res c2_rl_run_c2(Options* o) {
         if (mock_file) {
             file_name = mock_file;
         } else {
+            LOG_PRINTF("Enter new filename:\n");
+            fflush(stdout);
             file_name = c2_rl_readline();
             LOG_PRINTF("\n");
         }

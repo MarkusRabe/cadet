@@ -63,33 +63,34 @@ int skolem_encode_antecedent_inependently_satisfied(Skolem* s, Clause* c) {
     
     int antecedent_sat_and_indep = satsolver_inc_max_var(s->skolem);
     
-    // sat_and_dep := satisfied && (-other_depends && ... && - other_depends)
+    // sat_and_indep := satisfied && -(lit_depends || ... || lit_depends)
     for (unsigned i = 0; i < c->size; i++) {
         Lit l = c->occs[i];
         unsigned v = lit_to_var(l);
         if (l != uc) {
-            int other_depends_satlit = skolem_get_depends_on_decision_satlit(s, v);
-            satsolver_add(s->skolem, other_depends_satlit);
-            satsolver_add(s->skolem, - satisfied);
-            satsolver_add(s->skolem, antecedent_sat_and_indep);
+            int lit_depends = skolem_get_depends_on_decision_satlit(s, v);
+            satsolver_add(s->skolem, - lit_depends);
+            satsolver_add(s->skolem, - antecedent_sat_and_indep);
             satsolver_clause_finished(s->skolem);
         }
     }
+    
+    satsolver_add(s->skolem, satisfied);
+    satsolver_add(s->skolem, - antecedent_sat_and_indep);
+    satsolver_clause_finished(s->skolem);
     
     for (unsigned i = 0; i < c->size; i++) {
         Lit l = c->occs[i];
         unsigned v = lit_to_var(l);
         if (l != uc) {
-            int other_depends_satlit = skolem_get_depends_on_decision_satlit(s, v);
-            satsolver_add(s->skolem, - other_depends_satlit);
+            int lit_depends = skolem_get_depends_on_decision_satlit(s, v);
+            satsolver_add(s->skolem, lit_depends);
         }
     }
-    satsolver_add(s->skolem, - antecedent_sat_and_indep);
+    satsolver_add(s->skolem, - satisfied);
+    satsolver_add(s->skolem, antecedent_sat_and_indep);
     satsolver_clause_finished(s->skolem);
 
-    satsolver_add(s->skolem, satisfied);
-    satsolver_add(s->skolem, - antecedent_sat_and_indep);
-    satsolver_clause_finished(s->skolem);
 
     V4("Antecedent of clause %u independently satsified satlit: %d\n", c->clause_idx, antecedent_sat_and_indep);
     return antecedent_sat_and_indep;
@@ -110,7 +111,7 @@ int skolem_encode_lit_satisfied_and_depends_on_decisions(Skolem* s, Lit lit) {
     }
     if (int_vector_count(indep_lits) == 0) {
         int_vector_free(indep_lits);
-        return - skolem_get_satsolver_lit(s, lit);
+        return skolem_get_satsolver_lit(s, lit);
     }
     
     int satlit_is_set_and_depends = satsolver_inc_max_var(s->skolem);

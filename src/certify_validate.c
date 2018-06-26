@@ -24,15 +24,15 @@ void cert_validate_print_assignment(aiger* a, QCNF* qcnf, SATSolver* checker, in
     }
     V0("\n");
     
-    V0("Violating assignment to existentials:");
-    for (unsigned i = 0; i < var_vector_count(qcnf->vars); i++) {
-        if (qcnf_var_exists(qcnf, i) && qcnf_is_existential(qcnf, i)) {
-            unsigned al = mapped_lit2aigerlit(aigerlits, (Lit) i);
-            int val = satsolver_deref(checker, aiger_lit2lit(al, truelit));
-            V0(" %d", val * (int) i);
-        }
-    }
-    V0("\n");
+//    V0("Violating assignment to existentials:");
+//    for (unsigned i = 0; i < var_vector_count(qcnf->vars); i++) {
+//        if (qcnf_var_exists(qcnf, i) && qcnf_is_existential(qcnf, i)) {
+//            unsigned al = mapped_lit2aigerlit(aigerlits, (Lit) i);
+//            int val = satsolver_deref(checker, aiger_lit2lit(al, truelit));
+//            V0(" %d", val * (int) i);
+//        }
+//    }
+//    V0("\n");
 }
 
 void cert_validate_encode_aiger(aiger* a, SATSolver* checker, int truelit) {

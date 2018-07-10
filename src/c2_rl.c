@@ -149,6 +149,11 @@ void c2_rl_print_state(C2* c2, unsigned conflicts_until_next_restart, float max_
         return;
     }
     
+    int conflicts_until_next_restart_int = (int) conflicts_until_next_restart;
+    if (conflicts_until_next_restart > UINT_MAX / 2) {
+        conflicts_until_next_restart_int = -1;
+    }
+    
     unsigned var_num = var_vector_count(c2->qcnf->vars);
     unsigned uvar_num = 0;
     if (!qcnf_is_propositional(c2->qcnf)) {
@@ -157,25 +162,25 @@ void c2_rl_print_state(C2* c2, unsigned conflicts_until_next_restart, float max_
     }
     float var_ratio = (float) uvar_num / (float) (var_num + 1);
     if (c2->options->rl_slim_state) {
-        LOG_PRINTF("s %u,%u,%f,%zu,%zu,%u,%f\n",
+        LOG_PRINTF("s %u,%u,%f,%zu,%zu,%d,%f\n",
                    c2->restart_base_decision_lvl,
                    c2->skolem->decision_lvl,
                    (float) int_vector_count(c2->skolem->determinization_order) / (float) (var_num + 1),
                    c2->restarts,
                    c2->restarts_since_last_major,
-                   conflicts_until_next_restart,
+                   conflicts_until_next_restart_int,
                    max_activity
                    );
     } else {
         // Solver state
-        LOG_PRINTF("s %u,%u,%u,%f,%zu,%zu,%u,",
+        LOG_PRINTF("s %u,%u,%u,%f,%zu,%zu,%d,",
                    c2->restart_base_decision_lvl,
                    c2->skolem->decision_lvl,
                    int_vector_count(c2->skolem->determinization_order),
                    (float) int_vector_count(c2->skolem->determinization_order) / (float) (var_num + 1),
                    c2->restarts,
                    c2->restarts_since_last_major,
-                   conflicts_until_next_restart
+                   conflicts_until_next_restart_int
                    );
         
         // Formula statistics

@@ -57,8 +57,24 @@ int skolem_encode_antecedent_satisfied(Skolem* s, Clause* c) {
 
 
 int skolem_encode_antecedent_inependently_satisfied(Skolem* s, Clause* c) {
-    Lit uc = skolem_get_unique_consequence(s, c);
     int satisfied = skolem_encode_antecedent_satisfied(s, c);
+    if (satisfied == - s->satlit_true) {
+        return - s->satlit_true;
+    }
+    Lit uc = skolem_get_unique_consequence(s, c);
+    
+    // Check if any of the lit_depends are statically false; can avoid allocating a new satsolver var
+    for (unsigned i = 0; i < c->size; i++) {
+        Lit l = c->occs[i];
+        unsigned v = lit_to_var(l);
+        if (l != uc) {
+            int lit_depends = skolem_get_depends_on_decision_satlit(s, v);
+            if (lit_depends == s->satlit_true) {
+                return - s->satlit_true;
+            }
+        }
+    }
+    
     int antecedent_sat_and_indep = satsolver_inc_max_var(s->skolem);
     
     // sat_and_indep := satisfied && -(lit_depends || ... || lit_depends)
@@ -94,12 +110,37 @@ int skolem_encode_antecedent_inependently_satisfied(Skolem* s, Clause* c) {
     return antecedent_sat_and_indep;
 }
 
+bool skolem_encode_lit_is_definitely_independent(Skolem* s, Lit lit) {
+    if (skolem_is_decision_var(s, lit_to_var(lit))) {
+        return false;
+    }
+    vector* occs = qcnf_get_occs_of_lit(s->qcnf, lit);
+    for (unsigned i = 0; i < vector_count(occs); i++) {
+        Clause* c = vector_get(occs, i);
+        Lit uc = skolem_get_unique_consequence(s, c);
+        if (uc == lit) {
+            for (unsigned i = 0; i < c->size; i++) {
+                Lit l = c->occs[i];
+                unsigned v = lit_to_var(l);
+                if (l != uc) {
+                    int lit_depends = skolem_get_depends_on_decision_satlit(s, v);
+                    if (lit_depends != - s->satlit_true) {
+                        return false;
+                    }
+                }
+            }
+        }
+    }
+    return true;
+}
 
 int skolem_encode_lit_satisfied_and_depends_on_decisions(Skolem* s, Lit lit) {
-    vector* occs = qcnf_get_occs_of_lit(s->qcnf, lit);
+    if (skolem_encode_lit_is_definitely_independent(s, lit)) {
+        return - s->satlit_true;
+    }
     
     int_vector* indep_lits = int_vector_init();
-    
+    vector* occs = qcnf_get_occs_of_lit(s->qcnf, lit);
     for (unsigned i = 0; i < vector_count(occs); i++) {
         Clause* c = vector_get(occs, i);
         if (skolem_get_unique_consequence(s, c) == lit) {
@@ -135,6 +176,9 @@ void skolem_encode_depends_on_decision(Skolem* s, unsigned var_id) {
     
     int depends_pos = skolem_encode_lit_satisfied_and_depends_on_decisions(s,   (Lit) var_id);
     int depends_neg = skolem_encode_lit_satisfied_and_depends_on_decisions(s, - (Lit) var_id);
+    if (depends_neg == - s->satlit_true && depends_pos == - s->satlit_true) {
+        return;
+    }
     
     int old_depends_on_decision_satlit = skolem_get_depends_on_decision_satlit(s, var_id);
     int new_depends_on_decision_satlit = satsolver_inc_max_var(s->skolem);

@@ -177,6 +177,7 @@ void skolem_encode_depends_on_decision(Skolem* s, unsigned var_id) {
     int depends_pos = skolem_encode_lit_satisfied_and_depends_on_decisions(s,   (Lit) var_id);
     int depends_neg = skolem_encode_lit_satisfied_and_depends_on_decisions(s, - (Lit) var_id);
     if (depends_neg == - s->satlit_true && depends_pos == - s->satlit_true) {
+        // no new cases can exist, so old_depends_satlit can remain
         return;
     }
     

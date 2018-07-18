@@ -58,9 +58,7 @@ int skolem_encode_antecedent_satisfied(Skolem* s, Clause* c) {
 
 int skolem_encode_antecedent_inependently_satisfied(Skolem* s, Clause* c) {
     Lit uc = skolem_get_unique_consequence(s, c);
-    
     int satisfied = skolem_encode_antecedent_satisfied(s, c);
-    
     int antecedent_sat_and_indep = satsolver_inc_max_var(s->skolem);
     
     // sat_and_indep := satisfied && -(lit_depends || ... || lit_depends)
@@ -131,7 +129,7 @@ int skolem_encode_lit_satisfied_and_depends_on_decisions(Skolem* s, Lit lit) {
 
 
 void skolem_encode_depends_on_decision(Skolem* s, unsigned var_id) {
-    if (!s->options->functional_synthesis) {
+    if (!s->options->functional_synthesis || qcnf_is_universal(s->qcnf, var_id)) {
         return;
     }
     

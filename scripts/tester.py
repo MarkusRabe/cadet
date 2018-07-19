@@ -556,6 +556,7 @@ if __name__ == "__main__":
                    '--debugging --sat_by_qbf -c cert.aag',
                    'RESULT_SAT --debugging --sat_by_qbf -f cert.aag',
                    'RESULT_SAT --debugging --sat_by_qbf -e cert.aag',
+                   'RESULT_SAT --debugging --sat_by_qbf -e cert.aag --cegar',
                    '--debugging --sat_by_qbf --cegar -c cert.aag',
                    # '--debugging --sat_by_qbf --case_splits -c cert.aag',
                    '--debugging --sat_by_qbf --cegar',

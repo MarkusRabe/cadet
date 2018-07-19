@@ -719,15 +719,13 @@ cadet_res c2_sat(C2* c2) {
     V1("Initial propagation\n");
     c2_propagate(c2);
     if (c2_is_in_conflcit(c2)) {
-        
         if (c2->options->functional_synthesis) {
-            V1("In conflict before any decision was taken. This formula is equivalent to false.")
-            assert(c2->skolem->state == SKOLEM_STATE_CONSTANTS_CONLICT);
+            V1("In conflict before any decision was taken. This formula is equivalent to false.\n")
+            assert(c2->skolem->state == SKOLEM_STATE_CONSTANTS_CONLICT);  // because global conflict checks need decisions in functional_synthesis mode
             c2_add_lit(c2, 0);  // make formula false
             c2->state = C2_SAT;
             goto return_result;
         }
-        
         c2->state = C2_UNSAT;
         goto return_result;
     }
@@ -821,7 +819,13 @@ cadet_res c2_solve_qdimacs(const char* file_name, Options* options) {
 
     if (qcnf_is_propositional(c2->qcnf) && ! options->use_qbf_engine_also_for_propositional_problems) {
         LOG_WARNING("Propositional problem; using SAT solver.\n");
-        return c2_check_propositional(c2->qcnf, options);
+        cadet_res res = c2_check_propositional(c2->qcnf, options);
+        if (! options->functional_synthesis || res == CADET_RESULT_SAT) {
+            return res;
+        } else {
+            assert(res == CADET_RESULT_UNSAT);
+            c2_add_lit(c2, 0);
+        }
     }
     
     if (options->plaisted_greenbaum_completion) {

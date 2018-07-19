@@ -672,8 +672,6 @@ void skolem_propagate_determinicity(Skolem* s, unsigned var_id) {
         s->statistics.propagations += 1;
         skolem_update_decision_lvl(s, var_id, s->decision_lvl);
         
-        skolem_encode_depends_on_decision(s, var_id);
-        
         if ( ! skolem_is_locally_conflicted(s, var_id)) {
             int satlit = satsolver_inc_max_var(s->skolem);
             skolem_update_pos_lit(s, var_id,   satlit); // must be done before the two next calls to make 'satlit' available in the skolem_var
@@ -681,6 +679,8 @@ void skolem_propagate_determinicity(Skolem* s, unsigned var_id) {
             
             skolem_add_clauses_using_existing_satlits(s, var_id, &v->pos_occs);
             skolem_add_clauses_using_existing_satlits(s, var_id, &v->neg_occs);
+            
+            skolem_encode_depends_on_decision(s, var_id);
         } else { // add clauses with unique consequence as partial function
             
             skolem_fix_lit_for_unique_antecedents(s, (Lit)   (int) var_id, false);
@@ -690,6 +690,8 @@ void skolem_propagate_determinicity(Skolem* s, unsigned var_id) {
             satsolver_add(s->skolem, skolem_get_satsolver_lit(s,   (Lit) var_id));
             satsolver_add(s->skolem, skolem_get_satsolver_lit(s, - (Lit) var_id));
             satsolver_clause_finished(s->skolem);
+            
+            skolem_encode_depends_on_decision(s, var_id);
             
             skolem_global_conflict_check(s, var_id);
             if (skolem_is_conflicted(s)) {
@@ -735,8 +737,6 @@ void skolem_propagate_pure_variable(Skolem* s, unsigned var_id) {
         s->statistics.propagations += 1;
         s->statistics.pure_vars += 1;
         
-        skolem_encode_depends_on_decision(s, var_id);
-        
         if ( ! skolem_is_locally_conflicted(s, var_id)) {
             skolem_fix_lit_for_unique_antecedents(s, pure_polarity * (Lit) var_id, true);
             skolem_var si = skolem_get_info(s, var_id);
@@ -753,7 +753,7 @@ void skolem_propagate_pure_variable(Skolem* s, unsigned var_id) {
             }
             skolem_update_deterministic(s, var_id);
             skolem_update_dependencies(s, var_id, skolem_compute_dependencies(s,var_id));
-            
+            skolem_encode_depends_on_decision(s, var_id);
         } else {
             // pure and locally conflicted
             skolem_fix_lit_for_unique_antecedents(s,   pure_polarity * (Lit) var_id, true);
@@ -811,6 +811,8 @@ void skolem_propagate_pure_variable(Skolem* s, unsigned var_id) {
             satsolver_add(s->skolem, skolem_get_satsolver_lit(s,   (Lit) var_id));
             satsolver_add(s->skolem, skolem_get_satsolver_lit(s, - (Lit) var_id));
             satsolver_clause_finished(s->skolem);
+            
+            skolem_encode_depends_on_decision(s, var_id);
             
             skolem_global_conflict_check(s, var_id);
             if (skolem_is_conflicted(s)) {
@@ -1325,10 +1327,8 @@ void skolem_assign_constant_value(Skolem* s, Lit lit, union Dependencies propaga
         }
     }
     
-    skolem_encode_depends_on_decision(s, var_id);
-    
     if (potentially_conflicted) {
-        V2("Variable %u is assigned a constant but is locally conflicted in the skolem domain.\n", var_id);
+        V2("Variable %u is assigned a constant but is locally conflicted.\n", var_id);
         if ( ! skolem_is_deterministic(s, lit_to_var(lit))) {
             // We know the variable is deterministic now; it is in fact constant. But we have to add the opposite side of the clauses to be able to do the conflict check
             skolem_fix_lit_for_unique_antecedents(s, (lit > 0 ? -1 : 1) * (Lit) var_id, false);
@@ -1338,7 +1338,9 @@ void skolem_assign_constant_value(Skolem* s, Lit lit, union Dependencies propaga
         } else {
             skolem_update_neg_lit(s, var_id, s->satlit_true);
         }
-        
+    
+        skolem_encode_depends_on_decision(s, var_id);
+    
         // Global conflict check!
         // This check may put s in conflict state; returns after this call.
         // Callee has to check for conflict state.
@@ -1357,6 +1359,10 @@ void skolem_assign_constant_value(Skolem* s, Lit lit, union Dependencies propaga
     skolem_update_neg_lit(s, var_id, - polarity * s->satlit_true);
     
     skolem_update_dependencies(s, var_id, propagation_deps);
+    
+    if (!potentially_conflicted) {  // otherwise it was already encoded above
+        skolem_encode_depends_on_decision(s, var_id);
+    }
     
     // Queue potentially new constants
     vector* opp_occs = qcnf_get_occs_of_lit(s->qcnf, - lit);
@@ -1538,26 +1544,27 @@ void skolem_decision(Skolem* s, Lit decision_lit) {
         satsolver_clause_finished(s->skolem);
         
         
+        skolem_encode_depends_on_decision(s, decision_var_id);
+        
         // encode depends_on_decision_satlit
         // actual := old || (-val && -opposite)
         // onesided only: actual => (old || (-val && -opposite))
         // simplify: -actual || old || (-val && -opposite)
         // in CNF:
-        skolem_encode_depends_on_decision(s, decision_var_id);
-        int old_depends_on_decision_satlit = skolem_get_depends_on_decision_satlit(s, decision_var_id);
-        int actual_depends_on_decision_satlit = satsolver_inc_max_var(s->skolem);
-        
-        satsolver_add(s->skolem, - val_satlit);
-        satsolver_add(s->skolem, old_depends_on_decision_satlit);
-        satsolver_add(s->skolem, - actual_depends_on_decision_satlit);
-        satsolver_clause_finished(s->skolem);
-        
-        satsolver_add(s->skolem, - opposite_satlit);
-        satsolver_add(s->skolem, old_depends_on_decision_satlit);
-        satsolver_add(s->skolem, - actual_depends_on_decision_satlit);
-        satsolver_clause_finished(s->skolem);
-        
-        skolem_update_depends_on_decision_satlit(s, decision_var_id, actual_depends_on_decision_satlit);
+//        int old_depends_on_decision_satlit = skolem_get_depends_on_decision_satlit(s, decision_var_id);
+//        int actual_depends_on_decision_satlit = satsolver_inc_max_var(s->skolem);
+//
+//        satsolver_add(s->skolem, - val_satlit);
+//        satsolver_add(s->skolem, old_depends_on_decision_satlit);
+//        satsolver_add(s->skolem, - actual_depends_on_decision_satlit);
+//        satsolver_clause_finished(s->skolem);
+//
+//        satsolver_add(s->skolem, - opposite_satlit);
+//        satsolver_add(s->skolem, old_depends_on_decision_satlit);
+//        satsolver_add(s->skolem, - actual_depends_on_decision_satlit);
+//        satsolver_clause_finished(s->skolem);
+//        
+//        skolem_update_depends_on_decision_satlit(s, decision_var_id, actual_depends_on_decision_satlit);
     }
     
     // Decision variable needs to be deterministic before we can do conflict checks. Also this is why we have to check exactly here.

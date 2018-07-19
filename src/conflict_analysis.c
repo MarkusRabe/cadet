@@ -324,8 +324,8 @@ Clause* analyze_conflict(conflict_analysis* ca,
         qcnf_add_lit(ca->c2->qcnf, - int_vector_get(ca->conflicting_assignment, i));
     }
     Clause* c = qcnf_close_clause(ca->c2->qcnf);
-    c->original = 0;
     abortif(!c, "Learnt clause could not be created");
+    c->original = 0;
     map_add(ca->resolution_graph, (int) c->clause_idx, ca->resolutions_of_last_conflict);
     ca->resolutions_of_last_conflict = int_vector_init();
     c2_rl_new_clause(c);

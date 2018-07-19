@@ -2,6 +2,9 @@
 Makefile
 cadet
 *.qdimacs
+*.qaig
+*.aag
+*.aig
 
 # Compiled source #
 ###################

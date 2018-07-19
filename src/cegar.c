@@ -132,6 +132,27 @@ void cegar_one_round_for_conflicting_assignment(C2* c2) {
         casesplits_encode_CEGAR_case(c2->cs);
         c2->cs->cegar_stats.recent_average_cube_size = (float) int_vector_count(cube) * (float) 0.1 + c2->cs->cegar_stats.recent_average_cube_size * (float) 0.9;
     } else {
+        if (c2->options->functional_synthesis) {
+            int_vector* core = int_vector_init();
+            satsolver_failed_assumptions(cs->exists_solver, core);
+            for (unsigned i = 0; i < int_vector_count(core); i++) {
+                Lit lit = int_vector_get(core, i);
+//                qcnf_add_lit(c2->qcnf, - lit);
+                int satlit = skolem_get_satsolver_lit(c2->skolem, lit);
+                satsolver_add(c2->skolem->skolem, - satlit);
+            }
+            satsolver_clause_finished_for_context(c2->skolem->skolem, 0);
+//            Clause* c = qcnf_close_clause(c2->qcnf);
+//            abortif(!c, "Could not create clause from unsat core in functional synthesis cegar iteration.");
+//            c->original = 0;
+//            c->consistent_with_originals = 0;
+//            c->is_cube = 1;
+//            c2_new_clause(c2, c);
+            
+            int_vector_free(core);
+            return;
+        }
+        
         c2->state = C2_UNSAT;
     }
     return;

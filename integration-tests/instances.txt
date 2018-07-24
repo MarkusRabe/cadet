@@ -126,7 +126,9 @@ integration-tests/sorting_network_4_5_rr.qdimacs | 20
 integration-tests/fuzz14807_reduced.qdimacs | 20
 integration-tests/bug_refinement_reduced2.qdimacs | 20
 
-
+[minitest]
+integration-tests/test_sat.qdimacs | 10
+integration-tests/test_unsat.qdimacs | 20
 
 [qbflib2010-2QBF]
 ../qbf-benchmarks/evaluations/qbflib2010-2QBF/mutex-2-s.qdimacs.gz | 10

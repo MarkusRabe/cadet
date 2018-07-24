@@ -23,15 +23,15 @@ def cyan(string):
     return c_cyan + string + c_reset
 
 def log(msg):
-    print msg
+    print(msg)
 
 def log_progress(msg):
     sys.stdout.write(msg)
 
 def error(msg):
-    print red('Error: ' + msg)
+    print(red('Error: ' + msg))
 
 def fatal(msg):
-    print red('Fatal Error: ' + msg)
+    print(red('Fatal Error: ' + msg))
     exit(1)
 

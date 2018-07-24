@@ -13,7 +13,7 @@ import numpy as np
 import itertools
 
 from reporting import log, log_progress, cyan, red, green, yellow
-from command import call
+from command import call_interruptable
 
 testcase_result = {}
 profiling_db = dict()
@@ -51,11 +51,13 @@ if sys.platform == 'darwin':
     TIME_UTIL = 'gtime -v '
 TIME_UTIL = 'exec ' + TIME_UTIL
 
+
 def log_fail(name, log):
     for line in log.split('\n'):
         if line:
             print('> ' + line)
     print('')
+
 
 def log_return_value(name, return_value):
     if return_value == SATISFIABLE:
@@ -68,6 +70,7 @@ def log_return_value(name, return_value):
         result = str(return_value)
     log_progress(result)
 
+
 def compute_average(results):
     seconds = 0
     memory = 0
@@ -77,6 +80,7 @@ def compute_average(results):
     seconds /= len(results)
     memory /= len(results)
     return seconds, memory
+
 
 def print_result(name, config, expected, result, return_value, seconds, memory):
     if return_value == SATISFIABLE:
@@ -102,7 +106,8 @@ def print_result(name, config, expected, result, return_value, seconds, memory):
     
     log_progress(name + ' ' + config)
     log_progress('\n')
-            
+
+
 def print_stats():
     global failed
     print('\nStatistics:')
@@ -120,35 +125,24 @@ def print_stats():
     log_progress(yellow('TIMEOUT: ') + "{}\n".format(TIMEOUTS))
     log_progress(cyan(  'UNKNOWN: ') + "{}\n".format(UNKNOWNS))
 
-def write_csv(file_handle, benchmark):
-    header = ['"Name"','"Result"','"time [s]"','"memory [MB]"']
-    if benchmark and benchmark > 1:
-        for i in xrange(benchmark):
-            header.extend(['"run {} [s]"'.format(i+1), '"run {} [KB]"'.format(i+1)])
-    file_handle.write('{}\n'.format(';'.join(header)))
-    for name in testcases:
-        if name not in testcase_result:
-            continue
-        result = testcase_result[name]
-        row = ['"{}"'.format(name), '{}'.format(result)]
-        
-        if name in benchmark_results:
-            seconds, memory = compute_average(benchmark_results[name])
-            row.extend(['{}'.format(seconds), '{}'.format(memory)])
-            if benchmark and benchmark > 1:
-                for i in xrange(benchmark):
-                    if i < len(benchmark_results[name]):
-                        seconds, memory = benchmark_results[name][i]
-                        row.extend(['{}'.format(seconds), '{}'.format(memory)])
-                else:
-                    row.extend(['', ''])
-        else:
-            row.extend(['', ''])
-            if benchmark and benchmark > 1:
-                for i in xrange(benchmark):
-                    row.extend(['', ''])
-        
-        file_handle.write('{}\n'.format(';'.join(row)))
+
+def write_csv(file):
+    header = ['"Formula"', '"Arguments"','"Result"','"time [s]"','"memory [MB]"','"certificate size [gates]"']
+    file.write(','.join(header) + '\n')
+
+    print(testcase_result)
+
+    for name, data in testcase_result.iteritems():
+        testcase_name, config, expected, result, return_value, seconds, memory, certificate_size = data
+        row = [testcase_name,
+               config,
+               str(return_value),
+               str(seconds),
+               str(memory),
+               str(certificate_size)
+              ]
+        file.write(','.join(row) + '\n')
+
 
 def worker_loop(job_queue, result_queue, process_id):
     signal.signal(signal.SIGINT, signal.SIG_IGN)
@@ -156,7 +150,7 @@ def worker_loop(job_queue, result_queue, process_id):
         # print 'new_iteration of thread {}'.format(process_id)
         try:
             job = job_queue.get(block=True,timeout=1) # This is hacky; times out after 1 second if no element is in the queue. This terminates the tread!
-            result_queue.put(run_testcase(job),block=True)
+            result_queue.put(run_testcase(job), block=True)
             
         except Queue.Empty:
             # print 'thread {} has an exception'.format(process_id)
@@ -205,9 +199,9 @@ def run_testcases(threads, runs=1):
     
     for i in range(len(to_run)):
         try:
-            testcase, config, expected, result, return_value, seconds, memory = result_queue.get(block=True)
+            testcase, config, expected, result, return_value, seconds, memory, certificate_size = result_queue.get(block=True)
             if testcase + ' ' + config not in testcase_result:
-                testcase_result[testcase + ' ' + config] = (testcase, config, expected, result, return_value, seconds, memory)
+                testcase_result[testcase + ' ' + config] = (testcase, config, expected, result, return_value, seconds, memory, certificate_size)
             if seconds is not None:
                 if not testcase in benchmark_results:
                     benchmark_results[testcase] = []
@@ -350,7 +344,7 @@ def run_testcase(testcase_input):
                             ' '.join(parameters), 
                             file_path)
     
-    return_value, output, error = call(command_string, ARGS.timeout)
+    return_value, output, error = call_interruptable(command_string, ARGS.timeout)
     
     if ARGS.verbose:
         print('COMMAND: ' + command_string)
@@ -386,20 +380,36 @@ def run_testcase(testcase_input):
     
     if ARGS.certify and return_value == SATISFIABLE:
         print("CERTIFYING NOW")
-        cert_return_value, cert_output, cert_error = call('abc -c "read ' + cert_file + 'tmp.aig; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2;  print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; print_stats; dc2; write ' + cert_file + ';"',ARGS.timeout);
+        cert_return_value, cert_output, cert_error = 
+            call_interruptable('abc -c "read ' + cert_file + 
+                 'tmp.aig; print_stats; dc2; print_stats; dc2; print_stats; '
+                 'dc2; print_stats; dc2; print_stats; dc2;  print_stats; dc2; '
+                 'print_stats; dc2; print_stats; dc2; print_stats; dc2; '
+                 'print_stats; dc2; print_stats; dc2; print_stats; dc2; '
+                 'print_stats; dc2; print_stats; dc2; print_stats; dc2; '
+                 'print_stats; dc2; print_stats; dc2; print_stats; dc2; '
+                 'print_stats; dc2; print_stats; dc2; write ' + 
+                 cert_file + ';"',ARGS.timeout);
 
         cert_file2 = testcase+'.cert2.aig';
 
         cert_cmd = './../../tools/caqe/certcheck ' + testcase + ' ' + cert_file + ' | aigtoaig - ' + cert_file2
-        cert_return_value, cert_output, cert_error = call(cert_cmd, ARGS.timeout)
+        cert_return_value, cert_output, cert_error = call_interruptable(cert_cmd, ARGS.timeout)
         
         # print(cert_cmd)
         # print(cert_output)
         # print(cert_error)
         
-        cert_return_value, cert_output, cert_error = call('abc -c "&r ' + cert_file2 + '; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &put; write ' + cert_file2 + '"', ARGS.timeout);
+        cert_return_value, cert_output, cert_error = 
+            call_interruptable('abc -c "&r ' + cert_file2 + 
+                 '; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; '
+                 '&ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; '
+                 '&ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; '
+                 '&ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; '
+                 '&ps; &put; write ' + 
+                 cert_file2 + '"', ARGS.timeout);
         
-        cert_return_value, cert_output, cert_error = call('cat '+cert_file2+' | aigtocnf | lingeling', 5 *  ARGS.timeout)
+        cert_return_value, cert_output, cert_error = call_interruptable('cat '+cert_file2+' | aigtocnf | lingeling', 5 *  ARGS.timeout)
         
         if 's UNSATISFIABLE' not in cert_output:
             print('CERTIFICATE FAILED for {}'.format(str(testcase)))
@@ -411,7 +421,7 @@ def run_testcase(testcase_input):
             # if ARGS.verbose:
             print('Certified!')
             
-        call('rm ' + cert_file + ' ' + cert_file2, ARGS.timeout)
+        call_interruptable('rm ' + cert_file + ' ' + cert_file2, ARGS.timeout)
     return testcase, config, expected, result, return_value, seconds, memory
 
 
@@ -609,7 +619,7 @@ if __name__ == "__main__":
     print_stats()
     
     if ARGS.csv:
-        write_csv(args.csv)
+        write_csv(ARGS.csv)
 
     if failed:
         sys.exit(1)

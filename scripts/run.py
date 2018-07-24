@@ -4,16 +4,14 @@ import sys
 import os
 import re
 import argparse
-import random
 import signal
 import multiprocessing as mp
 import queue
-import threading
-import numpy as np
-import itertools
+import tempfile
 
 from reporting import log, log_progress, cyan, red, green, yellow
-from command import call
+from command import call_interruptable
+from subprocess import PIPE, call
 
 failed = False
 interrupted = False
@@ -35,6 +33,8 @@ def log_fail(log):
 
 
 def print_result(name, config, expected, result, return_value, seconds, memory):
+    global failed
+
     if return_value == SATISFIABLE:
         return_value = "SAT"
     elif return_value == UNSATISFIABLE:
@@ -150,6 +150,19 @@ def get_benchmark_result(time_output):
     return seconds, memory
 
 
+def minimize_certificate(f):
+    print('Minimizing!')
+    # call(["cat", f.name])
+    # call(["cp", f.name, f.name + ".2.aig"])
+    call(
+        [
+         "abc", "-c",
+         f"read {f.name}; print_stats;dc2;dc2;dc2;print_stats; write {f.name}"
+        ],
+        stdout=PIPE
+    )  # this ensures that ABC is not too verbose, but still prints errors
+    # call(["aigtoaig", f.name + ".aig", simplified_filename], stdout=PIPE)
+
 def extract_result(job, output, error, return_value):
     
     seconds, memory = get_benchmark_result(error)
@@ -166,6 +179,7 @@ def extract_result(job, output, error, return_value):
     propagations_of_constants = None
     restarts = None
     certificate_size = None
+    minimized_certificate_size = None
     
     parse_num = re.compile(r"[^\d]*(\d+)")
 
@@ -215,7 +229,8 @@ def extract_result(job, output, error, return_value):
         'propagations_of_constants' : propagations_of_constants,
         'restarts' : restarts,
         'certificate_size' : certificate_size,
-        'timeout' : return_value == -15
+        'timeout' : return_value == -15,
+        'minimized_certificate_size' : minimized_certificate_size
         }
     return p
 
@@ -224,33 +239,53 @@ def is_failed(expected, result):
     return expected in [10, 20] and result in [10, 20] and result != expected
 
 
-def run_job(job, worker_ID, timeout, expected):
+def read_aig_size(file):
+    file.seek(0)
+    content = file.read()
+    parse_aig_header = re.compile(r"aig \d+ \d+ \d+ \d+ (\d+)")
+    parse_num = re.compile(r"[^\d]*(\d+)")
+    gates_num = int(parse_num.match(content.decode()).groups(1)[0])
+    return gates_num
+
+
+def run_job(job, worker_ID, timeout, expected, manage_certificate=False):
     # using 'bash -c' to run the command because otherwise 'sh' may be used on some machines
+    if manage_certificate:
+        f = tempfile.NamedTemporaryFile(suffix='.aig')
+        job = job.format(f.name)
+
     command = f'bash -c "{TIME_UTIL} {job}"'
-    return_value, output, error = call(command, timeout)
+    return_value, output, error = call_interruptable(command, timeout)
+
     if return_value not in [10, 20, 30, -15] or is_failed(expected, return_value):
         log_fail((output + error).decode())
         return None
     else:
-        return extract_result(job, output, error, return_value)
+        r = extract_result(job, output, error, return_value)
+        if manage_certificate and return_value is 10:
+            minimize_certificate(f)
+            r['minimized_certificate_size'] = read_aig_size(f)
+            f.close()
+        return r
 
 
-def worker_loop(job_queue, results, result_queue, worker_ID, timeout):
+def worker_loop(job_queue, results, result_queue,
+                worker_ID, timeout, manage_certificate=False):
     signal.signal(signal.SIGINT, signal.SIG_IGN)
     while True:
         try:
             # This is hacky; times out after 1 second if no element is in the queue.
             # This terminates the tread!
             (job_name, job, expected) = job_queue.get(block=True,timeout=1)
-
-            r = run_job(job, worker_ID, timeout, expected)
+            r = run_job(job, worker_ID, timeout, expected, 
+                        manage_certificate=manage_certificate)
             result_queue.put((job_name, job, expected, r), block=True)
 
         except queue.Empty:
             break
 
 
-def run_jobs(jobs, timeout, threads=1):
+def run_jobs(jobs, timeout, threads=1, manage_certificate=False):
     global interrupted
 
     job_queue = mp.Queue()
@@ -262,7 +297,8 @@ def run_jobs(jobs, timeout, threads=1):
 
     workers = []
     for i in range(threads):
-        tmp = mp.Process(target=worker_loop, args=(job_queue, results, result_queue, i, timeout))
+        tmp = mp.Process(target=worker_loop, 
+                         args=(job_queue, results, result_queue, i, timeout, manage_certificate))
         tmp.start()
         workers.append(tmp)
 
@@ -322,6 +358,7 @@ def run_jobs(jobs, timeout, threads=1):
 def write_csv(csv_file, results):
     header = ['call', 'result', '"time [s]"',
               '"memory [MB]"', '"certificate size [gates]"',
+              '"minimized certificate size [gates]"',
               'restarts', 'conflicts' , 'decisions',
               'propagations', '"pure variables"']
     # with csv_file_name
@@ -333,6 +370,7 @@ def write_csv(csv_file, results):
                str(r['seconds']),
                str(r['memory']),
                str(r['certificate_size']),
+               str(r['minimized_certificate_size']),
                str(r['restarts']),
                str(r['conflicts']),
                str(r['decisions']),
@@ -364,8 +402,8 @@ if __name__ == "__main__":
     parser.add_argument('-p', '--preprocessor', dest='preprocessor', 
                         action='store', default=None,
                         help='Use this command to set a preprocessor command.')
-    parser.add_argument('--certify', dest='certify', action='store_true',
-                        help='Also test certificates. CADET only.')
+    parser.add_argument('--minimize_certificates', dest='minimize_certificates', action='store_true',
+                        help='Minimize certificates. Use {} in place of certificate file name.')
     parser.add_argument('-d', '--directory', dest='directory', 
                         action='store', default=None,
                         help='Specify folder of formulas to solve.')
@@ -405,8 +443,10 @@ if __name__ == "__main__":
     paths = get_paths_from_categories(categories)
     jobs = jobs_from_paths(paths, configs)
 
+    manage_certificate = ARGS.minimize_certificates
+
     # Run the tests
-    results = run_jobs(jobs, ARGS.timeout, ARGS.threads)
+    results = run_jobs(jobs, ARGS.timeout, ARGS.threads, manage_certificate)
 
     if ARGS.csv:
         write_csv(ARGS.csv, results)

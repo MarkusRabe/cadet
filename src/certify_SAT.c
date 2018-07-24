@@ -34,7 +34,7 @@ void cert_write_aiger(aiger* a, Options* o) {
         
     }
     abortif(!write_success, "Could not write to file for aiger certificate (file name '%s').", filename);
-    V1("Wrote AIG certificate to %s\n", filename);
+    V1("Wrote AIG certificate with %u gates to %s\n", a->num_ands, filename);
 }
 
 aiger* cert_setup_AIG(QCNF* qcnf) {

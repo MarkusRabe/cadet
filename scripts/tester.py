@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 
 import sys
 import os
@@ -7,7 +7,7 @@ import argparse
 import random
 import signal
 import multiprocessing
-import Queue
+import queue
 import threading
 import numpy as np
 import itertools
@@ -53,7 +53,8 @@ TIME_UTIL = 'exec ' + TIME_UTIL
 
 
 def log_fail(name, log):
-    for line in log.split('\n'):
+    for line in log.split(b'\n'):
+        line = line.decode()
         if line:
             print('> ' + line)
     print('')
@@ -152,7 +153,7 @@ def worker_loop(job_queue, result_queue, process_id):
             job = job_queue.get(block=True,timeout=1) # This is hacky; times out after 1 second if no element is in the queue. This terminates the tread!
             result_queue.put(run_testcase(job), block=True)
             
-        except Queue.Empty:
+        except queue.Empty:
             # print 'thread {} has an exception'.format(process_id)
             break
         # print 'thread {} finished iteration'.format(thread_id)
@@ -199,9 +200,9 @@ def run_testcases(threads, runs=1):
     
     for i in range(len(to_run)):
         try:
-            testcase, config, expected, result, return_value, seconds, memory, certificate_size = result_queue.get(block=True)
+            testcase, config, expected, result, return_value, seconds, memory = result_queue.get(block=True)
             if testcase + ' ' + config not in testcase_result:
-                testcase_result[testcase + ' ' + config] = (testcase, config, expected, result, return_value, seconds, memory, certificate_size)
+                testcase_result[testcase + ' ' + config] = (testcase, config, expected, result, return_value, seconds, memory)
             if seconds is not None:
                 if not testcase in benchmark_results:
                     benchmark_results[testcase] = []
@@ -479,7 +480,8 @@ def get_benchmark_result(testcase, time_output):
     memory_re = re.compile(r"[^\d]*(\d+)")
     
     
-    for line in time_output.split('\n'):
+    for line in time_output.split(b'\n'):
+        line = line.decode()
         if 'Elapsed (wall clock) time' in line:
             match = wall_clock_re.match(line)
             hours = "0"
@@ -609,7 +611,7 @@ if __name__ == "__main__":
                 sys.exit(1)
             else: 
                 print('Warning: CPU load high and override used.')
-    except ImportError, e:
+    except ImportError:
         print('Warning: Could not check CPU load.')
         pass # module doesn't exist, deal with it.
     

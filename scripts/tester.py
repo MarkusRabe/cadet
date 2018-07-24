@@ -9,7 +9,6 @@ import signal
 import multiprocessing
 import queue
 import threading
-import numpy as np
 import itertools
 
 from reporting import log, log_progress, cyan, red, green, yellow

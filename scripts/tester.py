@@ -380,7 +380,7 @@ def run_testcase(testcase_input):
     
     if ARGS.certify and return_value == SATISFIABLE:
         print("CERTIFYING NOW")
-        cert_return_value, cert_output, cert_error = 
+        cert_return_value, cert_output, cert_error = \
             call_interruptable('abc -c "read ' + cert_file + 
                  'tmp.aig; print_stats; dc2; print_stats; dc2; print_stats; '
                  'dc2; print_stats; dc2; print_stats; dc2;  print_stats; dc2; '
@@ -400,7 +400,7 @@ def run_testcase(testcase_input):
         # print(cert_output)
         # print(cert_error)
         
-        cert_return_value, cert_output, cert_error = 
+        cert_return_value, cert_output, cert_error = \
             call_interruptable('abc -c "&r ' + cert_file2 + 
                  '; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; '
                  '&ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; &ps; &dc2; '

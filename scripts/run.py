@@ -151,9 +151,6 @@ def get_benchmark_result(time_output):
 
 
 def minimize_certificate(f):
-    print('Minimizing!')
-    # call(["cat", f.name])
-    # call(["cp", f.name, f.name + ".2.aig"])
     call(
         [
          "abc", "-c",
@@ -243,8 +240,8 @@ def read_aig_size(file):
     file.seek(0)
     content = file.read()
     parse_aig_header = re.compile(r"aig \d+ \d+ \d+ \d+ (\d+)")
-    parse_num = re.compile(r"[^\d]*(\d+)")
-    gates_num = int(parse_num.match(content.decode()).groups(1)[0])
+    parse_num = re.compile(b"[^\\d]*(\\d+)")
+    gates_num = int(parse_num.match(content).groups(1)[0])
     return gates_num
 
 

@@ -945,7 +945,8 @@ void c2_print_colored_literal_name(C2* c2, char* color, int lit) {
     char* name = qcnf_get_variable_name(c2->qcnf, lit_to_var(lit));
     if (!c2->options->print_variable_names || name == NULL) {
         LOG_COLOR(color, " %d", lit);
+    } else {
+        LOG_COLOR(color, " %s%s", lit > 0 ? "" : "-", name);
     }
-    LOG_COLOR(color, " %s%s", lit > 0 ? "" : "-", name);
 }
 

@@ -56,7 +56,7 @@ Options* default_options() {
     o->print_detailed_miniscoping_stats = false;
     o->print_name_mapping = true;
     o->print_statistics = true;
-    o->print_variable_names = false;
+    o->print_variable_names = true;
 
     o->trace_learnt_clauses = false;
     o->trace_for_visualization = false;
@@ -114,7 +114,7 @@ char* options_get_help() {
     "\t--trace_for_profiling\tPrint trace of learnt clauses with timestamps\n\t\t\t\tand SAT solver time consumption.\n"
     "\t--print_variable_names\tReplace variable numbers by names where available\n\t\t\t\t(default %d)\n"
     "\n  Aiger options\n"
-    "\t--aiger_ci [string]\tSet prefix of controllable inputs in QAIGER\n\t\t\t\t(default '%s')\n"
+    "\t----aiger_controllable_inputs [string]\tSet prefix of controllable inputs in QAIGER\n\t\t\t\t(default '%s')\n"
     "\n",
     debug_verbosity,
     o->reinforcement_learning,

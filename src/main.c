@@ -132,7 +132,7 @@ int main(int argc, const char* argv[]) {
                         options->easy_debugging = !options->easy_debugging;
                     } else if (strcmp(argv[i], "--aiger_controllable_inputs") == 0) {
                         if (i + 1 >= argc) {
-                            LOG_ERROR("Missing string for argument --aiger_ci\n");
+                            LOG_ERROR("Missing string for argument --aiger_controllable_inputs\n");
                             print_usage(argv[0]);
                             return 1;
                         }

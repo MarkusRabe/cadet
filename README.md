@@ -4,12 +4,12 @@
 # CADET
 CADET is a solver for _quantified Boolean formulas_ with a forall-exists quantifier alternation (2QBF). The solver is based on the _Incremental Determinization_ algorithm published in SAT 2016 was written by [Markus N. Rabe](https://people.eecs.berkeley.edu/~rabe/). 
 
-As of 2017, CADET is one of the fastest and most reliable solvers for 2QBF formulas. It won second price in the 2QBF track of [QBFEval](http://www.qbflib.org/qbfeval17.php). CADET can also _prove_ its results little overhead, which is unique in the current landscape of QBF solvers. 
+As of 2018, CADET is one of the fastest and most reliable solvers for 2QBF formulas. It won second price in the 2QBF track of [QBFEval](http://www.qbflib.org/qbfeval17.php). CADET can also _prove_ its results little overhead, which is unique in the current landscape of QBF solvers. 
 
 
 ## Installing CADET
 
-CADET can be built from source with both clang and gcc. You can find pre-built binaries of CADET for Linux and OSX. The testing scripts require Python 2.7. 
+CADET can be built from source with both clang and gcc. You can find pre-built binaries of CADET for Linux and OSX. The testing scripts require Python 3. 
 
 To compile the solver type:
 
@@ -57,7 +57,9 @@ Note that QBFcert standard is only compatible with the ASCII format of the AIGER
 
 ## Publications
 
-[Incremental Determinization](https://www.eecs.berkeley.edu/~rabe/IncrementalDeterminizationSAT2016.pdf). Markus Rabe and Sanjit Seshia. SAT, 2016. 
+[Understanding and Extending Incremental Determinization for 2QBF](https://people.eecs.berkeley.edu/~sseshia/pubdir/id-cav18.pdf). Markus N. Rabe, Leander Tentrup, Cameron Rasmussen, and Sanjit Seshia. CAV, 2018.
+
+[Incremental Determinization](https://www.eecs.berkeley.edu/~rabe/IncrementalDeterminizationSAT2016.pdf). Markus N. Rabe and Sanjit Seshia. SAT, 2016.
 
 ## Acknowledgements
 

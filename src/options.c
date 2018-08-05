@@ -21,7 +21,7 @@ Options* default_options() {
     o->fresh_random_seed = false;
     
     // Computational enginges
-    o->cegar = false;
+    o->cegar = true;
     o->cegar_only = false;
     o->use_qbf_engine_also_for_propositional_problems = false;
     o->casesplits = false;

@@ -106,13 +106,14 @@ void close_possibly_zipped_file(const char* file_name, FILE* file) {
 
 int ms_sleep(unsigned int ms) {
     int result = 0;
-    struct timespec ts_remaining = {
-        ms / 1000,
-        (ms % 1000) * 1000000L
-    };
+    struct timespec ts_remaining;
+    ts_remaining.tv_sec = ms / 1000;
+    ts_remaining.tv_nsec = (ms % 1000) * 1000000L;
     
     do {
-        struct timespec ts_sleep = ts_remaining;
+        struct timespec ts_sleep;
+        ts_sleep.tv_sec = ts_remaining.tv_sec;
+        ts_sleep.tv_nsec = ts_remaining.tv_nsec;
         result = nanosleep(&ts_sleep, &ts_remaining);
     }
     while (EINTR == result);

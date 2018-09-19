@@ -72,8 +72,26 @@ def jobs_from_paths(paths, configs):
     return jobs
 
 
-def get_paths_from_categories(categories):
-    jobs = {}
+def get_paths_from_categories(categories, directory):
+    paths = {}
+
+    if directory:
+        for (dirpath, dirnames, filenames) in os.walk(directory):
+            omitted_files = 0
+            detected_files = 0
+            for filename in filenames:
+                if filename.endswith('qdimacs.gz') or \
+                   filename.endswith('aag') or \
+                   filename.endswith('aig') or \
+                   filename.endswith('qdimacs'):
+
+                    paths[os.path.join(dirpath,filename)] = (os.path.join(dirpath,filename), 30)
+                    detected_files += 1
+                else:
+                    omitted_files += 1
+            print(f'Detected {detected_files} files in directory {dirpath}')
+            if omitted_files > 0:
+                print(f'Omitted {omitted_files} files')
 
     categories_file = os.path.join(BASE_PATH, 'integration-tests', 'instances.txt')
     with open(categories_file) as file_handle:
@@ -96,11 +114,11 @@ def get_paths_from_categories(categories):
                     path, expected_result = [v.strip() for v in line.split('|')]
                     expected_result = int(expected_result)
                     directory, file_name = os.path.split(path)
-                    if file_name in jobs:
-                        jobs[path] = (f'{path}', expected_result)
+                    if file_name in paths:
+                        paths[path] = (f'{path}', expected_result)
                     else:
-                        jobs[file_name] = (f'{path}', expected_result)
-    return jobs
+                        paths[file_name] = (f'{path}', expected_result)
+    return paths
 
 
 def halt_if_busy(ARGS):
@@ -423,21 +441,18 @@ if __name__ == "__main__":
             configs.append(tool + ' ' + c)
 
     categories = []
-    if ARGS.directory:
-        categories.append('directory')
-
     for cat in all_categories:
         if getattr(ARGS, cat):
             if not cat in categories:
                 categories.append(cat)
 
-    if not categories:
+    if not categories and not ARGS.directory:
         parser.print_help()
         exit()
 
     halt_if_busy(ARGS)
 
-    paths = get_paths_from_categories(categories)
+    paths = get_paths_from_categories(categories, ARGS.directory)
     jobs = jobs_from_paths(paths, configs)
 
     manage_certificate = ARGS.minimize_certificates

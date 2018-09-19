@@ -388,7 +388,7 @@ if __name__ == "__main__":
     parser.add_argument('--threads', dest='threads', action='store', nargs='?', type=int,
                         metavar='num', default=1,
                         help=f'Number of threads to use (default: {1})')  # mp.cpu_count()
-    parser.add_argument('-t', '--tool', dest='tool', action='store',
+    parser.add_argument('--tool', dest='tool', action='store',
                         default='./cadet -v 1',  #  os.path.join(BASE_PATH, './cadet -v 1')
                         help='Define which tool is tested (default "./cadet -v 1").')
     parser.add_argument('-c', '--configs', metavar='C', type=str, nargs='*',

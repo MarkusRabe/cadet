@@ -169,6 +169,56 @@ int main(int argc, const char* argv[]) {
                         options->reinforcement_learning = true;
                         log_colors = false;
                         options->reinforcement_learning_mock = true;
+                    } else if (strcmp(argv[i], "--rl_completion_reward") == 0) {
+                        if (i + 1 >= argc) {
+                            LOG_ERROR("Missing float for rl_completion_reward\n");
+                            print_usage(argv[0]);
+                            return 1;
+                        }
+                        options->rewards->completion_reward = strtof(argv[i+1], NULL);
+                        LOG_WARNING("--rl_completion_reward set to %f\n",
+                                    options->rewards->completion_reward);
+                        i++;
+                    } else if (strcmp(argv[i], "--rl_reward_per_decision") == 0) {
+                        if (i + 1 >= argc) {
+                            LOG_ERROR("Missing float for rl_reward_per_decision\n");
+                            print_usage(argv[0]);
+                            return 1;
+                        }
+                        options->rewards->reward_per_decision = strtof(argv[i+1], NULL);
+                        LOG_WARNING("--rl_reward_per_decision set to %f\n",
+                                    options->rewards->reward_per_decision);
+                        i++;
+                    } else if (strcmp(argv[i], "--rl_vsids_similarity_reward_factor") == 0) {
+                        if (i + 1 >= argc) {
+                            LOG_ERROR("Missing float for rl_vsids_similarity_reward_factor\n");
+                            print_usage(argv[0]);
+                            return 1;
+                        }
+                        options->rewards->vsids_similarity_reward_factor = strtof(argv[i+1], NULL);
+                        LOG_WARNING("--rl_vsids_similarity_reward_factor set to %f\n",
+                                    options->rewards->vsids_similarity_reward_factor);
+                        i++;
+                    } else if (strcmp(argv[i], "--rl_total_reward_for_necessary_conflicts") == 0) {
+                        if (i + 1 >= argc) {
+                            LOG_ERROR("Missing float for rl_total_reward_for_necessary_conflicts\n");
+                            print_usage(argv[0]);
+                            return 1;
+                        }
+                        options->rewards->total_reward_for_necessary_conflicts = strtof(argv[i+1], NULL);
+                        LOG_WARNING("--rl_total_reward_for_necessary_conflicts set to %f\n",
+                                 options->rewards->total_reward_for_necessary_conflicts);
+                        i++;
+                    } else if (strcmp(argv[i], "--rl_self_reward_factor") == 0) {
+                        if (i + 1 >= argc) {
+                            LOG_ERROR("Missing float for rl_self_reward_factor\n");
+                            print_usage(argv[0]);
+                            return 1;
+                        }
+                        options->rewards->self_reward_factor = strtof(argv[i+1], NULL);
+                        LOG_WARNING("--rl_self_reward_factor set to %f\n",
+                                 options->rewards->self_reward_factor);
+                        i++;
                     } else if (strcmp(argv[i], "--cegar_soft_conflict_limit") == 0) {
                         options->cegar_soft_conflict_limit = true;
                     } else if (strcmp(argv[i], "--trace_for_profiling") == 0) {

@@ -66,7 +66,6 @@ Options* default_options() {
     o->rl_vsids_rewards = false;
     o->rl_slim_state = false;
     o->reinforcement_learning_mock = false;
-    o->cegar_soft_conflict_limit = false;
     o->hard_decision_limit = 0;  // 0 means no limit
     
     return o;

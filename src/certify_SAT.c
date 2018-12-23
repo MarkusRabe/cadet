@@ -228,7 +228,8 @@ unsigned cert_encode_conflicts(Skolem* skolem, aiger* a, unsigned *max_sym, int_
 }
 
 // Certify all vars with dlvl>0 by writing out the unique consequences in the correct order
-void cert_encode_function_for_case(Skolem* skolem, aiger* a, unsigned *max_sym, int_vector* aigerlits,
+void cert_encode_function_for_case(Skolem* skolem, aiger* a, unsigned *max_sym,
+                                   int_vector* aigerlits,
                                    int_vector* decisions,
                                    int_vector* unique_consequences) {
     if (debug_verbosity >= VERBOSITY_MEDIUM) {V2("Decision order: "); int_vector_print(decisions); V2("\n");}
@@ -249,11 +250,13 @@ void cert_encode_function_for_case(Skolem* skolem, aiger* a, unsigned *max_sym, 
 
 unsigned cert_dlvl0_definitions(aiger* a, int_vector* aigerlits, Skolem* skolem, unsigned* max_sym) {
     int_vector* decision_sequence = case_splits_determinization_order_with_polarities(skolem);
-    cert_encode_function_for_case(skolem, a, max_sym, aigerlits, decision_sequence, skolem->unique_consequence);
+    cert_encode_function_for_case(skolem, a, max_sym, aigerlits, decision_sequence,
+                                  skolem->unique_consequence);
     
     if (skolem->options->quantifier_elimination) {
         unsigned res = cert_encode_conflicts(skolem, a, max_sym, aigerlits, decision_sequence,
-                                             skolem->potentially_conflicted_variables, skolem->unique_consequence);
+                                             skolem->potentially_conflicted_variables,
+                                             skolem->unique_consequence);
         int_vector_free(decision_sequence);
         return res;
     } else {
@@ -433,6 +436,7 @@ void c2_write_AIG_certificate(C2* c2) {
         }
     }
     
+    bool valid = false;
     if (c2->options->quantifier_elimination) {
         // This is the quantifier elimination certificate.
         // There are three ways the resulting formula can evaluate to false:
@@ -467,8 +471,7 @@ void c2_write_AIG_certificate(C2* c2) {
         projection = aigeru_AND(a, &max_sym, projection, negate(dlvl0_conflict_aigerlit));
         aiger_add_output(a, projection, QUANTIFIER_ELIMINATION_OUTPUT_STRING);
         
-        bool valid = cert_validate_quantifier_elimination(a, c2->qcnf, aigerlits, projection);
-        abortif(!valid, "Quantifier elimination failed!");
+        valid = cert_validate_quantifier_elimination(a, c2->qcnf, aigerlits, projection);
         
     } else { // Create function
         int_vector* out_aigerlits = int_vector_copy(aigerlits);
@@ -493,17 +496,16 @@ void c2_write_AIG_certificate(C2* c2) {
         cert_define_aiger_outputs(skolem_dlvl0, a, out_aigerlits);
         
         if (!c2->options->functional_synthesis) {
-            bool valid = cert_validate_skolem_function(a, c2->qcnf, out_aigerlits, case_selectors);
-            abortif(!valid, "Skolem function invalid!");
+            valid = cert_validate_skolem_function(a, c2->qcnf, out_aigerlits, case_selectors);
         } else {
-            bool valid = cert_validate_functional_synthesis(a, c2->qcnf, out_aigerlits, case_selectors);
-            abortif(!valid, "Functional synthesis failed!");
+            valid = cert_validate_functional_synthesis(a, c2->qcnf, out_aigerlits, case_selectors);
         }
         
         int_vector_free(out_aigerlits);
     }
-    
     cert_write_aiger(a, c2->options);
+    
+    abortif(!valid, "Validation of certificate invalid!");
     
     int_vector_free(aigerlits);
     vector_free(case_aigerlits);

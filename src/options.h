@@ -28,7 +28,6 @@ typedef struct {
     bool rl_vsids_rewards;
     bool rl_slim_state;
     bool reinforcement_learning_mock; // for testing reinforcement learning code
-    bool cegar_soft_conflict_limit; // switches cegar on after 1000 conflicts to also solve hard problems.
     unsigned hard_decision_limit;
     
     // Use a configuration of CADET 2 that is easier to debug than the

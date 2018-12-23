@@ -542,15 +542,11 @@ void c2_run(C2* c2, unsigned remaining_conflicts) {
                 return;
             } else { // take a decision
                 assert(!skolem_is_conflicted(c2->skolem));
-                
                 if (c2->restarts >= c2->magic.num_restarts_before_Jeroslow_Wang && !c2->options->reinforcement_learning) {
-
                     float pos_JW_weight = c2_Jeroslow_Wang_log_weight(&decision_var->pos_occs);
                     float neg_JW_weight = c2_Jeroslow_Wang_log_weight(&decision_var->neg_occs);
-
                     phase = pos_JW_weight > neg_JW_weight ? 1 : -1;
                 }
-
                 c2_scale_activity(c2, decision_var->var_id, c2->magic.decision_var_activity_modifier);
 
                 // Pushing before the actual decision is important to keep things
@@ -716,6 +712,36 @@ cadet_res c2_sat(C2* c2) {
     abortif(int_vector_count(c2->skolem->universals_assumptions) != 0, "There are universal assumptions before solving started.");
     assert(c2->options->functional_synthesis || int_vector_count(c2->qcnf->universal_clauses) == 0); // they must have been detected through c2_new_clause
     
+    if (c2->options->functional_synthesis) {
+        int_vector* tmp_vars = int_vector_init();
+        for (unsigned i = 0; i < var_vector_count(c2->qcnf->vars); i++) {
+            int_vector_add(tmp_vars, 0);
+        }
+        for (unsigned i = 0; i < vector_count(c2->qcnf->all_clauses); i++) {
+            Clause* c = vector_get(c2->qcnf->all_clauses, i);
+            V3("Satsolver clause:");
+            for (unsigned j = 0; j < c->size; j++) {
+                Lit l = c->occs[j];
+                unsigned var_id = lit_to_var(l);
+                if (qcnf_is_universal(c2->qcnf, var_id)) {
+                    int satlit = skolem_get_satsolver_lit(c2->skolem, l);
+                    satsolver_add(c2->skolem->skolem, satlit);
+                    V3("%d(u%d)\n", satlit, l);
+                } else {
+                    if (! int_vector_get(tmp_vars, var_id)) {
+                        int_vector_set(tmp_vars, var_id, satsolver_inc_max_var(c2->skolem->skolem));
+                    }
+                    int sign = l>0 ? 1 : -1;
+                    int satlit = int_vector_get(tmp_vars, var_id);
+                    satsolver_add(c2->skolem->skolem, sign * satlit);
+                    V3("%d(e%d)\n", sign * satlit, l);
+                }
+            }
+            satsolver_clause_finished(c2->skolem->skolem);
+        }
+        int_vector_free(tmp_vars);
+    }
+    
     V1("Initial propagation\n");
     c2_propagate(c2);
     if (c2_is_in_conflcit(c2)) {
@@ -761,11 +787,6 @@ cadet_res c2_sat(C2* c2) {
             c2->restarts += 1;
             c2_restart_heuristics(c2);
             if (c2->options->minimize_learnt_clauses) {c2_simplify(c2);}
-        }
-        
-        if (c2->options->cegar_soft_conflict_limit && c2->statistics.conflicts > 1000 && ! c2->options->cegar) {
-            LOG_WARNING("Switching cegar on after >1000 conflicts to save time during generation of problems for RL. Remove for normal operation.\n");
-            c2->options->cegar = true;
         }
     }
 return_result:

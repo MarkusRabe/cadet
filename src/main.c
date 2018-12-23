@@ -169,8 +169,6 @@ int main(int argc, const char* argv[]) {
                         options->reinforcement_learning = true;
                         log_colors = false;
                         options->reinforcement_learning_mock = true;
-                    } else if (strcmp(argv[i], "--cegar_soft_conflict_limit") == 0) {
-                        options->cegar_soft_conflict_limit = true;
                     } else if (strcmp(argv[i], "--trace_for_profiling") == 0) {
                         options->trace_for_profiling = true;
                     } else if (strcmp(argv[i], "--print_variable_names") == 0) {

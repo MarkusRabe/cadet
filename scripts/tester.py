@@ -577,7 +577,7 @@ if __name__ == "__main__":
                    '--rl --rl_mock --sat_by_qbf --debugging --minimize --rl_vsids_rewards',
                    '--rl --rl_mock --sat_by_qbf --random_decisions --rl_vsids_rewards',
                    '--rl --rl_mock --sat_by_qbf --random_decisions --rl_advanced_rewards --rl_vsids_rewards --rl_slim_state',
-                   '--debugging --cegar_soft_conflict_limit -l 10 --sat_by_qbf --random_decisions --fresh_seed'
+                   '--debugging -l 10 --sat_by_qbf --random_decisions --fresh_seed'
                    ]
     
     if ARGS.config:

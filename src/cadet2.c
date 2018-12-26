@@ -833,7 +833,7 @@ cadet_res c2_solve_qdimacs(const char* file_name, Options* options) {
     }
     C2* c2 = c2_from_file(file, options);
     close_possibly_zipped_file(file_name, file);
-
+    
     V1("Maximal variable index: %u\n", var_vector_count(c2->qcnf->vars));
     V1("Number of clauses: %u\n", vector_count(c2->qcnf->all_clauses));
     V1("Number of scopes: %u\n", vector_count(c2->qcnf->scopes));

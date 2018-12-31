@@ -326,12 +326,16 @@ def run_jobs(jobs, timeout, threads=1, manage_certificate=False):
         try:
             job_name, job, expected, result = result_queue.get(block=True)
             results[job_name] = result
+            seconds = None
+            memory = None
+            return_value = None
 
-            seconds = result['seconds']
-            memory = result['memory']
-            return_value = result['return_value']
+            if result is not None:
+                seconds = result['seconds']
+                memory = result['memory']
+                return_value = result['return_value']
 
-            if seconds is None:
+            if result is not None and seconds is None:
                 log_progress(yellow('TIMEOUT: '))
                 TIMEOUTS += 1
             elif return_value == 30:

@@ -471,8 +471,11 @@ void c2_write_AIG_certificate(C2* c2) {
         projection = aigeru_AND(a, &max_sym, projection, negate(dlvl0_conflict_aigerlit));
         aiger_add_output(a, projection, QUANTIFIER_ELIMINATION_OUTPUT_STRING);
         
-        valid = cert_validate_quantifier_elimination(a, c2->qcnf, aigerlits, projection);
-        
+        if (c2->options->verify) {
+            valid = cert_validate_quantifier_elimination(a, c2->qcnf, aigerlits, projection);
+        } else {
+            valid = true;
+        }
     } else { // Create function
         int_vector* out_aigerlits = int_vector_copy(aigerlits);
         for (unsigned var_id = 0; var_id < vector_count(case_aigerlits); var_id++) {
@@ -495,7 +498,9 @@ void c2_write_AIG_certificate(C2* c2) {
         
         cert_define_aiger_outputs(skolem_dlvl0, a, out_aigerlits);
         
-        if (!c2->options->functional_synthesis) {
+        if (!c2->options->verify) {
+            valid = true;
+        } else if (!c2->options->functional_synthesis) {
             valid = cert_validate_skolem_function(a, c2->qcnf, out_aigerlits, case_selectors);
         } else {
             valid = cert_validate_functional_synthesis(a, c2->qcnf, out_aigerlits, case_selectors);

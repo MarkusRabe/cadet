@@ -192,6 +192,8 @@ int main(int argc, const char* argv[]) {
                         options->enhanced_pure_literals = ! options->enhanced_pure_literals;
                     } else if (strcmp(argv[i], "--qbce") == 0) {
                         options->qbce = ! options->qbce;
+                    } else if (strcmp(argv[i], "--dontverify") == 0) {
+                        options->verify = 0;
                     } else {
                         LOG_ERROR("Unknown long argument '%s'", argv[i]);
                         print_usage(argv[0]);

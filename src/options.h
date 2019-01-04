@@ -29,6 +29,7 @@ typedef struct {
     bool rl_slim_state;
     bool reinforcement_learning_mock; // for testing reinforcement learning code
     unsigned hard_decision_limit;
+    bool verify;
     
     // Use a configuration of CADET 2 that is easier to debug than the
     // performance-oriented configuration

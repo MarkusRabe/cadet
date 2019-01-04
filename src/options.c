@@ -112,9 +112,9 @@ char* options_get_help() {
     "\t--trace_for_vis\t\tPrint trace of solver states at every conflict point.\n"
     "\t--trace_for_profiling\tPrint trace of learnt clauses with timestamps\n\t\t\t\tand SAT solver time consumption.\n"
     "\t--print_variable_names\tReplace variable numbers by names where available\n\t\t\t\t(default %d)\n"
+    "\t--dontverify\t\tDo not verify results.\n"
     "\n  Aiger options\n"
     "\t--aiger_controllable_inputs [string]\tSet prefix of controllable inputs in QAIGER\n\t\t\t\t(default '%s')\n"
-    "\t--dontverify\t\tDo not verify results.\n"
     "\n",
     debug_verbosity,
     o->reinforcement_learning,

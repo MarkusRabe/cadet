@@ -282,19 +282,6 @@ void skolem_update_decision(Skolem* s, Lit lit) {
     }
 }
 
-void skolem_update_depends_on_decision_satlit(Skolem* s, unsigned var_id, int satlit) {
-    skolem_enlarge_skolem_var_vector(s, var_id);
-    skolem_var* sv = skolem_var_vector_get(s->infos, var_id);
-    assert(satlit != 0);
-    
-    V4("Setting depends_on_decision_satlit %d for var %u\n", satlit, var_id);
-    union skolem_undo_union suu;
-    suu.sus.var_id = var_id;
-    suu.sus.val = sv->depends_on_decision_satlit;
-    stack_push_op(s->stack, SKOLEM_OP_UPDATE_INFO_DEPENDS_ON_DECISION_SATLIT, suu.ptr);
-    sv->depends_on_decision_satlit = satlit;
-}
-
 void skolem_update_dependencies(Skolem* s, unsigned var_id, union Dependencies deps) {
 #ifdef DEBUG
     Var* v = var_vector_get(s->qcnf->vars, var_id);

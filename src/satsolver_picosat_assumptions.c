@@ -171,7 +171,7 @@ void satsolver_add(SATSolver* solver, int lit) {
     
 #ifdef SATSOLVER_TRACE
     if (solver->trace_solver_commands) {
-        LOG_PRINTF("picosat_add(s,%d);\n",pico_lit);
+        LOG_PRINTF("picosat_add(s,%d); // was lit %d \n", pico_lit, lit);
     }
 #endif
 }
@@ -487,7 +487,7 @@ void satsolver_print_statistics(SATSolver* solver) {
     V0("  PicoSAT maxvar: %u\n", picosat_inc_max_var(solver->ps));
 #ifdef SATSOLVER_TRACE
     if (solver->trace_solver_commands) {
-        abortif(true,"Not logging satsolver_print_statistics, implement me.");
+        LOG_PRINTF("//call to picosat_inc_vax_var for printing statistics.\n");
     }
 #endif
 }

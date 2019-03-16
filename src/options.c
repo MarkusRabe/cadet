@@ -66,9 +66,8 @@ Options* default_options() {
     o->rl_vsids_rewards = false;
     o->rl_slim_state = false;
     o->reinforcement_learning_mock = false;
-    o->cegar_soft_conflict_limit = false;
     o->hard_decision_limit = 0;  // 0 means no limit
-    
+    o->verify = 1;
     return o;
 }
 
@@ -113,8 +112,9 @@ char* options_get_help() {
     "\t--trace_for_vis\t\tPrint trace of solver states at every conflict point.\n"
     "\t--trace_for_profiling\tPrint trace of learnt clauses with timestamps\n\t\t\t\tand SAT solver time consumption.\n"
     "\t--print_variable_names\tReplace variable numbers by names where available\n\t\t\t\t(default %d)\n"
+    "\t--dontverify\t\tDo not verify results.\n"
     "\n  Aiger options\n"
-    "\t----aiger_controllable_inputs [string]\tSet prefix of controllable inputs in QAIGER\n\t\t\t\t(default '%s')\n"
+    "\t--aiger_controllable_inputs [string]\tSet prefix of controllable inputs in QAIGER\n\t\t\t\t(default '%s')\n"
     "\n",
     debug_verbosity,
     o->reinforcement_learning,

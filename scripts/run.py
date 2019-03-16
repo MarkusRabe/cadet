@@ -80,10 +80,10 @@ def get_paths_from_categories(categories, directory):
             omitted_files = 0
             detected_files = 0
             for filename in filenames:
-                if filename.endswith('qdimacs.gz') or \
-                   filename.endswith('aag') or \
-                   filename.endswith('aig') or \
-                   filename.endswith('qdimacs'):
+                if filename.endswith('.qdimacs.gz') or \
+                   filename.endswith('.aag') or \
+                   filename.endswith('.aig') or \
+                   filename.endswith('.qdimacs'):
 
                     paths[os.path.join(dirpath,filename)] = (os.path.join(dirpath,filename), 30)
                     detected_files += 1
@@ -326,12 +326,16 @@ def run_jobs(jobs, timeout, threads=1, manage_certificate=False):
         try:
             job_name, job, expected, result = result_queue.get(block=True)
             results[job_name] = result
+            seconds = None
+            memory = None
+            return_value = None
 
-            seconds = result['seconds']
-            memory = result['memory']
-            return_value = result['return_value']
+            if result is not None:
+                seconds = result['seconds']
+                memory = result['memory']
+                return_value = result['return_value']
 
-            if seconds is None:
+            if result is not None and seconds is None:
                 log_progress(yellow('TIMEOUT: '))
                 TIMEOUTS += 1
             elif return_value == 30:

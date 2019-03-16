@@ -80,10 +80,10 @@ def get_paths_from_categories(categories, directory):
             omitted_files = 0
             detected_files = 0
             for filename in filenames:
-                if filename.endswith('qdimacs.gz') or \
-                   filename.endswith('aag') or \
-                   filename.endswith('aig') or \
-                   filename.endswith('qdimacs'):
+                if filename.endswith('.qdimacs.gz') or \
+                   filename.endswith('.aag') or \
+                   filename.endswith('.aig') or \
+                   filename.endswith('.qdimacs'):
 
                     paths[os.path.join(dirpath,filename)] = (os.path.join(dirpath,filename), 30)
                     detected_files += 1

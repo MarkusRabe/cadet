@@ -68,8 +68,8 @@ fi
 cat Makefile.in >> Makefile
 
 echo 'ensuring Python package numpy and pyplot is available'
-pip install --user numpy
-pip install --user matplotlib
+pip3 install --user numpy
+pip3 install --user matplotlib
 
 echo 'configuration complete, type make to build.'
 

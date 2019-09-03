@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		28675A4F1DDAA9D000951212 /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A1C1DDAA9D000951212 /* main.c */; };
-		28715A1320B3E5780047F481 /* skolem_encodings.c in Sources */ = {isa = PBXBuildFile; fileRef = 28715A1220B3E5780047F481 /* skolem_encodings.c */; };
 		289A56E0207EF58100BEAC53 /* qcnf_variable_names.c in Sources */ = {isa = PBXBuildFile; fileRef = 289A56DF207EF58100BEAC53 /* qcnf_variable_names.c */; };
 		28DC3AD72079960E00266A75 /* certify_validate.c in Sources */ = {isa = PBXBuildFile; fileRef = 28DC3AD62079960E00266A75 /* certify_validate.c */; };
 		28FF2E86206C285100AEFB7F /* log.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A6B1DDAAB2600951212 /* log.c */; };
@@ -159,7 +158,6 @@
 		28675A431DDAA9D000951212 /* vector.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = vector.c; path = src/vector.c; sourceTree = "<group>"; };
 		28675A441DDAA9D000951212 /* vector.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = vector.h; path = src/vector.h; sourceTree = "<group>"; };
 		28675A6B1DDAAB2600951212 /* log.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = log.c; path = src/log.c; sourceTree = "<group>"; };
-		28715A1220B3E5780047F481 /* skolem_encodings.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = skolem_encodings.c; path = src/skolem_encodings.c; sourceTree = "<group>"; };
 		287BB7C11E0609B000AAE180 /* partitions.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = partitions.c; path = src/partitions.c; sourceTree = "<group>"; };
 		287C3B0B1E37EF7B00F7096A /* examples.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = examples.c; path = src/examples.c; sourceTree = "<group>"; };
 		287C3B0C1E37EF7B00F7096A /* examples.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = examples.h; path = src/examples.h; sourceTree = "<group>"; };
@@ -314,7 +312,6 @@
 				28DA30F31DFFDD2600EABCA6 /* skolem_dependencies.h */,
 				28DA30F21DFFDD2600EABCA6 /* skolem_dependencies.c */,
 				28FEE64A1EDA304000A9D8CA /* skolem_conflict_analysis.c */,
-				28715A1220B3E5780047F481 /* skolem_encodings.c */,
 			);
 			name = skolem;
 			sourceTree = "<group>";
@@ -532,7 +529,6 @@
 				28FF2EAB206C285100AEFB7F /* satsolver_picosat_assumptions.c in Sources */,
 				28FF2EA5206C285100AEFB7F /* lglib.c in Sources */,
 				28FF2E91206C285100AEFB7F /* c2_clause_minimization.c in Sources */,
-				28715A1320B3E5780047F481 /* skolem_encodings.c in Sources */,
 				28FF2EB9206C285100AEFB7F /* val_vector.c in Sources */,
 				28FF2EB1206C285100AEFB7F /* heap.c in Sources */,
 				28FF2E9F206C285100AEFB7F /* examples.c in Sources */,

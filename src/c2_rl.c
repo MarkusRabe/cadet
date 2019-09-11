@@ -123,25 +123,13 @@ void c2_rl_print_slim_state(C2* c2, unsigned conflicts_until_next_restart) {
     if (!rl || rl->mute) {
         return;
     }
-    
     unsigned var_num = var_vector_count(c2->qcnf->vars);
-    unsigned uvar_num = 0;
-    if (!qcnf_is_propositional(c2->qcnf)) {
-        Scope* s = vector_get(c2->qcnf->scopes, 1);
-        uvar_num = int_vector_count(s->vars);
-    }
-    
-    Var* max_activity_var = c2_pick_max_activity_variable(c2);
-    
-    LOG_PRINTF("s %u,%u,%f,%zu,%zu,%u,%f\n",
-               c2->restart_base_decision_lvl,
+    LOG_PRINTF("s %u,%f,%zu,%zu,%u\n",
                c2->skolem->decision_lvl,
                (float) int_vector_count(c2->skolem->determinization_order) / (float) (var_num + 1),
                c2->restarts,
                c2->restarts_since_last_major,
-               conflicts_until_next_restart,
-               max_activity_var ? c2_get_activity(c2, max_activity_var->var_id) : 0.0
-               );
+               conflicts_until_next_restart);
 }
 
 void c2_rl_print_state(C2* c2, unsigned conflicts_until_next_restart, float max_activity) {

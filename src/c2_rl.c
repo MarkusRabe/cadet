@@ -14,13 +14,6 @@
 #include <stdio.h>
 #include <math.h>
 
-float reward_per_decision = -0.0001f;
-float vsids_similarity_reward_factor = 0.5f;
-
-float total_reward_for_necessary_conflicts = 0.5f;
-float self_reward_factor = 0.5f;
-float completion_reward = 1.0f;
-
 typedef struct {
     Stats* stats;
     // Record relevant information about the run to give rewards later
@@ -137,6 +130,7 @@ void c2_rl_print_state(C2* c2, unsigned conflicts_until_next_restart, float max_
         return;
     }
     
+    // this makes sure that very large values are mapped to -1, which helps us avoid normalization ...
     int conflicts_until_next_restart_int = (int) conflicts_until_next_restart;
     if (conflicts_until_next_restart > UINT_MAX / 2) {
         conflicts_until_next_restart_int = -1;
@@ -231,6 +225,7 @@ char* c2_rl_readline() {
 
 // decision var is the default, returns its ID if user does not pick a variable
 int c2_rl_get_decision(C2* solver, unsigned default_decision, float max_activity) {
+    Rewards* r = solver->options->rewards;
     long ret = 0;
     bool pick_by_std_heuristic = false;
     bool restart = false;
@@ -275,14 +270,14 @@ int c2_rl_get_decision(C2* solver, unsigned default_decision, float max_activity
         
         float aux = 0.0f;
         if (solver->options->rl_vsids_rewards) {
-            aux = - vsids_similarity_reward_factor * reward_per_decision * activity_ratio;
+            aux = - r->vsids_similarity_reward_factor * r->reward_per_decision * activity_ratio;
             abortif(aux < 0.0f, "Illegal value for VSIDS aux reward: %f\n", aux);
         }
-        float_vector_add(rl->rewards, reward_per_decision + aux);
+        float_vector_add(rl->rewards, r->reward_per_decision + aux);
     }
     
     if (restart) {
-        float_vector_add(rl->rewards, reward_per_decision * 10);
+        float_vector_add(rl->rewards, r->reward_per_decision * 10);
         ret = INT_MIN; // is a hack; indicates a restart
     }
     
@@ -409,6 +404,7 @@ int_vector* c2_rl_necessary_learnt_clauses(C2* solver) {
 // Gives half the reward to the clause itself and, recursively, the other half
 // of the reward to the clauses it was derived from.
 void rl_reward_clause(C2* solver, unsigned idx, float total_reward) {
+    Rewards* r = solver->options->rewards;
     int_vector* clauses_to_reward = int_vector_init();
     int_vector_add(clauses_to_reward, (int) idx);
     float_vector* clause_rewards_to_distribute = float_vector_init();
@@ -422,7 +418,7 @@ void rl_reward_clause(C2* solver, unsigned idx, float total_reward) {
         float reward = float_vector_pop(clause_rewards_to_distribute);
         unsigned reward_idx = (unsigned) map_get(rl->conflicts_in_reward_vector, (int) idx);
         
-        float self_reward = reward * self_reward_factor;
+        float self_reward = reward * r->self_reward_factor;
         float remaining_reward = reward - self_reward;
         rl_add_reward(reward_idx, self_reward);
         V1("Rewarding clause %u at pos %u with %f\n", idx, reward_idx, self_reward);
@@ -465,6 +461,7 @@ void rl_mock_file(char* file_name) {
 }
 
 void rl_advanced_action_rewards(C2* solver) {
+    Rewards* r = solver->options->rewards;
     if (!solver->options->rl_advanced_rewards) {
         return;
     }
@@ -478,7 +475,7 @@ void rl_advanced_action_rewards(C2* solver) {
             unsigned last_clause_idx = (unsigned) vector_count(solver->qcnf->all_clauses) - 1;
             assert(solver->statistics.decisions == 0 || qcnf_is_active(solver->qcnf, last_clause_idx));
             if (!qcnf_is_original_clause(solver->qcnf, last_clause_idx)) {
-                rl_reward_clause(solver, last_clause_idx, total_reward_for_necessary_conflicts);
+                rl_reward_clause(solver, last_clause_idx, r->total_reward_for_necessary_conflicts);
             }
         }
         //            int_vector* refutation = c2_refuting_assignment(solver);
@@ -491,10 +488,10 @@ void rl_advanced_action_rewards(C2* solver) {
         int_vector* necessary_clause_idxs = c2_rl_necessary_learnt_clauses(solver);
         if (int_vector_count(necessary_clause_idxs) == 0) {
             if (float_vector_count(rl->rewards) > 0) {
-                rl_add_reward(float_vector_count(rl->rewards) - 1, total_reward_for_necessary_conflicts);
+                rl_add_reward(float_vector_count(rl->rewards) - 1, r->total_reward_for_necessary_conflicts);
             }
         } else {
-            float reward_per_necessary_conflict = total_reward_for_necessary_conflicts / (float) int_vector_count(necessary_clause_idxs);
+            float reward_per_necessary_conflict = r->total_reward_for_necessary_conflicts / (float) int_vector_count(necessary_clause_idxs);
             for (unsigned i = 0; i < int_vector_count(necessary_clause_idxs); i++) {
                 unsigned cidx = (unsigned) int_vector_get(necessary_clause_idxs, i);
                 assert(qcnf_is_active(solver->qcnf, cidx));
@@ -542,7 +539,7 @@ cadet_res c2_rl_run_c2(Options* o) {
         
         if (res == CADET_RESULT_SAT || res == CADET_RESULT_UNSAT) {
             if (float_vector_count(rl->rewards) > 0) {
-                rl_add_reward(float_vector_count(rl->rewards) - 1, completion_reward);
+                rl_add_reward(float_vector_count(rl->rewards) - 1, o->rewards->completion_reward);
             }
         }
         

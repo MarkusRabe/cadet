@@ -12,9 +12,21 @@
 
 #include <string.h>
 
+Rewards* default_rewards() {
+    Rewards* r = malloc(sizeof(Rewards));
+    r->completion_reward = 1.0f;
+    r->reward_per_decision = -0.0001f;
+    r->vsids_similarity_reward_factor = 0.5f;
+    r->total_reward_for_necessary_conflicts = 0.5f;
+    r->self_reward_factor = 0.5f;
+    return r;
+}
+
 Options* default_options() {
     Options* o = malloc(sizeof(Options));
 
+    o->rewards = default_rewards();
+    
     o->seed = 0;
 
     o->easy_debugging = false;
@@ -88,10 +100,6 @@ char* options_get_help() {
     "\t--caqecert\t\tWrite certificate in caqecert format (default)\n"
     "\t--qaiger\t\tWrite certificate in qaiger format\n"
     "\n  Options for the QBF engine\n"
-    "\t--rl\t\t\tReinforcement learning mode: print state-action pairs,\n\t\t\t\tread decisions (default %d).\n"
-    "\t--rl_advanced_rewards\tReward necessary actions (default %d)\n"
-    "\t--rl_vsids_rewards\tReward actions that are similar to VSIDS (default %d)\n"
-    "\t--rl_slim_state\t\tPrint rl state without statistics (default %d)\n"
     "\t--debugging \t\tEasy debugging configuration (default %d)\n"
     "\t--cegar\t\t\tUse CEGAR refinements in addition to clause learning\n\t\t\t\t(default %d)\n"
     "\t--cegar_only\t\tUse CEGAR strategy exclusively (default %d)\n"
@@ -115,12 +123,18 @@ char* options_get_help() {
     "\t--dontverify\t\tDo not verify results.\n"
     "\n  Aiger options\n"
     "\t--aiger_controllable_inputs [string]\tSet prefix of controllable inputs in QAIGER\n\t\t\t\t(default '%s')\n"
+    "  Reinforcement Learning\n"
+    "\t--rl\t\t\tReinforcement learning mode: print state-action pairs,\n\t\t\t\tread decisions (default %d).\n"
+    "\t--rl_advanced_rewards\tReward necessary actions (default %d)\n"
+    "\t--rl_vsids_rewards\tReward actions that are similar to VSIDS (default %d)\n"
+    "\t--rl_slim_state\t\tPrint rl state without statistics (default %d)\n"
+    "\t--rl_completion_reward \t\t(default %f)\n"
+    "\t--rl_reward_per_decision \t\t(default %f)\n"
+    "\t--rl_vsids_similarity_reward_factor \t\t(default %f)\n"
+    "\t--rl_total_reward_for_necessary_conflicts \t\t(default %f)\n"
+    "\t--rl_self_reward_factor \t\t(default %f)\n"
     "\n",
     debug_verbosity,
-    o->reinforcement_learning,
-    o->rl_advanced_rewards,
-    o->rl_vsids_rewards,
-    o->rl_slim_state,
     o->easy_debugging,
     o->cegar,
     o->cegar_only,
@@ -134,7 +148,16 @@ char* options_get_help() {
 //    o->plaisted_greenbaum_completion,
     o->print_detailed_miniscoping_stats,
     o->print_variable_names,
-    o->aiger_controllable_input_prefix
+    o->aiger_controllable_input_prefix,
+    o->reinforcement_learning,
+    o->rl_advanced_rewards,
+    o->rl_vsids_rewards,
+    o->rl_slim_state,
+    o->rewards->completion_reward,
+    o->rewards->reward_per_decision,
+    o->rewards->vsids_similarity_reward_factor,
+    o->rewards->total_reward_for_necessary_conflicts,
+    o->rewards->self_reward_factor
     );
     
     return options_string;

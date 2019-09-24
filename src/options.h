@@ -20,7 +20,16 @@ typedef enum {
 } function_output_format;
 
 typedef struct {
-    
+    float completion_reward;
+    float reward_per_decision;
+    float vsids_similarity_reward_factor;
+    float total_reward_for_necessary_conflicts;
+    float self_reward_factor;
+} Rewards;
+Rewards* default_rewards();
+
+typedef struct {
+    Rewards* rewards;
     unsigned long seed; // for the random number generator
     bool fresh_random_seed;
     bool reinforcement_learning; // take decisions through stdin; trace state

@@ -560,24 +560,24 @@ if __name__ == "__main__":
         ARGS.instances = None
         # ARGS.certify = False
         categories = ['test_files']
-        configs = ['',
+        configs = [#'',
                    '--cegar',
-                   '--case_splits',
-                   '--cegar --case_splits',
-                   '--debugging --sat_by_qbf -c cert.aag',
-                   'RESULT_SAT --debugging --sat_by_qbf -f cert.aag',
-                   'RESULT_SAT --debugging --sat_by_qbf -e cert.aag',
-                   'RESULT_SAT --debugging --sat_by_qbf -e cert.aag --cegar',
-                   '--debugging --sat_by_qbf --cegar -c cert.aag',
-                   # '--debugging --sat_by_qbf --case_splits -c cert.aag',
-                   '--debugging --sat_by_qbf --cegar',
-                   '--debugging --sat_by_qbf --cegar --case_splits',
-                   '--rl --rl_mock --sat_by_qbf',
-                   '--rl --rl_mock --sat_by_qbf --debugging',
-                   '--rl --rl_mock --sat_by_qbf --debugging --minimize --rl_vsids_rewards',
-                   '--rl --rl_mock --sat_by_qbf --random_decisions --rl_vsids_rewards',
-                   '--rl --rl_mock --sat_by_qbf --random_decisions --rl_advanced_rewards --rl_vsids_rewards --rl_slim_state',
-                   '--debugging -l 10 --sat_by_qbf --random_decisions --fresh_seed'
+                   # '--case_splits',
+                   # '--cegar --case_splits',
+                   # '--debugging --sat_by_qbf -c cert.aag',
+                   # 'RESULT_SAT --debugging --sat_by_qbf -f cert.aag',
+                   # 'RESULT_SAT --debugging --sat_by_qbf -e cert.aag',
+                   # 'RESULT_SAT --debugging --sat_by_qbf -e cert.aag --cegar',
+                   # '--debugging --sat_by_qbf --cegar -c cert.aag',
+                   # # '--debugging --sat_by_qbf --case_splits -c cert.aag',
+                   # '--debugging --sat_by_qbf --cegar',
+                   # '--debugging --sat_by_qbf --cegar --case_splits',
+                   # '--rl --rl_mock --sat_by_qbf',
+                   # '--rl --rl_mock --sat_by_qbf --debugging',
+                   # '--rl --rl_mock --sat_by_qbf --debugging --minimize --rl_vsids_rewards',
+                   # '--rl --rl_mock --sat_by_qbf --random_decisions --rl_vsids_rewards',
+                   # '--rl --rl_mock --sat_by_qbf --random_decisions --rl_advanced_rewards --rl_vsids_rewards --rl_slim_state',
+                   # '--debugging -l 10 --sat_by_qbf --random_decisions --fresh_seed'
                    ]
     
     if ARGS.config:

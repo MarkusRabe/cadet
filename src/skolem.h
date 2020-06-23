@@ -102,6 +102,7 @@ struct Skolem {
     // Configuration
     bool ignore_universal_conflicts;
     bool record_conflicts;
+    bool id3_decisions;
     
     // Static objects
     // Helper variables in the SAT solver

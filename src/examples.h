@@ -27,7 +27,7 @@ struct Examples {
     QCNF* qcnf;
     unsigned example_max_num;
 //    float_vector* activity; // tracks the recent success/usefulness of each example
-    vector* ex; // vector of partial_assignment domains
+    vector* ex; // vector of partial_assignments
     PartialAssignment* conflicted_pa;
     
     EXAMPLES_STATE state;

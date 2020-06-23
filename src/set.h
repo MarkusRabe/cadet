@@ -13,6 +13,7 @@
 
 #include <stdlib.h>
 #include <stdbool.h>
+#include "vector.h"
 
 struct set_entry;
 typedef struct set_entry set_entry;
@@ -39,5 +40,6 @@ void set_remove(set* container, void* key);
 void set_reset(set* container);
 void set_free(set* container);
 size_t set_count(set*);
+vector* set_items(set* container);
 
 #endif /* set_h */

@@ -75,7 +75,9 @@ bool set_contains(set* container, void* key) {
 }
 
 void set_add(set* container, void* key) {
-    assert(!set_contains(container, key));
+    if (set_contains(container, key)) {
+        return;
+    }
     int hash = set_hash_function(key, container->size);
     assert(hash >= 0 && hash < (int) container->size);
     
@@ -162,4 +164,16 @@ void set_free(set* container) {
 
 size_t set_count(set* container) {
     return container->count;
+}
+
+vector* set_items(set* container) {
+    vector* items = vector_init();
+    for (size_t i = 0; i < container->size; i++) {
+        set_entry* next_e;
+        for (set_entry* e = container->data[i]; e != NULL; e = next_e) {
+            vector_add(items, e->key);
+            next_e = e->next;
+        }
+    }
+    return items;
 }

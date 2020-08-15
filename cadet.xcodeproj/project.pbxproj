@@ -63,6 +63,7 @@
 		28FF2EB9206C285100AEFB7F /* val_vector.c in Sources */ = {isa = PBXBuildFile; fileRef = 287C3B191E3C2D5500F7096A /* val_vector.c */; };
 		28FF2EEC206C39E200AEFB7F /* util.c in Sources */ = {isa = PBXBuildFile; fileRef = 28675A411DDAA9D000951212 /* util.c */; };
 		28FF2EF7206C4E8100AEFB7F /* tests.c in Sources */ = {isa = PBXBuildFile; fileRef = 28FF2EF5206C4E8000AEFB7F /* tests.c */; };
+		EE47D01624AABD04008C9569 /* decision_tree.c in Sources */ = {isa = PBXBuildFile; fileRef = EE47D01524AABD04008C9569 /* decision_tree.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -198,6 +199,7 @@
 		28FF2E71206C277D00AEFB7F /* tests */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = tests; sourceTree = BUILT_PRODUCTS_DIR; };
 		28FF2EF5206C4E8000AEFB7F /* tests.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = tests.c; path = src/tests.c; sourceTree = "<group>"; };
 		28FF2EF6206C4E8100AEFB7F /* tests.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = tests.h; path = src/tests.h; sourceTree = "<group>"; };
+		EE47D01524AABD04008C9569 /* decision_tree.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; name = decision_tree.c; path = src/decision_tree.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -307,6 +309,7 @@
 			children = (
 				28675A3A1DDAA9D000951212 /* skolem.h */,
 				28675A391DDAA9D000951212 /* skolem.c */,
+				EE47D01524AABD04008C9569 /* decision_tree.c */,
 				287C3B151E3C01FE00F7096A /* skolem_var.h */,
 				287C3B141E3C01FE00F7096A /* skolem_var.c */,
 				28DA30F31DFFDD2600EABCA6 /* skolem_dependencies.h */,
@@ -483,6 +486,7 @@
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
 			knownRegions = (
+				English,
 				en,
 			);
 			mainGroup = 28D2C3811DDAA95E000E9C51;
@@ -524,6 +528,7 @@
 				28FF2EA6206C285100AEFB7F /* lglopts.c in Sources */,
 				28FF2EB0206C285100AEFB7F /* bit_vector.c in Sources */,
 				28FF2E8F206C285100AEFB7F /* c2_rl.c in Sources */,
+				EE47D01624AABD04008C9569 /* decision_tree.c in Sources */,
 				28FF2E99206C285100AEFB7F /* casesplits.c in Sources */,
 				28FF2E9C206C285100AEFB7F /* certify_SAT.c in Sources */,
 				28FF2EAB206C285100AEFB7F /* satsolver_picosat_assumptions.c in Sources */,

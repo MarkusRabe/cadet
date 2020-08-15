@@ -95,13 +95,13 @@ Clause* c2_minimize_clause(C2* c2, Clause* c) {
             new_clause->minimized = 1;
             c2_rl_new_clause(new_clause);
             assert(c->size - int_vector_count(to_remove) == new_clause->size);
-            V2("Conflict clause minimization removed %u of %u literals.\n", int_vector_count(to_remove), initial_size);
+            V2("Clause minimization removed %u of %u literals.\n", int_vector_count(to_remove), initial_size);
             // Schedule removed literals for pure variable checks
             for (unsigned i = 0; i < int_vector_count(to_remove); i++) {
                 skolem_new_variable(c2->skolem, lit_to_var(int_vector_get(to_remove, i)));
             }
         } else {
-            V1("Clause minimization led to a duplicate.\n");
+            V2("Clause minimization led to a duplicate.\n");
             // Schedule all variables in the clause for pure variable checks
             for (unsigned i = 0; i < c->size; i++) {
                 skolem_new_variable(c2->skolem, lit_to_var(c->occs[i]));

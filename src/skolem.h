@@ -52,6 +52,10 @@ struct Skolem_Statistics {
     
     Stats* global_conflict_checks_sat;
     Stats* global_conflict_checks_unsat;
+    Stats* local_determinicity_check_stats;
+    Stats* local_conflict_check_stats;
+    Stats* decision_tree;
+    
 };
 
 struct Skolem_Magic_Values {
@@ -204,5 +208,7 @@ bool skolem_is_locally_conflicted(Skolem*, unsigned var_id);
 // used by debug.c
 int skolem_get_satsolver_lit(Skolem* s, Lit lit);
 int skolem_get_depends_on_decision_satlit(Skolem* s, unsigned var_id);
+
+void skolem_learn_decision_tree(Skolem* s, Lit decision_lit, int decision_tree_sat_lit);
 
 #endif /* skolem_h */

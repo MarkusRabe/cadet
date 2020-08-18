@@ -83,6 +83,7 @@ struct C2 {
     size_t next_major_restart;
     unsigned restart_base_decision_lvl; // decision_lvl used for restarts
     float_vector* variable_activities; // indexed by var_id
+    int_vector* interesting_variables; // sorted vector of var_ids
     
     // Reasoning domains
     Skolem* skolem;
@@ -142,7 +143,8 @@ void c2_scale_activity(C2* c2, unsigned var_id, float factor);
 unsigned c2_get_decision_lvl(C2* c2, unsigned var_id);
 Var* c2_pick_max_activity_variable(C2* c2);
 Var* c2_pick_nondeterministic_variable(C2* c2);
-void c2_backtrack_to_decision_lvl(C2 *c2, unsigned backtracking_lvl);
+void c2_backtrack_to_decision_lvl(C2* c2, unsigned backtracking_lvl);
+void c2_bump_interesting_variables(C2* c2);
 
 Clause* c2_minimize_clause(C2*,Clause*);
 

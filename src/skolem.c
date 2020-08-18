@@ -44,7 +44,7 @@ Skolem* skolem_init(QCNF* qcnf, Options* o) {
     
     s->record_conflicts = false;
     s->ignore_universal_conflicts = false;
-    s->id3_decisions = true;
+    s->id3_decisions = false;
     
     if (qcnf_is_DQBF(s->qcnf)) {
         s->empty_dependencies.dependencies = int_vector_init();

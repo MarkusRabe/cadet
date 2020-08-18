@@ -49,6 +49,7 @@ C2* c2_init(Options* options) {
     c2->activity_factor = 1.0f;
     c2->activity_factor_inverse = 1.0f / c2->activity_factor;
     c2->variable_activities = float_vector_init();
+    c2->interesting_variables = int_vector_init();
     
     // DOMAINS
     c2->cs = casesplits_init(c2->qcnf);
@@ -115,6 +116,7 @@ void c2_free(C2* c2) {
     partial_assignment_free(c2->minimization_pa);
     statistics_free(c2->statistics.minimization_stats);
     float_vector_free(c2->variable_activities);
+    int_vector_free(c2->interesting_variables);
     free(c2);
 }
 
@@ -149,6 +151,7 @@ void c2_scale_activity(C2* c2, unsigned var_id, float factor) {
 }
 
 void c2_rescale_activity_values(C2* c2) {
+    V1("Rescaling activity values.\n");
     float rescale_factor = 1.0f / c2->activity_factor;
     c2->activity_factor = 1.0f;
     c2->activity_factor_inverse = 1.0f;
@@ -184,10 +187,10 @@ Var* c2_pick_max_activity_variable(C2* c2) {
 }
 
 // Returns NULL, if all variables are decided
-Var* c2_pick_nondeterministic_variable(C2* c2) {
+Var* c2_pick_undetermined_variable(C2* c2) {
     if (!c2->options->random_decisions) {  // Pick variable with highest activity
         return c2_pick_max_activity_variable(c2);
-    } else {  // Pick a random nondeterministic variable
+    } else {  // Pick a random undetermined variable
         Var* decision_var = NULL;
         long candidate_quality = LONG_MIN;
         for (unsigned i = 1; i < var_vector_count(c2->qcnf->vars); i++) {
@@ -304,14 +307,22 @@ unsigned c2_determine_backtracking_lvl(C2* c2, Clause* conflict) {
 }
 
 void c2_decay_activity(C2* c2) {
+//    for (int i = 0; i < 10; i++) {
+//        float old = c2_get_activity(c2, float_vector_count(c2->variable_activities) - i - 1);
+//        V0("Old activity: %.2f\n", old);
+//    }
     assert(c2->activity_factor > 0);
     assert(isfinite(c2->activity_factor));
     float new_activity_factor = c2->activity_factor / c2->magic.decay_rate;
     if (!(isfinite(new_activity_factor) && isfinite(1.0 / c2->activity_factor) && new_activity_factor < 1000.0)) {
         c2_rescale_activity_values(c2);
     }
-    c2->activity_factor *= c2->activity_factor / c2->magic.decay_rate;
+    c2->activity_factor = c2->activity_factor / c2->magic.decay_rate;
     c2->activity_factor_inverse = 1.0f / c2->activity_factor;
+//    for (int i = 0; i < 10; i++) {
+//        float new = c2_get_activity(c2, float_vector_count(c2->variable_activities) - i - 1);
+//        V0("New activity: %.2f\n", new);
+//    }
 }
 
 float c2_Jeroslow_Wang_log_weight(vector* clauses) {
@@ -511,7 +522,7 @@ void c2_run(C2* c2, unsigned remaining_conflicts) {
             int phase = 1;
             
             // scan for decision variable also done in RL mode, to detect SAT
-            decision_var = c2_pick_nondeterministic_variable(c2);
+            decision_var = c2_pick_undetermined_variable(c2);
             
             if (decision_var != NULL && c2->options->reinforcement_learning) {
                 Var* max_activity_var = decision_var;
@@ -661,15 +672,25 @@ void c2_replenish_skolem_satsolver(C2* c2) {
     skolem_free(old_skolem);
     casesplits_free(old_cs);
     
-    abortif(c2_is_in_conflcit(c2) || c2->state != C2_READY, "Illegal state afte replenishing");
+    abortif(c2_is_in_conflcit(c2) || c2->state != C2_READY, "Illegal state after replenishing");
 }
 
+void c2_bump_interesting_variables(C2* c2) {
+//    return; // DO NOT SUBMIT
+    for (unsigned i = 0; i < int_vector_count(c2->interesting_variables); i++) {
+        unsigned var_id = (unsigned) int_vector_get(c2->interesting_variables, i);
+        c2_increase_activity(c2, var_id, c2->magic.activity_bump_value * 5.0f);
+    }
+    if (int_vector_count(c2->interesting_variables) > 0) {
+        V0("Bumped activies of %u interesting variables.\n", int_vector_count(c2->interesting_variables));
+    }
+}
 
 void c2_restart_heuristics(C2* c2) {
     c2->restarts_since_last_major += 1;
     c2->next_restart = (unsigned) (c2->next_restart * c2->magic.restart_factor) ;
     V3("Next restart in %u conflicts.\n", c2->next_restart);
-    c2_rescale_activity_values(c2);
+    c2_bump_interesting_variables(c2);
     
     if (c2->next_major_restart == c2->restarts_since_last_major) {
         c2->major_restarts += 1;
@@ -968,6 +989,16 @@ void c2_print_colored_literal_name(C2* c2, char* color, int lit) {
         LOG_COLOR(color, " %d", lit);
     } else {
         LOG_COLOR(color, " %s%s", lit > 0 ? "" : "-", name);
+    }
+    if (int_vector_count(c2->interesting_variables) > 0) {
+        unsigned var_id = lit_to_var(lit);
+        if (int_vector_contains_sorted(c2->interesting_variables, (int) var_id)) {
+            LOG_COLOR(color, "!");
+        } else {
+            if (qcnf_is_existential(c2->qcnf, var_id)) {
+                LOG_COLOR(color, "?");
+            };
+        }
     }
 }
 

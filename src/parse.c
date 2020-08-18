@@ -98,6 +98,7 @@ C2* c2_from_qdimacs_and_header(Options* options, FILE* file, char* header, int l
         line_num++;
         size_t pos = 0;
         bool is_dependency_quantifier = false;
+        bool is_i_variables = false;
         
         switch (line[0]) {
             case 'e':
@@ -126,6 +127,11 @@ C2* c2_from_qdimacs_and_header(Options* options, FILE* file, char* header, int l
                 V0("Comment in line %d is not conform in the DIMACS/QDIMACS/DQDIMACS standard.\n", line_num);
                 continue;
                 break;
+            case 'i':
+                V0("Warning: non-qdimacs variables tagged with 'i' in line %d; interpreting as interesting decision variables.\n", line_num);
+                is_i_variables = true;
+                pos++;
+                break;
             default:
                 break;
         }
@@ -150,7 +156,9 @@ C2* c2_from_qdimacs_and_header(Options* options, FILE* file, char* header, int l
                 abort();
             }
             
-            if (is_dependency_quantifier) {
+            if (is_i_variables) {
+                int_vector_add(c2->interesting_variables, next_lit);
+            } else if (is_dependency_quantifier) {
                 if (num_vars_parsed_this_line == 0) {
                     int_vector_add(dependency_variables, next_lit);
                 } else {
@@ -192,6 +200,10 @@ C2* c2_from_qdimacs_and_header(Options* options, FILE* file, char* header, int l
             }
         }
     }
+    
+    int_vector_sort(c2->interesting_variables, compare_integers_natural_order);
+    int_vector_remove_duplicates(c2->interesting_variables);
+    c2_bump_interesting_variables(c2);
     
     // TODO: the following is a bit out of date; moved this function from qcnf to c2 at some point
     if (int_vector_count(dependency_variables) != 0) {

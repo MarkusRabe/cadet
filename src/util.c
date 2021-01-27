@@ -14,6 +14,7 @@
 #include <assert.h>
 #include <stdint.h>
 #include <errno.h>
+#include <time.h>
 
 int compare_integers_abs(const void * a, const void * b) {
     int x = abs(* ((int*) a));

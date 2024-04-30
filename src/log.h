@@ -36,10 +36,10 @@
 #define KORANGE  "\x1B[38;5;202m"
 #define KORANGE_BOLD  "\x1B[01;38;5;202m"
 
-int debug_verbosity;
-bool log_qdimacs_compliant;
-bool log_colors;
-bool log_silent;
+extern int debug_verbosity;
+extern bool log_qdimacs_compliant;
+extern bool log_colors;
+extern bool log_silent;
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wgnu-zero-variadic-macro-arguments"
